@@ -20,11 +20,20 @@ const emit = defineEmits<{
 </script>
 
 <template>
+    <!--
+        Sticky to the bottom of the viewport rather than placed in the flow.
+
+        Two reasons, and both matter in a long list. Selecting a row used to
+        insert a block above the table and push every row down by its height,
+        which moves the checkbox out from under the pointer mid-selection. And
+        on a hundred-row page the actions were at the top, so ticking a row
+        near the bottom meant scrolling back up to act on it.
+    -->
     <div
         v-if="selected.length > 0 && actions.length > 0"
-        class="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2"
+        class="panel-bulk-actions sticky bottom-4 z-20 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-lg"
     >
-        <p class="text-sm">
+        <p class="text-sm font-medium tabular-nums">
             {{ selected.length }}
             {{ selected.length === 1 ? 'row' : 'rows' }} selected
         </p>

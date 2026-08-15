@@ -45,8 +45,18 @@ const props = withDefaults(
         summaries?: TableSummaries;
         /** The same, per band, when the table is grouped. */
         groupSummaries?: TableGroupSummaries;
+        /**
+         * Whether the table draws its own frame.
+         *
+         * True standalone — a relation table on a record page, a table widget
+         * — where it is one object among several and needs an edge of its
+         * own. False on a resource index, where the toolbar, the rows and the
+         * pagination are joined into a single surface and a second border
+         * inside it would draw a box around the middle third of one object.
+         */
+        bordered?: boolean;
     }>(),
-    { summaries: () => ({}), groupSummaries: () => ({}) },
+    { summaries: () => ({}), groupSummaries: () => ({}), bordered: true },
 );
 
 const emit = defineEmits<{
@@ -313,7 +323,9 @@ const { hook } = usePanelStyling();
 </script>
 
 <template>
-    <div class="rounded-lg border" :class="hook('table')">
+    <div
+        :class="[bordered ? 'rounded-lg border' : '', hook('table')]"
+    >
         <Table>
             <TableHeader>
                 <TableRow>
