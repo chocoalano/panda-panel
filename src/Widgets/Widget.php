@@ -189,7 +189,7 @@ abstract class Widget implements WidgetContract
      */
     public static function columnSpan(): array
     {
-        return ColumnSpan::normalize(static::$columnSpan);
+        return ColumnSpan::normalize(static::$columnSpan, static::class);
     }
 
     /**

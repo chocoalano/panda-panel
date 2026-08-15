@@ -10,6 +10,9 @@ import { Spinner } from '@/components/ui/spinner';
 import PanelAuthLayout from '@/panel/layouts/PanelAuthLayout.vue';
 import type { PanelDefinition } from '@/panel/types/panel';
 import { store } from '@/routes/register';
+import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+
+defineOptions({ layout: PanelBlankLayout });
 
 defineProps<{
     panel: PanelDefinition;

@@ -46,12 +46,49 @@ function toFlashToast(payload: unknown): PanelToast | null {
 }
 
 /**
+ * Reaching Echo without letting it take the panel down with it.
+ *
+ * `echo()` throws when `configureEcho()` was never called, and this runs in
+ * `onMounted` on the panel shell — so the throw aborted the layout's mount
+ * and Inertia then produced a dozen `Slot "default" invoked outside of the
+ * render function` warnings swapping a layout that had never finished. The
+ * server now withholds the channel unless the application has a broadcaster,
+ * which removes the common case; this covers the rest — a broadcaster
+ * configured in PHP that the frontend never wired up.
+ *
+ * One warning, in development only, then the panel carries on without
+ * realtime notifications. The feature dies; the screen does not.
+ */
+let warned = false;
+
+function withEcho<T>(use: (client: ReturnType<typeof echo>) => T): T | null {
+    try {
+        return use(echo());
+    } catch (error) {
+        if (!warned && import.meta.env.DEV) {
+            warned = true;
+
+            console.warn(
+                '[panel] Realtime notifications are off: this panel has broadcasting ' +
+                    'enabled and a broadcaster configured, but Echo was never set up in ' +
+                    'the browser. Call configureEcho({ broadcaster: … }) in resources/js/app.ts, ' +
+                    'or turn it off with ->broadcasting(false) on the panel.',
+                error,
+            );
+        }
+
+        return null;
+    }
+}
+
+/**
  * Subscribes the panel to its own notifications.
  *
  * Nothing connects unless the server sent a channel, which it only does for a
- * signed-in user on a panel with broadcasting on. That is what makes
- * `broadcasting(false)` cost nothing rather than merely hiding a connection
- * that was opened anyway.
+ * signed-in user, on a panel with broadcasting on, in an application that has
+ * a broadcaster configured. That is what makes `broadcasting(false)` — and an
+ * application with no broadcaster at all — cost nothing rather than merely
+ * hiding a connection that was attempted anyway.
  *
  * Notifications land as the same toast a flash message does, so a job that
  * finishes long after its request reaches the user the same way.
@@ -68,9 +105,8 @@ export function usePanelBroadcasting(): void {
             return;
         }
 
-        echo()
-            .private(channel)
-            .listen(EVENT, (payload: unknown) => {
+        const listening = withEcho((client) =>
+            client.private(channel).listen(EVENT, (payload: unknown) => {
                 const notification = toFlashToast(payload);
 
                 if (notification === null) {
@@ -105,14 +141,17 @@ export function usePanelBroadcasting(): void {
                                   },
                               },
                 });
-            });
+            }),
+        );
 
-        subscribed = channel;
+        // Only remembered when the subscription actually happened, so the
+        // teardown below does not call into an Echo that was never there.
+        subscribed = listening === null ? null : channel;
     });
 
     onBeforeUnmount(() => {
         if (subscribed !== null) {
-            echo().leave(subscribed);
+            withEcho((client) => client.leave(subscribed as string));
             subscribed = null;
         }
     });

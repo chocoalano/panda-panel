@@ -9,6 +9,8 @@ use PandaPanel\Forms\FormSchema;
 use PandaPanel\Forms\Layouts\Callout;
 use PandaPanel\Forms\Layouts\CustomComponent;
 use PandaPanel\Forms\Layouts\EmptyState;
+use PandaPanel\Forms\Layouts\Grid;
+use PandaPanel\Forms\Layouts\Section;
 use PandaPanel\Forms\Layouts\Tab;
 use PandaPanel\Forms\Layouts\Tabs;
 use PandaPanel\Forms\Prime\Icon;
@@ -169,4 +171,101 @@ it('applies state to fields nested inside a layout', function (): void {
     $form = $schema->toArrayWithState(null, ['name' => 'Apollo']);
 
     expect($form['schema'][0]['tabs'][0]['schema'][0]['value'])->toBe('Apollo');
+});
+
+/*
+ * Column spans
+ */
+
+it('serializes a field span as the number it was given', function (): void {
+    $definition = TextInput::make('name')->columnSpan(2)->toArray(null, 'create');
+
+    expect($definition['columnSpan'])->toBe(2);
+});
+
+it('serializes a full-width field as full rather than as a number', function (): void {
+    // A number would have to be the container's column count, which the
+    // field does not know and which can change without it being touched.
+    $definition = TextInput::make('bio')->columnSpanFull()->toArray(null, 'create');
+
+    expect($definition['columnSpan'])->toBe('full');
+});
+
+it('refuses a span below one', function (): void {
+    $definition = TextInput::make('name')->columnSpan(0)->toArray(null, 'create');
+
+    expect($definition['columnSpan'])->toBe(1);
+});
+
+it('lets the last call decide the span', function (): void {
+    expect(TextInput::make('name')->columnSpanFull()->columnSpan(2)->toArray(null, 'create')['columnSpan'])
+        ->toBe(2)
+        ->and(TextInput::make('name')->columnSpan(2)->columnSpanFull()->toArray(null, 'create')['columnSpan'])
+        ->toBe('full');
+});
+
+it('spans a field inside a section the same way', function (): void {
+    $definition = Section::make('Details')
+        ->columns(3)
+        ->schema([TextInput::make('bio')->columnSpanFull()])
+        ->toArray(null, 'create');
+
+    // The section carries its column count and the field carries `full`. The
+    // two are resolved together where the row is drawn, so a section changed
+    // from three columns to two keeps this field full width.
+    expect($definition['columns'])->toBe(3)
+        ->and($definition['schema'][0]['columnSpan'])->toBe('full');
+});
+
+/*
+ * Calls that landed on the wrong receiver
+ */
+
+it('says where a span belongs when it is called on the schema', function (): void {
+    // PHP's own "Call to unknown method FormSchema::columnSpanFull()" names
+    // the class but not the mistake, which is that a span belongs to a
+    // component inside the schema. The schema is the root; there is nothing
+    // outside it to span.
+    expect(fn () => FormSchema::make()->columnSpanFull())
+        ->toThrow(
+            BadMethodCallException::class,
+            'columnSpanFull() belongs to a field, not to the form schema.',
+        );
+});
+
+it('leaves an unrecognised call to the ordinary error', function (): void {
+    expect(fn () => FormSchema::make()->definitelyNotAThing())
+        ->toThrow(
+            BadMethodCallException::class,
+            'Call to undefined method PandaPanel\Forms\FormSchema::definitelyNotAThing().',
+        );
+});
+
+/*
+ * Column counts
+ */
+
+it('clamps a column count to what the renderer can draw', function (): void {
+    // Six was serialized as six, the renderer had no literal class for it,
+    // and the fallback drew one column — the widest ask reported as the
+    // narrowest result, silently.
+    expect(FormSchema::make()->columns(6)->toArray()['columns'])->toBe(4)
+        ->and(Section::make('Details')->columns(12)->toArray(null, 'create')['columns'])->toBe(4)
+        ->and(Grid::make(9)->toArray(null, 'create')['columns'])->toBe(4);
+});
+
+it('clamps a column count below one', function (): void {
+    expect(FormSchema::make()->columns(0)->toArray()['columns'])->toBe(1)
+        ->and(Grid::make(-3)->toArray(null, 'create')['columns'])->toBe(1);
+});
+
+it('carries the root column count to the renderer', function (): void {
+    // Sent all along; ignored all along. The root stacked its nodes and a
+    // field that asked for half a row got a whole one.
+    $form = FormSchema::make()
+        ->columns(2)
+        ->schema([TextInput::make('name'), TextInput::make('email')])
+        ->toArray();
+
+    expect($form['columns'])->toBe(2);
 });

@@ -17,6 +17,7 @@ use PandaPanel\Http\Controllers\PanelExportController;
 use PandaPanel\Http\Controllers\PanelFormOptionsController;
 use PandaPanel\Http\Controllers\PanelFormStateController;
 use PandaPanel\Http\Controllers\PanelImportController;
+use PandaPanel\Http\Controllers\PanelIntegrationController;
 use PandaPanel\Http\Controllers\PanelNotificationController;
 use PandaPanel\Http\Controllers\PanelPageController;
 use PandaPanel\Http\Controllers\PanelRelationController;
@@ -471,8 +472,10 @@ final class PanelRouteRegistrar
 
             $prefix = $attributes['prefix'];
 
-            $this->router->group($attributes, function () use ($resource, $prefix): void {
+            $this->router->group($attributes, function () use ($resource, $prefix, $slug): void {
                 $singular = $resource::isSingular();
+
+                $this->registerIntegrationRoutes($resource, $prefix, $slug);
 
                 foreach ($this->orderPages($resource::pages()) as $name => $page) {
                     foreach ($this->routesFor($name, $page, $singular) as $route) {
@@ -486,6 +489,52 @@ final class PanelRouteRegistrar
                     }
                 }
             });
+        }
+    }
+
+    /**
+     * The integrations screen, for a resource that asked for one.
+     *
+     * Registered here rather than declared in `pages()` because it is not the
+     * application's page: it belongs to the framework, it is the same for
+     * every resource, and a resource should not have to list it to get it. A
+     * resource that never called `isEnabled(true)` registers nothing, so the
+     * URL 404s rather than answering 403 — there is no screen to be refused.
+     *
+     * `{integration}` is a plain id and is looked up scoped to this panel and
+     * this resource, so an id from another screen cannot be edited here.
+     *
+     * @param  class-string<PanelResource>  $resource
+     */
+    private function registerIntegrationRoutes(string $resource, string $prefix, string $slug): void
+    {
+        if (! $resource::integrationSettings()->enabled()) {
+            return;
+        }
+
+        $name = "resources.{$slug}.integrations";
+        $controller = PanelIntegrationController::class;
+
+        $routes = [
+            ['get', 'integrations', 'index', ''],
+            ['post', 'integrations', 'store', '.store'],
+            ['put', 'integrations/{integration}', 'update', '.update'],
+            ['delete', 'integrations/{integration}', 'destroy', '.destroy'],
+            ['post', 'integrations/{integration}/send', 'send', '.send'],
+            ['post', 'integrations/{integration}/rotate', 'rotate', '.rotate'],
+        ];
+
+        foreach ($routes as [$verb, $path, $method, $suffix]) {
+            $this->claimPath($verb, $prefix, $path, $resource);
+
+            $this->router
+                ->{$verb}($path, [$controller, $method])
+                // The slug travels as a default rather than as a segment: the
+                // path is already inside the resource's prefix, and a second
+                // copy of the slug in the URL would be a second thing that
+                // could disagree with the first.
+                ->defaults('resource', $slug)
+                ->name($name.$suffix);
         }
     }
 

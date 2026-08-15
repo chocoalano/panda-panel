@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use PandaPanel\Infolists\Enums\EntryType;
 use PandaPanel\Infolists\Support\InfolistRow;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * One sub-schema rendered once per item.
@@ -48,7 +49,7 @@ final class RepeatableEntry extends Entry
 
     public function columns(int $columns): self
     {
-        $this->columns = $columns;
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

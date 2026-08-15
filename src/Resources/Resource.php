@@ -20,8 +20,10 @@ use PandaPanel\Core\PanelManager;
 use PandaPanel\Enums\SubNavigationPosition;
 use PandaPanel\Exceptions\PanelAuthorizationException;
 use PandaPanel\Exceptions\PanelRegistrationException;
+use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\FormSchema;
 use PandaPanel\Infolists\InfolistSchema;
+use PandaPanel\Integrations\Integrations;
 use PandaPanel\Resources\Resource as PanelResource;
 use PandaPanel\Support\NavigationItem;
 use PandaPanel\Support\ParentRecord;
@@ -161,10 +163,26 @@ abstract class Resource implements ResourceContract
     protected static ?string $parentRelationship = null;
 
     /**
+     * Resolved integration settings, keyed by resource class.
+     *
+     * @var array<class-string, Integrations>
+     */
+    private static array $integrationSettings = [];
+
+    /**
      * @return class-string<Model>
      */
     public static function getModel(): string
     {
+        // PHP's own answer here is "Typed static property
+        // PandaPanel\Resources\Resource::$model must not be accessed before
+        // initialization", which names this class rather than the one that
+        // forgot, and does not say what to add. It is the single most common
+        // thing to leave out of a new resource.
+        if (! isset(static::$model)) {
+            throw PanelSchemaException::missingModel(static::class);
+        }
+
         return static::$model;
     }
 
@@ -252,6 +270,19 @@ abstract class Resource implements ResourceContract
             );
         }
 
+        // A method that exists is not yet a relationship. A scope, an
+        // accessor, or a plain helper passes the check above and then fails
+        // inside `whereHas` with "Call to a member function getRelated() on
+        // null" — an error about Eloquent's internals that names neither the
+        // resource nor the property that pointed at it.
+        if (! $model->{$relationship}() instanceof Relation) {
+            throw PanelRegistrationException::tenantRelationshipIsNotARelation(
+                static::class,
+                $model::class,
+                $relationship,
+            );
+        }
+
         $tenant = Tenancy::require();
 
         return $query->whereHas(
@@ -329,6 +360,39 @@ abstract class Resource implements ResourceContract
     public static function infolist(InfolistSchema $schema): InfolistSchema
     {
         return $schema;
+    }
+
+    /**
+     * Outbound HTTP on this resource's writes.
+     *
+     * Off unless a resource says otherwise, because turning it on gives
+     * whoever can reach the screen the ability to make the server issue
+     * requests — see `Integrations` and `OutboundUrl`:
+     *
+     * ```php
+     * public static function integrations(Integrations $integrations): Integrations
+     * {
+     *     return $integrations->isEnabled(true);
+     * }
+     * ```
+     */
+    public static function integrations(Integrations $integrations): Integrations
+    {
+        return $integrations;
+    }
+
+    /**
+     * The resolved settings, built once per class per request.
+     *
+     * Cached because the route registrar, the boot-time observer registration
+     * and the page all ask the same question, and `integrations()` is a
+     * method an application wrote — it should be called predictably rather
+     * than once per lookup.
+     */
+    public static function integrationSettings(): Integrations
+    {
+        return self::$integrationSettings[static::class]
+            ??= static::integrations(Integrations::make());
     }
 
     /**

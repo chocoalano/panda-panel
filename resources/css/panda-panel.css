@@ -170,3 +170,44 @@
         @apply bg-background text-foreground;
     }
 }
+
+/*
+ * The seam where a frozen column group ends.
+ *
+ * A hairline plus a short gradient, drawn on the cell rather than as a border:
+ * a border would move the cell's content by a pixel when a table starts
+ * scrolling, and the whole point of the marker is that nothing else appears
+ * to move. Without it, columns slide under the frozen group and look as
+ * though they have teleported.
+ *
+ * Both directions, because a column can be pinned to either edge and the
+ * shadow has to fall away from the frozen side.
+ */
+@layer components {
+    .panel-table-frozen-edge {
+        position: relative;
+    }
+
+    .panel-table-frozen-edge::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 0.75rem;
+        pointer-events: none;
+    }
+
+    /* Pinned left: the seam sits on the right of the cell. */
+    .panel-table-frozen-edge:not([style*='right'])::after {
+        left: 100%;
+        border-left: 1px solid var(--border);
+        background: linear-gradient(to right, rgb(0 0 0 / 0.06), transparent);
+    }
+
+    /* Pinned right: mirrored. */
+    .panel-table-frozen-edge[style*='right']::after {
+        right: 100%;
+        border-right: 1px solid var(--border);
+        background: linear-gradient(to left, rgb(0 0 0 / 0.06), transparent);
+    }
+}

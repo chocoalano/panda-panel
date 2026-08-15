@@ -6,6 +6,7 @@ namespace PandaPanel\Actions;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use PandaPanel\Actions\Enums\ActionVariant;
 use PandaPanel\Actions\Enums\ModalWidth;
@@ -215,6 +216,19 @@ final class ImportAction
 
         $headings = ImportRun::headings($local);
         $mapping = self::mapping($importer, $data, $headings);
+
+        // Before a single row is read. A required column with no heading fails
+        // every row identically, which is ten thousand true statements about
+        // the wrong thing — the file simply does not have that column.
+        $missing = ImportRun::unmappedRequiredColumns($importer, $mapping);
+
+        if ($missing !== []) {
+            $disk->delete($stored);
+
+            throw ValidationException::withMessages([
+                'file' => ImportRun::missingColumnsMessage($missing, $headings),
+            ]);
+        }
 
         $rows = ImportRun::countRows($local);
 

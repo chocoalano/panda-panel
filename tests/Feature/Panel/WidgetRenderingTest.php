@@ -10,6 +10,7 @@ use App\Panels\Admin\Widgets\UserStats;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use PandaPanel\Core\PanelManager;
+use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Widgets\Support\ColumnSpan;
 use PandaPanel\Widgets\Support\Stat;
 
@@ -145,11 +146,25 @@ it('lets an undeclared breakpoint inherit the one below it', function (): void {
 });
 
 it('clamps a span the frontend has no class for', function (): void {
+    // A number out of range is somebody asking for more columns than the grid
+    // has, and the largest one is the honest answer.
     expect(ColumnSpan::normalize(99))
         ->toBe(['default' => 4, 'md' => 4, 'lg' => 4, 'xl' => 4])
         ->and(ColumnSpan::normalize(0)['default'])->toBe(1)
-        ->and(ColumnSpan::normalize('nonsense')['default'])->toBe(1)
         ->and(ColumnSpan::normalize('full')['default'])->toBe('full');
+});
+
+it('refuses a span it would otherwise have to guess at', function (): void {
+    // This used to answer 1 — a quarter of the width that was asked for, from
+    // a typo, with nothing to say why. A word is not a number out of range;
+    // it is a mistake, and clamping it hides one.
+    expect(fn () => ColumnSpan::normalize('ful'))
+        ->toThrow(PanelSchemaException::class, 'neither a number nor "full"');
+});
+
+it('refuses a breakpoint this grid does not have', function (): void {
+    expect(fn () => ColumnSpan::normalize(['default' => 1, 'sm' => 2]))
+        ->toThrow(PanelSchemaException::class, 'It has: default, md, lg, xl');
 });
 
 it('counts users with aggregates rather than hydrating them', function (): void {

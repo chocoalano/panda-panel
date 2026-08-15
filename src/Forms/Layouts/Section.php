@@ -7,6 +7,7 @@ namespace PandaPanel\Forms\Layouts;
 use Illuminate\Database\Eloquent\Model;
 use PandaPanel\Forms\Components\Field;
 use PandaPanel\Forms\Components\FormComponent;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * A titled group of fields.
@@ -51,7 +52,7 @@ final class Section extends FormComponent
 
     public function columns(int $columns): self
     {
-        $this->columns = max(1, $columns);
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

@@ -85,6 +85,20 @@ abstract class ManageRelatedRecords extends ResourcePage
         return static::$routePath ?? '{record}/'.$key;
     }
 
+    protected function defaultTitle(?Model $record): string
+    {
+        return static::$relationManager::title();
+    }
+
+    /**
+     * The owner beneath the relation's name: the page is one record's posts,
+     * not every post.
+     */
+    protected function defaultSubheading(?Model $record): ?string
+    {
+        return $record === null ? null : $this->recordTitle($record);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -94,9 +108,7 @@ abstract class ManageRelatedRecords extends ResourcePage
         $title = $this->recordTitle($owner);
 
         return [
-            'title' => $manager::title(),
-            'heading' => $manager::title(),
-            'subheading' => $title,
+            ...$this->headingMetadata($owner),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 ...$this->baseBreadcrumbs(),
                 $this->recordCrumb($owner, $title),

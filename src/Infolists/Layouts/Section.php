@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use PandaPanel\Actions\Action;
 use PandaPanel\Infolists\Components\Entry;
 use PandaPanel\Infolists\Components\InfolistComponent;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * A titled group of entries.
@@ -53,7 +54,7 @@ final class Section extends InfolistComponent
 
     public function columns(int $columns): self
     {
-        $this->columns = $columns;
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

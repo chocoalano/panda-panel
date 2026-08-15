@@ -28,7 +28,14 @@ abstract class Entry extends InfolistComponent
 
     protected ?string $helperText = null;
 
-    protected int $columnSpan = 1;
+    /**
+     * How many of the container's columns this entry takes, or `'full'` for
+     * the whole row. See `Field::$columnSpan` for why the whole row is not
+     * spelled as a number.
+     *
+     * @var int|'full'
+     */
+    protected int|string $columnSpan = 1;
 
     /** @var (Closure(mixed, Model): mixed)|null */
     protected ?Closure $formatUsing = null;
@@ -84,7 +91,17 @@ abstract class Entry extends InfolistComponent
 
     public function columnSpan(int $columnSpan): static
     {
-        $this->columnSpan = $columnSpan;
+        $this->columnSpan = max(1, $columnSpan);
+
+        return $this;
+    }
+
+    /**
+     * The whole row, whatever the container turns out to be divided into.
+     */
+    public function columnSpanFull(): static
+    {
+        $this->columnSpan = 'full';
 
         return $this;
     }

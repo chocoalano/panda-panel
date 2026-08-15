@@ -169,18 +169,39 @@ abstract class EditRecord extends ResourcePage
         );
     }
 
+    protected function defaultTitle(?Model $record): string
+    {
+        return $record === null
+            ? 'Edit '.static::$resource::label()
+            : 'Edit '.$this->recordTitle($record);
+    }
+
+    /**
+     * The heading is the record, not "Edit {record}": the breadcrumb above it
+     * already says which page this is, and repeating the verb twice reads as
+     * a mistake.
+     */
+    protected function defaultHeading(?Model $record): string
+    {
+        return $record === null
+            ? static::$resource::label()
+            : $this->recordTitle($record);
+    }
+
+    protected function defaultSubheading(?Model $record): ?string
+    {
+        return 'Edit '.static::$resource::label();
+    }
+
     /**
      * @return array<string, mixed>
      */
     protected function pageMetadata(Model $record): array
     {
-        $resource = static::$resource;
         $title = $this->recordTitle($record);
 
         return [
-            'title' => 'Edit '.$title,
-            'heading' => $title,
-            'subheading' => 'Edit '.$resource::label(),
+            ...$this->headingMetadata($record),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 ...$this->baseBreadcrumbs(),
                 $this->recordCrumb($record, $title),

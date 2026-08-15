@@ -12,6 +12,7 @@ use PandaPanel\Actions\Enums\ActionType;
 use PandaPanel\Actions\Enums\ActionVariant;
 use PandaPanel\Actions\Enums\ModalWidth;
 use PandaPanel\Actions\Support\Modal;
+use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\FormSchema;
 use PandaPanel\Support\DatabaseTransaction;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -107,7 +108,39 @@ class Action
      */
     protected ?bool $databaseTransaction = null;
 
-    final public function __construct(protected readonly string $name) {}
+    final public function __construct(protected readonly string $name)
+    {
+        if (trim($name) === '') {
+            throw PanelSchemaException::emptyName('action');
+        }
+
+        // The name travels to the action endpoint as an identifier and is
+        // matched there against the schema. A space or a slash in it is a name
+        // the endpoint can be asked for but never matches, which renders as a
+        // button that fails only when pressed.
+        if (preg_match('/^[A-Za-z0-9_.-]+$/', $name) !== 1) {
+            throw PanelSchemaException::unusableActionName($name);
+        }
+    }
+
+    /**
+     * Whether pressing this would do anything at all.
+     *
+     * Checked where a set of actions is declared rather than per row, so an
+     * action that leads nowhere is refused once at definition time instead of
+     * being drawn for every record and disappointing on click.
+     */
+    public function isInert(): bool
+    {
+        return $this->urlUsing === null
+            && $this->handleUsing === null
+            && $this->handleBulkUsing === null
+            && $this->handleTableUsing === null
+            && $this->schemaUsing === null
+            && $this->formUrlUsing === null
+            && $this->modal === null
+            && $this->modalActions === [];
+    }
 
     public static function make(string $name): static
     {

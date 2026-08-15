@@ -1,6 +1,6 @@
-import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import type { ComputedRef } from 'vue';
+import { panelSharedProps } from '@/panel/types/shared';
 import type {
     PanelBroadcasting,
     PanelDefinition,
@@ -58,19 +58,19 @@ export type UsePanelReturn = {
  * because the shell can render during a navigation that leaves the panel.
  */
 export function usePanel(): UsePanelReturn {
-    const page = usePage();
+    const props = panelSharedProps();
 
-    const panel = computed(() => page.props.panel);
+    const panel = computed(() => props.value.panel);
 
     /**
      * Empty outside a panel, and holding a single entry when the user may
      * enter only one, so the switcher can hide itself rather than offering a
      * move to where the user already is.
      */
-    const panels = computed(() => page.props.panels ?? []);
+    const panels = computed(() => props.value.panels ?? []);
 
     /** Null for every panel that declared no tenancy, which is most of them. */
-    const tenancy = computed(() => page.props.tenancy ?? null);
+    const tenancy = computed(() => props.value.tenancy ?? null);
 
     return {
         panel,
@@ -81,11 +81,11 @@ export function usePanel(): UsePanelReturn {
         panels,
         canSwitchPanels: computed(() => panels.value.length > 1),
         broadcasting: computed(
-            () => page.props.broadcasting ?? { enabled: false, channel: null },
+            () => props.value.broadcasting ?? { enabled: false, channel: null },
         ),
         search: computed(
             () =>
-                page.props.search ?? {
+                props.value.search ?? {
                     enabled: false,
                     url: null,
                     debounce: 300,
@@ -94,7 +94,7 @@ export function usePanel(): UsePanelReturn {
         ),
         notifications: computed(
             () =>
-                page.props.notifications ?? {
+                props.value.notifications ?? {
                     enabled: false,
                     indexUrl: null,
                     readUrl: null,

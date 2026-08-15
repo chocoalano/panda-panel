@@ -9,6 +9,7 @@ use PandaPanel\Actions\Action;
 use PandaPanel\Infolists\Components\Entry;
 use PandaPanel\Infolists\Components\InfolistComponent;
 use PandaPanel\Infolists\Layouts\Section;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * A record's read-only presentation.
@@ -46,7 +47,7 @@ final class InfolistSchema
 
     public function columns(int $columns): self
     {
-        $this->columns = $columns;
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

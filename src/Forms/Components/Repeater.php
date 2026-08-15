@@ -7,6 +7,7 @@ namespace PandaPanel\Forms\Components;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use PandaPanel\Forms\Enums\FieldType;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * A group of fields the user can repeat.
@@ -111,7 +112,7 @@ final class Repeater extends Field
 
     public function columns(int $columns): self
     {
-        $this->columns = max(1, $columns);
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

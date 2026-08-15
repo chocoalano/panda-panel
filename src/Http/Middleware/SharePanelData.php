@@ -13,6 +13,7 @@ use Inertia\Inertia;
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
 use PandaPanel\Resources\Resource as PanelResource;
+use PandaPanel\Support\BroadcastSupport;
 use PandaPanel\Support\NavigationBuilder;
 use PandaPanel\Tenancy\Tenancy;
 use Symfony\Component\HttpFoundation\Response;
@@ -217,9 +218,19 @@ final class SharePanelData
     {
         $panel = $this->manager->currentPanel();
 
+        // Two questions, and both have to answer yes. The panel says whether
+        // it wants realtime notifications; `BroadcastSupport` says whether
+        // this application has anything to deliver them with. Sending a
+        // channel on the strength of the first alone is what made a panel
+        // installed into a starter kit with no broadcaster throw from inside
+        // `onMounted` and take the whole layout down with it.
+        if ($panel === null || ! $panel->hasBroadcasting() || ! BroadcastSupport::isConfigured()) {
+            return ['enabled' => false, 'channel' => null];
+        }
+
         return [
-            'enabled' => $panel?->hasBroadcasting() ?? false,
-            'channel' => $panel?->getBroadcastChannel($request->user()),
+            'enabled' => true,
+            'channel' => $panel->getBroadcastChannel($request->user()),
         ];
     }
 

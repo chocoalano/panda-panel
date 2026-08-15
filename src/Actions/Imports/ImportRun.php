@@ -144,6 +144,49 @@ final class ImportRun
     }
 
     /**
+     * The required columns the file has no heading for.
+     *
+     * Without this, an unmapped required column produced a validation failure
+     * on *every row* — "The name field is required", ten thousand times — which
+     * is a true statement about the wrong thing. The file does not have a name
+     * column at all, and saying so once, before the import starts, is the
+     * difference between a fixable message and a wall of them.
+     *
+     * @param  class-string<Importer>  $importer
+     * @param  array<string, int>  $mapping
+     * @return list<string>
+     */
+    public static function unmappedRequiredColumns(string $importer, array $mapping): array
+    {
+        $missing = [];
+
+        foreach ($importer::columns() as $column) {
+            if ($column->isRequired() && ! array_key_exists($column->getName(), $mapping)) {
+                $missing[] = $column->getName();
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Says which required columns the file is missing, and what it does have.
+     *
+     * @param  list<string>  $missing
+     * @param  list<string>  $headings
+     */
+    public static function missingColumnsMessage(array $missing, array $headings): string
+    {
+        return sprintf(
+            'This file has no column for %s, and %s required. Its headings are: %s. Rename the '
+                .'column in the file, or map it by hand before importing.',
+            '['.implode('], [', $missing).']',
+            count($missing) === 1 ? 'it is' : 'they are',
+            $headings === [] ? '(none)' : implode(', ', $headings),
+        );
+    }
+
+    /**
      * One row: cast, resolve, validate, write.
      *
      * Returns null when the row was imported, or the reason it was not.

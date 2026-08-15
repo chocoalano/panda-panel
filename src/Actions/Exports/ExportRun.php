@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use PandaPanel\Actions\Enums\SpreadsheetFormat;
+use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Support\Spreadsheet\Csv;
 use PandaPanel\Support\Spreadsheet\Xlsx;
 
@@ -58,7 +59,7 @@ final class ExportRun
             $handle = Csv::open($temporary);
 
             foreach ($rows as $row) {
-                Csv::write($handle, $row);
+                Csv::write($handle, $row, $exporter::escapesFormulas());
             }
 
             fclose($handle);
@@ -134,9 +135,21 @@ final class ExportRun
      */
     private static function selected(string $exporter, array $columns): array
     {
+        $declared = $exporter::columns();
+
+        // Two columns with one name produce two identical headings, and the
+        // column picker keys its selection by name — so choosing one chooses
+        // both, and unchecking it removes neither on its own.
+        $names = array_map(static fn (ExportColumn $column): string => $column->getName(), $declared);
+        $duplicates = array_values(array_unique(array_diff_assoc($names, array_unique($names))));
+
+        if ($duplicates !== []) {
+            throw PanelSchemaException::duplicateExportColumns($duplicates);
+        }
+
         $selected = [];
 
-        foreach ($exporter::columns() as $column) {
+        foreach ($declared as $column) {
             if ($columns === [] || in_array($column->getName(), $columns, true)) {
                 $selected[] = $column;
             }

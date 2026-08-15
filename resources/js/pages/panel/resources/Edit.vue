@@ -10,6 +10,9 @@ import type { RelationDefinition } from '@/panel/types/relation';
 import type { ResourceMeta } from '@/panel/types/table';
 import type { WidgetData, WidgetDefinition } from '@/panel/types/widget';
 import PageWidgets from '@/panel/widgets/PageWidgets.vue';
+import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+
+defineOptions({ layout: PanelLayout });
 
 withDefaults(
     defineProps<{

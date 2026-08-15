@@ -6,6 +6,9 @@ import type { ActionDefinition } from '@/panel/types/action';
 import type { PageMetadata } from '@/panel/types/page';
 import type { WidgetData, WidgetDefinition } from '@/panel/types/widget';
 import WidgetGrid from '@/panel/widgets/WidgetGrid.vue';
+import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+
+defineOptions({ layout: PanelLayout });
 
 /**
  * The generic renderer for a standalone page.

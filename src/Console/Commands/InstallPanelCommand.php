@@ -82,6 +82,7 @@ final class InstallPanelCommand extends Command
             $this->registerPanel($panel);
         }
 
+        $this->reportHomeRedirect();
         $this->checkFrontend();
         $this->offerUser($panel);
 
@@ -140,6 +141,40 @@ final class InstallPanelCommand extends Command
     }
 
     /**
+     * Says out loud that the starter kit's dashboard now leads into the panel.
+     *
+     * It is the one thing installing this package changes about a screen the
+     * application already had, and a redirect nobody was told about is a bug
+     * report. Printed rather than asked, because the answer lives in config
+     * and is one line to reverse.
+     */
+    private function reportHomeRedirect(): void
+    {
+        /** @var array<string, mixed> $config */
+        $config = (array) config('panda-panel.home_redirect', []);
+
+        if (($config['enabled'] ?? false) !== true) {
+            return;
+        }
+
+        /** @var list<string> $paths */
+        $paths = array_values(array_filter(
+            (array) ($config['paths'] ?? []),
+            static fn (mixed $path): bool => is_string($path) && $path !== '',
+        ));
+
+        if ($paths === []) {
+            return;
+        }
+
+        $this->components->info(sprintf(
+            'Signed-in visitors to /%s now land in the panel. '
+                .'Set home_redirect.enabled to false in config/panda-panel.php to keep your own.',
+            implode(', /', $paths),
+        ));
+    }
+
+    /**
      * Everything the published components need from the application.
      *
      * Each of these fails at `npm run build` with a message about a module
@@ -165,6 +200,19 @@ final class InstallPanelCommand extends Command
             $this->outstanding[] = 'Install the npm dependencies the components import, then rebuild:'
                 ."\n\n     npm install ".implode(" \\\n       ", $packages)
                 ."\n     npm run build";
+        }
+
+        foreach (FrontendRequirements::layoutOverrides() as $override) {
+            $this->outstanding[] = sprintf(
+                "%s line %d overwrites the layout every panel page declares:\n\n       %s\n\n"
+                    ."     Make it fall back instead, so a page that names its own layout keeps it:\n\n"
+                    ."       page.default.layout ??= AppLayout\n\n"
+                    .'     Left as it is, every panel screen renders inside your application shell — '
+                    .'with your sidebar, not the panel navigation, and no error to say so.',
+                $override['file'],
+                $override['line'],
+                $override['code'],
+            );
         }
 
         $modules = FrontendRequirements::missingHostModules();

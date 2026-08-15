@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Conditionable;
+use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\Enums\ConditionOperator;
 use PandaPanel\Forms\Enums\FieldType;
 use PandaPanel\Forms\Support\Condition;
@@ -39,7 +40,17 @@ abstract class Field extends FormComponent
 
     protected bool $disabled = false;
 
-    protected int $columnSpan = 1;
+    /**
+     * How many of the container's columns this field takes.
+     *
+     * `'full'` rather than a number for the whole row, because the number
+     * that means "all of them" depends on the container: a field written
+     * `columnSpan(2)` inside a section is full width until somebody makes
+     * that section three columns, and then it is silently two thirds.
+     *
+     * @var int|'full'
+     */
+    protected int|string $columnSpan = 1;
 
     protected mixed $default = null;
 
@@ -131,7 +142,12 @@ abstract class Field extends FormComponent
     /** @var (Closure(mixed, ?Model): mixed)|null */
     protected ?Closure $formatUsing = null;
 
-    final public function __construct(protected readonly string $name) {}
+    final public function __construct(protected readonly string $name)
+    {
+        if (trim($name) === '') {
+            throw PanelSchemaException::emptyName('field');
+        }
+    }
 
     public static function make(string $name): static
     {
@@ -182,6 +198,20 @@ abstract class Field extends FormComponent
     public function columnSpan(int $span): static
     {
         $this->columnSpan = max(1, $span);
+
+        return $this;
+    }
+
+    /**
+     * The whole row, whatever the container turns out to be divided into.
+     *
+     * Resolved against the container that draws it rather than here, so a
+     * section changed from two columns to three keeps this field full width
+     * instead of leaving a gap nobody edited.
+     */
+    public function columnSpanFull(): static
+    {
+        $this->columnSpan = 'full';
 
         return $this;
     }

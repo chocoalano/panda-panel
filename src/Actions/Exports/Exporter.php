@@ -90,6 +90,23 @@ abstract class Exporter
     /**
      * How many records are held in memory at once.
      */
+    /**
+     * Whether a CSV cell that a spreadsheet would run as a formula is
+     * neutralised first.
+     *
+     * On, because the alternative is an export that executes whatever
+     * somebody typed into a text field on the machine of whoever opens it —
+     * see `Csv::neutralize()`.
+     *
+     * Turn it off for a file another *program* reads, where nothing evaluates
+     * anything and the leading apostrophe would be corruption rather than a
+     * fix. Never turn it off for a file a person opens.
+     */
+    public static function escapesFormulas(): bool
+    {
+        return true;
+    }
+
     public static function chunkSize(): int
     {
         return 500;

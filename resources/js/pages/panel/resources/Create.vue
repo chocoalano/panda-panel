@@ -7,6 +7,9 @@ import type { PageMetadata } from '@/panel/types/page';
 import type { ResourceMeta } from '@/panel/types/table';
 import type { WidgetData, WidgetDefinition } from '@/panel/types/widget';
 import PageWidgets from '@/panel/widgets/PageWidgets.vue';
+import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+
+defineOptions({ layout: PanelLayout });
 
 const props = withDefaults(
     defineProps<{

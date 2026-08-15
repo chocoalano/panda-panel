@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia;
 use PandaPanel\Broadcasting\PanelNotification;
@@ -24,6 +25,11 @@ it('broadcasts by default', function (): void {
 });
 
 it('tells the frontend which channel to listen on', function (): void {
+    // Stated rather than assumed: a channel is only sent to an application
+    // that can actually broadcast, and Testbench's skeleton cannot.
+    Config::set('broadcasting.default', 'reverb');
+    Config::set('broadcasting.connections.reverb.driver', 'reverb');
+
     $this->actingAs($this->admin)
         ->get('/admin')
         ->assertInertia(fn (AssertableInertia $page) => $page
@@ -49,7 +55,7 @@ it('sends no channel for a guest', function (): void {
 
 it('sends nothing at all outside a panel', function (): void {
     $this->actingAs($this->admin)
-        ->get('/dashboard')
+        ->get('/')
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('broadcasting.enabled', false)
             ->where('broadcasting.channel', null));
@@ -140,4 +146,54 @@ it('lets a panel with nothing to receive skip the connection', function (): void
 
     expect($panel->hasBroadcasting())->toBeFalse()
         ->and($panel->getBroadcastChannel($this->admin))->toBeNull();
+});
+
+/*
+ * The application has to be able to broadcast, not merely want to
+ */
+
+it('sends no channel when the application has no broadcaster', function (): void {
+    // A fresh Laravel with no config/broadcasting.php: the panel still wants
+    // realtime notifications, and there is nothing to deliver them with.
+    Config::set('broadcasting.default', null);
+
+    $this->actingAs($this->admin)
+        ->get('/admin')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('broadcasting.enabled', false)
+            ->where('broadcasting.channel', null));
+});
+
+it('sends no channel for a driver no browser can subscribe to', function (): void {
+    foreach (['null', 'log'] as $driver) {
+        Config::set('broadcasting.default', 'probe');
+        Config::set('broadcasting.connections.probe.driver', $driver);
+
+        $this->actingAs($this->admin)
+            ->get('/admin')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('broadcasting.enabled', false)
+                ->where('broadcasting.channel', null));
+    }
+});
+
+it('sends no channel for a default connection that was never defined', function (): void {
+    Config::set('broadcasting.default', 'typo');
+    Config::set('broadcasting.connections', []);
+
+    $this->actingAs($this->admin)
+        ->get('/admin')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('broadcasting.enabled', false));
+});
+
+it('sends the channel once a real broadcaster is configured', function (): void {
+    Config::set('broadcasting.default', 'reverb');
+    Config::set('broadcasting.connections.reverb.driver', 'reverb');
+
+    $this->actingAs($this->admin)
+        ->get('/admin')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('broadcasting.enabled', true)
+            ->where('broadcasting.channel', 'App.Models.User.'.$this->admin->id));
 });

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ActionButton from '@/panel/actions/ActionButton.vue';
+import { gridClass, spanClass } from '@/panel/lib/grid';
 import InfolistEntry from '@/panel/infolists/InfolistEntry.vue';
 import InfolistTabs from '@/panel/infolists/InfolistTabs.vue';
 import type { ActionDefinition } from '@/panel/types/action';
@@ -24,34 +25,19 @@ defineProps<{
 
 const emit = defineEmits<{ run: [action: ActionDefinition] }>();
 
-const COLUMN_CLASSES: Record<number, string> = {
-    1: 'grid-cols-1',
-    2: 'grid-cols-1 md:grid-cols-2',
-    3: 'grid-cols-1 md:grid-cols-3',
-    4: 'grid-cols-1 md:grid-cols-4',
-};
-
-const SPAN_CLASSES: Record<number, string> = {
-    1: 'col-span-1',
-    2: 'md:col-span-2',
-    3: 'md:col-span-3',
-    4: 'md:col-span-4',
-};
-
 function columnsClass(columns: number): string {
-    return COLUMN_CLASSES[columns] ?? COLUMN_CLASSES[1];
+    return gridClass(columns);
 }
 
 /** A layout takes the whole row; an entry takes what it asked for. */
-function spanClass(
+function nodeSpanClass(
     child: InfolistComponentDefinition,
     columns: number,
 ): string {
-    if (child.component !== 'entry') {
-        return 'col-span-full';
-    }
-
-    return SPAN_CLASSES[Math.min(child.columnSpan, columns)] ?? SPAN_CLASSES[1];
+    return spanClass(
+        child.component === 'entry' ? child.columnSpan : 'full',
+        columns,
+    );
 }
 </script>
 
@@ -89,7 +75,7 @@ function spanClass(
                 <div
                     v-for="(child, index) in node.schema"
                     :key="index"
-                    :class="spanClass(child, node.columns)"
+                    :class="nodeSpanClass(child, node.columns)"
                 >
                     <InfolistNode
                         :node="child"
@@ -109,7 +95,7 @@ function spanClass(
         <div
             v-for="(child, index) in node.schema"
             :key="index"
-            :class="spanClass(child, node.columns)"
+            :class="nodeSpanClass(child, node.columns)"
         >
             <InfolistNode
                 :node="child"

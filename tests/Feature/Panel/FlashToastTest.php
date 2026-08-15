@@ -25,60 +25,60 @@ function flashedToast(TestResponse $response): ?array
 
 beforeEach(function (): void {
     Route::middleware('web')->group(function (): void {
-        Route::get('/__test/flash-success', fn () => redirect('/dashboard')->with('success', 'Saved.'));
-        Route::get('/__test/flash-error', fn () => redirect('/dashboard')->with('error', 'Went wrong.'));
-        Route::get('/__test/flash-both', fn () => redirect('/dashboard')
+        Route::get('/__test/flash-success', fn () => redirect('/')->with('success', 'Saved.'));
+        Route::get('/__test/flash-error', fn () => redirect('/')->with('error', 'Went wrong.'));
+        Route::get('/__test/flash-both', fn () => redirect('/')
             ->with('success', 'Saved.')
             ->with('error', 'Went wrong.'));
         Route::get('/__test/flash-explicit', function () {
             Inertia::flash('toast', ['type' => 'info', 'message' => 'Explicit.']);
 
-            return redirect('/dashboard')->with('success', 'Ignored.');
+            return redirect('/')->with('success', 'Ignored.');
         });
-        Route::get('/__test/flash-none', fn () => redirect('/dashboard'));
+        Route::get('/__test/flash-none', fn () => redirect('/'));
     });
 
     $this->actingAs(User::factory()->create());
 });
 
 it('maps a conventional success flash onto the toast channel', function (): void {
-    $this->get('/__test/flash-success')->assertRedirect('/dashboard');
+    $this->get('/__test/flash-success')->assertRedirect('/');
 
-    expect(flashedToast($this->get('/dashboard')))
+    expect(flashedToast($this->get('/')))
         ->toBe(['type' => 'success', 'message' => 'Saved.']);
 });
 
 it('maps an error flash onto the toast channel', function (): void {
     $this->get('/__test/flash-error');
 
-    expect(flashedToast($this->get('/dashboard')))
+    expect(flashedToast($this->get('/')))
         ->toBe(['type' => 'error', 'message' => 'Went wrong.']);
 });
 
 it('surfaces the more severe message when a request flashes two', function (): void {
     $this->get('/__test/flash-both');
 
-    expect(flashedToast($this->get('/dashboard')))
+    expect(flashedToast($this->get('/')))
         ->toBe(['type' => 'error', 'message' => 'Went wrong.']);
 });
 
 it('never overrides an explicitly flashed toast', function (): void {
     $this->get('/__test/flash-explicit');
 
-    expect(flashedToast($this->get('/dashboard')))
+    expect(flashedToast($this->get('/')))
         ->toBe(['type' => 'info', 'message' => 'Explicit.']);
 });
 
 it('adds no toast when nothing was flashed', function (): void {
     $this->get('/__test/flash-none');
 
-    expect(flashedToast($this->get('/dashboard')))->toBeNull();
+    expect(flashedToast($this->get('/')))->toBeNull();
 });
 
 it('uses a payload shape the existing frontend bridge already understands', function (): void {
     $this->get('/__test/flash-success');
 
-    $toast = flashedToast($this->get('/dashboard'));
+    $toast = flashedToast($this->get('/'));
 
     expect($toast)->toHaveKeys(['type', 'message'])
         ->and($toast['type'])->toBeIn(['success', 'info', 'warning', 'error']);

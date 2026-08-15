@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import { useUnsavedChangesAlert } from '@/panel/composables/useUnsavedChangesAlert';
-import FormComponentRenderer from '@/panel/forms/FormComponentRenderer.vue';
+import FormGrid from '@/panel/forms/FormGrid.vue';
 import {
     fetchFormState,
     provideFormStateUrl,
@@ -438,10 +438,21 @@ const { hook } = usePanelStyling();
             @step-errors="(received) => (errors = received)"
         />
 
-        <FormComponentRenderer
-            v-for="(node, index) in wizard ? [] : schema"
-            :key="index"
-            :node="node"
+        <!--
+            The root is a grid like every other container, so `$schema->
+            columns(2)` means at the top level what it means inside a section.
+            It used to be sent and ignored: the root stacked its nodes in a
+            column and a field that asked for half a row got a whole one, with
+            nothing to say why.
+
+            Sections and every other layout still take the full width — they
+            are containers, and a half-width section is not what `columns()`
+            on the schema was ever asking for — so a form built the usual way
+            is laid out exactly as before.
+        -->
+        <FormGrid
+            v-if="!wizard"
+            :grid="{ component: 'grid', columns: form.columns, schema }"
             :values="values"
             :errors="errors"
             @change="onChange"

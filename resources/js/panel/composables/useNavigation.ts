@@ -1,8 +1,8 @@
-import { usePage } from '@inertiajs/vue3';
 import { useStorage } from '@vueuse/core';
 import { computed } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
 import { usePanel } from '@/panel/composables/usePanel';
+import { panelSharedProps } from '@/panel/types/shared';
 import type { NavigationGroup, NavigationItem } from '@/panel/types/navigation';
 
 function flatten(groups: NavigationGroup[]): NavigationItem[] {
@@ -28,10 +28,10 @@ export type UseNavigationReturn = {
  * same after a reload.
  */
 export function useNavigation(): UseNavigationReturn {
-    const page = usePage();
+    const props = panelSharedProps();
     const { panel } = usePanel();
 
-    const groups = computed(() => page.props.navigation);
+    const groups = computed(() => props.value.navigation);
     const items = computed(() => flatten(groups.value));
     const activeItem = computed(
         () => items.value.find((item) => item.active) ?? null,

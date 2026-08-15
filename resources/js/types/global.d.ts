@@ -1,14 +1,3 @@
-import type { NavigationGroup } from '@/panel/types/navigation';
-import type {
-    PanelBroadcasting,
-    PanelDefinition,
-    PanelNotificationSettings,
-    PanelSearchSettings,
-    PanelSummary,
-    PanelTenancy,
-} from '@/panel/types/panel';
-import type { Auth } from '@/types/auth';
-
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
     interface ImportMetaEnv {
@@ -22,33 +11,21 @@ declare module 'vite/client' {
     }
 }
 
-declare module '@inertiajs/core' {
-    export interface InertiaConfig {
-        sharedPageProps: {
-            name: string;
-            auth: Auth;
-            sidebarOpen: boolean;
-            // Panel props are present only on panel routes: null and empty
-            // everywhere else, never absent.
-            panel: PanelDefinition | null;
-            navigation: NavigationGroup[];
-            panels: PanelSummary[];
-            broadcasting: PanelBroadcasting;
-            search: PanelSearchSettings;
-            notifications: PanelNotificationSettings;
-            // Null for a panel that declared no tenancy, which is most of
-            // them — so the check reads `tenancy === null` rather than
-            // testing an empty list.
-            tenancy: PanelTenancy | null;
-            [key: string]: unknown;
-        };
-    }
-}
-
-declare module 'vue' {
-    interface ComponentCustomProperties {
-        $inertia: typeof Router;
-        $page: Page;
-        $headManager: ReturnType<typeof createHeadManager>;
-    }
-}
+/*
+ * This file used to also augment `@inertiajs/core`'s `InertiaConfig` with
+ * every prop `SharePanelData` shares, plus three the application owns
+ * (`name`, `auth`, `sidebarOpen`).
+ *
+ * Both halves were wrong, for the same reason. It publishes into
+ * `resources/js/types/` — a directory a starter kit already owns and already
+ * declares things in — and the panel's composables were written to depend on
+ * the result landing, being included by the host's `tsconfig`, and merging
+ * with whatever the host says about the same interface. When any of that
+ * failed the type fell back to `{}` and the *application's* `vue-tsc` reported
+ * fourteen errors inside files the developer never wrote.
+ *
+ * The panel now reads its own props through `panel/types/shared.ts`, which
+ * depends on no augmentation at all, and the application's three props are
+ * described only in `frontend/host/`, which never ships — because they are
+ * the application's to declare.
+ */

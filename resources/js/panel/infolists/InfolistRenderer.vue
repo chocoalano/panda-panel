@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Card, CardContent } from '@/components/ui/card';
 import ActionButton from '@/panel/actions/ActionButton.vue';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
+import { gridClass, spanClass } from '@/panel/lib/grid';
 import InfolistNode from '@/panel/infolists/InfolistNode.vue';
 import type { ActionDefinition } from '@/panel/types/action';
 import type {
@@ -24,20 +25,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ run: [action: ActionDefinition] }>();
 
-const COLUMN_CLASSES: Record<number, string> = {
-    1: 'grid-cols-1',
-    2: 'grid-cols-1 md:grid-cols-2',
-    3: 'grid-cols-1 md:grid-cols-3',
-    4: 'grid-cols-1 md:grid-cols-4',
-};
-
-const SPAN_CLASSES: Record<number, string> = {
-    1: 'col-span-1',
-    2: 'md:col-span-2',
-    3: 'md:col-span-3',
-    4: 'md:col-span-4',
-};
-
 function isEntry(node: InfolistComponentDefinition): node is EntryDefinition {
     return node.component === 'entry';
 }
@@ -51,11 +38,7 @@ const layouts = computed<InfolistComponentDefinition[]>(() =>
 );
 
 function columnsClass(columns: number): string {
-    return COLUMN_CLASSES[columns] ?? COLUMN_CLASSES[1];
-}
-
-function spanClass(span: number, columns: number): string {
-    return SPAN_CLASSES[Math.min(span, columns)] ?? SPAN_CLASSES[1];
+    return gridClass(columns);
 }
 
 const { hook } = usePanelStyling();

@@ -55,10 +55,10 @@ it('renders each panel with its own identity', function (): void {
 
 it('does not share panel props outside a panel', function (): void {
     $this->actingAs(User::factory()->create())
-        ->get('/dashboard')
+        ->get('/')
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('Dashboard')
+            ->component('Welcome')
             ->where('panel', null)
             ->where('navigation', [])
         );
@@ -68,7 +68,11 @@ it('keeps the existing starter kit routes working', function (): void {
     $user = User::factory()->create();
 
     $this->get('/')->assertOk();
-    $this->actingAs($user)->get('/dashboard')->assertOk();
+
+    // The starter kit's dashboard is the one screen the panel takes over
+    // outright: it is a placeholder, and landing on it after signing in is
+    // the worst first impression an install can make.
+    $this->actingAs($user)->get('/dashboard')->assertRedirect('/app');
 
     // Settings moved into the panel, so the starter kit address is now an
     // alias for it rather than a second screen.

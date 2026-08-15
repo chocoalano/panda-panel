@@ -307,8 +307,8 @@ it('serializes header, toolbar, and empty-state actions separately', function ()
 it('finds a table action wherever it was declared', function (): void {
     $schema = TableSchema::make()
         ->columns([TextColumn::make('name')])
-        ->headerActions([Action::make('export')])
-        ->emptyStateActions([Action::make('seed')]);
+        ->headerActions([Action::make('export')->tableAction(static fn () => null)])
+        ->emptyStateActions([Action::make('seed')->tableAction(static fn () => null)]);
 
     // The endpoint that runs them does not care which bar an action was
     // rendered in, only that the table declared it somewhere.
@@ -321,8 +321,10 @@ it('hides a table action the user may not run', function (): void {
     $definition = TableSchema::make()
         ->columns([TextColumn::make('name')])
         ->headerActions([
-            Action::make('export')->authorize(static fn (): bool => false),
-            Action::make('refresh'),
+            Action::make('export')
+                ->tableAction(static fn () => null)
+                ->authorize(static fn (): bool => false),
+            Action::make('refresh')->tableAction(static fn () => null),
         ])
         ->toArray();
 

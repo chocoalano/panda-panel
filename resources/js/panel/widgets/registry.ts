@@ -43,6 +43,41 @@ const componentsByName: Record<string, WidgetLoader> = Object.fromEntries(
         ]),
 );
 
+/** Names already complained about, so one typo is one warning. */
+const missing = new Set<string>();
+
+/**
+ * Says so, once, when a name resolves to nothing.
+ *
+ * The glob is a build-time allowlist, so an unregistered name is not a
+ * security question — it cannot reach anything. It is a *findability*
+ * question: the fallback looks exactly like a component that rendered
+ * nothing, and the three reasons for it (a typo, a file outside the globbed
+ * directory, a build that has not been re-run) are indistinguishable from the
+ * screen.
+ *
+ * Development only. In production the fallback is the whole answer, because
+ * this is a build problem and a console message on a live panel helps nobody.
+ */
+function reportMissing(kind: string, name: string, directory: string): void {
+    if (!import.meta.env.DEV || missing.has(name)) {
+        return;
+    }
+
+    missing.add(name);
+
+    console.warn(
+        '[panel] The ' +
+            kind +
+            ' component [' +
+            name +
+            '] is not in the build-time registry, so a fallback is drawn instead. ' +
+            'It has to live under ' +
+            directory +
+            ' — check the path and the spelling, then rebuild.',
+    );
+}
+
 export function hasWidgetComponent(name: string): boolean {
     return name in componentsByName;
 }
@@ -52,5 +87,15 @@ export function hasWidgetComponent(name: string): boolean {
  * throwing, so one mistyped component cannot take the dashboard down.
  */
 export function resolveWidgetComponent(name: string): WidgetLoader | null {
-    return componentsByName[name] ?? null;
+    const loader = componentsByName[name] ?? null;
+
+    if (loader === null) {
+        reportMissing(
+            'widget',
+            name,
+            'resources/js/pages/Panels/{Panel}/Widgets/',
+        );
+    }
+
+    return loader;
 }

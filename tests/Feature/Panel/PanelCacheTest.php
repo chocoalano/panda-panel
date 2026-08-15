@@ -20,7 +20,14 @@ it('writes a manifest of class names for every panel', function (): void {
 
     expect(File::exists(PanelManifest::path()))->toBeTrue();
 
-    $manifest = require PanelManifest::path();
+    $file = require PanelManifest::path();
+
+    // The classes sit under `panels`, beside the fingerprint that lets a later
+    // boot notice the manifest has gone stale.
+    expect($file)->toHaveKeys(['panels', 'fingerprint'])
+        ->and($file['fingerprint'])->toBeString()->not->toBeEmpty();
+
+    $manifest = $file['panels'];
 
     expect($manifest)->toHaveKeys(['admin', 'app'])
         ->and($manifest['admin']['resources'])->toBe([UserResource::class])
@@ -34,7 +41,7 @@ it('reports what it cached', function (): void {
         ->expectsOutputToContain('Panels cached')
         ->assertSuccessful();
 
-    $manifest = require PanelManifest::path();
+    $manifest = (require PanelManifest::path())['panels'];
 
     expect($manifest['admin']['resources'])->toHaveCount(1)
         ->and($manifest['admin']['widgets'])->toHaveCount(4);

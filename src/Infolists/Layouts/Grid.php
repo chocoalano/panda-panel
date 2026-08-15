@@ -7,6 +7,7 @@ namespace PandaPanel\Infolists\Layouts;
 use Illuminate\Database\Eloquent\Model;
 use PandaPanel\Infolists\Components\Entry;
 use PandaPanel\Infolists\Components\InfolistComponent;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * Columns without a heading.
@@ -24,7 +25,7 @@ final class Grid extends InfolistComponent
 
     public static function make(int $columns = 2): self
     {
-        return new self($columns);
+        return new self(ColumnCount::clamp($columns));
     }
 
     /**

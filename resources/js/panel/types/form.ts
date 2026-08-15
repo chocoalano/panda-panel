@@ -88,7 +88,13 @@ interface BaseFieldDefinition {
     disabled: boolean;
     /** Renders the label beside the control rather than above it. */
     inlineLabel: boolean;
-    columnSpan: number;
+    /**
+     * Columns of the container this field takes, or the whole row.
+     *
+     * `'full'` is resolved against the container that draws it, because the
+     * number that means "all of them" is the container's to know.
+     */
+    columnSpan: number | 'full';
     conditions: FieldConditions;
     live: LiveDefinition | null;
     validation: ValidationHints;

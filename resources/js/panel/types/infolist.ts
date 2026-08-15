@@ -28,7 +28,8 @@ interface BaseEntryDefinition {
     label: string;
     placeholder: string | null;
     helperText: string | null;
-    columnSpan: number;
+    /** Columns of the container this entry takes, or the whole row. */
+    columnSpan: number | 'full';
     /**
      * An operation offered beside the value. Null for an entry that declares
      * none, and for one the user may not run — an action they cannot perform

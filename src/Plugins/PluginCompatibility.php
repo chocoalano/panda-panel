@@ -39,8 +39,17 @@ use Throwable;
  */
 final class PluginCompatibility
 {
-    /** This package, as composer knows it. */
-    private const PACKAGE = 'panda-panel';
+    /**
+     * This package, as composer knows it.
+     *
+     * Must match `name` in `composer.json` exactly. A name no installation
+     * carries makes `InstalledVersions::getPrettyVersion()` throw, which this
+     * class reads as "not installed as a package" and answers null to — and a
+     * null version skips every `requiresPanel` constraint there is, silently
+     * and for good. `PluginTest` compares the two so a rename cannot turn the
+     * check off again.
+     */
+    private const PACKAGE = 'chocoalano/panel';
 
     /**
      * @param  string|null  $installed  the framework version to check against,

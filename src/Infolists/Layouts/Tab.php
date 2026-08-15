@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use PandaPanel\Infolists\Components\Entry;
 use PandaPanel\Infolists\Components\InfolistComponent;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * One panel of a tab set.
@@ -59,7 +60,7 @@ final class Tab extends InfolistComponent
 
     public function columns(int $columns): self
     {
-        $this->columns = $columns;
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

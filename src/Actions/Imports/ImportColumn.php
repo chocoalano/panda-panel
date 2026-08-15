@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
+use PandaPanel\Exceptions\PanelSchemaException;
 
 /**
  * One column of an import: where a cell lands, and what it must be.
@@ -43,7 +44,12 @@ final class ImportColumn
 
     private bool $createRelated = false;
 
-    public function __construct(private readonly string $name) {}
+    public function __construct(private readonly string $name)
+    {
+        if (trim($name) === '') {
+            throw PanelSchemaException::emptyName('import column');
+        }
+    }
 
     public static function make(string $name): self
     {

@@ -158,7 +158,7 @@ it('shares panel props scoped to the panel being viewed', function (): void {
     $this->actingAs($this->admin)->get('/app')
         ->assertInertia(fn (AssertableInertia $page) => $page->where('panel.path', 'app'));
 
-    $this->actingAs($this->admin)->get('/dashboard')
+    $this->actingAs($this->admin)->get('/')
         ->assertInertia(fn (AssertableInertia $page) => $page->where('panel', null));
 });
 
@@ -166,7 +166,10 @@ it('leaves the starter kit untouched by either panel', function (): void {
     $this->actingAs($this->member);
 
     $this->get('/')->assertOk();
-    $this->get('/dashboard')->assertOk();
+
+    // The dashboard is the exception: a member has no admin panel, so the
+    // one they can reach is where they land.
+    $this->get('/dashboard')->assertRedirect('/app');
 
     // Settings are the one thing the panel did take over: both addresses
     // now lead into the panel the user can reach.

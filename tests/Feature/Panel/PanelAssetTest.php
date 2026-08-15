@@ -64,7 +64,7 @@ it('loads them on no other panel', function (): void {
 it('loads them on no starter kit page either', function (): void {
     app(PanelManager::class)->get('admin')->assets('resources/css/panels/admin.css');
 
-    $this->actingAs($this->admin)->get('/dashboard')->assertOk();
+    $this->actingAs($this->admin)->get('/')->assertOk();
 
     expect($this->vite->entrypoints)->not->toContain('resources/css/panels/admin.css');
 });

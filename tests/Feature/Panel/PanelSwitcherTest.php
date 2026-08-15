@@ -48,7 +48,7 @@ it('never offers a panel the user would be refused', function (): void {
 
 it('sends no switcher entries outside a panel', function (): void {
     $this->actingAs($this->admin)
-        ->get('/dashboard')
+        ->get('/')
         ->assertInertia(fn (AssertableInertia $page) => $page->where('panels', []));
 });
 

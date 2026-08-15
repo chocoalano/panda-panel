@@ -7,6 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import PanelAuthLayout from '@/panel/layouts/PanelAuthLayout.vue';
 import type { PanelDefinition } from '@/panel/types/panel';
+import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+
+defineOptions({ layout: PanelBlankLayout });
 
 /**
  * The emailed-code challenge.

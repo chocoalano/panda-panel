@@ -6,6 +6,7 @@ namespace PandaPanel\Forms\Components;
 
 use Illuminate\Validation\Rule;
 use PandaPanel\Forms\Enums\FieldType;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * Several choices from a list, all of them visible.
@@ -54,7 +55,7 @@ final class CheckboxList extends Field
 
     public function columns(int $columns): self
     {
-        $this->columns = max(1, $columns);
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

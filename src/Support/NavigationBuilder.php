@@ -6,6 +6,7 @@ namespace PandaPanel\Support;
 
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
+use PandaPanel\Resources\Resource as PanelResource;
 
 /**
  * Turns a panel's registered resources and pages into sidebar groups.
@@ -113,6 +114,16 @@ final class NavigationBuilder
             }
 
             if (! $resource::canViewAny()) {
+                // The one case worth explaining: denied because nobody wrote
+                // a policy, rather than because one said no. Development
+                // only, once per model — see `MissingPolicyNotice`.
+                //
+                // The registry is typed to the contract, which does not
+                // declare a model; the base class is what a panel registers.
+                if (is_subclass_of($resource, PanelResource::class)) {
+                    MissingPolicyNotice::reportIfMissing($resource, $resource::getModel());
+                }
+
                 continue;
             }
 

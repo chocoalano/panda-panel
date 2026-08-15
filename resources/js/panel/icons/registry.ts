@@ -72,12 +72,42 @@ export function isPanelIconName(name: string): name is PanelIconName {
     return name in ICONS;
 }
 
+/** Names already complained about, so one typo is one warning. */
+const missing = new Set<string>();
+
 /**
  * Returns null for an unknown or absent name. Callers render no icon
  * rather than a broken one, and production stays console-clean.
+ *
+ * An unknown name used to be indistinguishable from no name at all:
+ * both drew nothing, so a mistyped icon — or, far more often, one
+ * declared in PHP after this file was last generated — was a missing
+ * icon with no way to find out why. This registry is written by
+ * `php artisan panel:icons`, and forgetting to re-run it is the whole
+ * failure mode.
+ *
+ * Development only. In production the icon is still simply absent,
+ * because a console message on a live panel helps nobody and this is
+ * a build problem rather than a runtime one.
  */
 export function resolveIcon(name: string | null | undefined): Component | null {
-    if (typeof name !== 'string' || !isPanelIconName(name)) {
+    if (typeof name !== 'string') {
+        return null;
+    }
+
+    if (!isPanelIconName(name)) {
+        if (import.meta.env.DEV && !missing.has(name)) {
+            missing.add(name);
+
+            console.warn(
+                '[panel] The icon [' +
+                    name +
+                    '] is not in the icon registry, so nothing is drawn for it. ' +
+                    'Run `php artisan panel:icons` to rebuild the registry from ' +
+                    'the icons your panels declare.',
+            );
+        }
+
         return null;
     }
 

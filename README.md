@@ -31,6 +31,11 @@ checks what the frontend still needs, and offers to create a user who can sign i
 naming anything it could not do for you — and on a Laravel Vue starter kit application, that list
 is usually empty.
 
+Signing in afterwards lands in the panel rather than on the starter kit's placeholder dashboard:
+`/dashboard` redirects to the first panel the user can enter. Your route, its name, and its page
+component are all left where they are — see `home_redirect` in [Configuration](#configuration) to
+turn it off.
+
 Each step is available on its own:
 
 ```bash
@@ -168,8 +173,10 @@ keeps working.
 | --- | --- | --- |
 | `panels` | `[]` | Panel providers to register, in order. |
 | `register_routes` | `true` | Register one route group per panel during boot. |
-| `register_web_middleware` | `true` | Add the panel's three `web` middleware to the group. |
+| `register_web_middleware` | `true` | Add the panel's four `web` middleware to the group. |
 | `register_guest_redirect` | `true` | Send guests who open a panel URL to that panel's own login. Turn off if you set your own `redirectGuestsTo`. |
+| `home_redirect.enabled` | `true` | Send a signed-in user who lands on the starter kit's dashboard into the first panel they can enter. Turn off to keep your own screen. |
+| `home_redirect.paths` | `['dashboard']` | The `Request::is()` patterns that redirect. A path a panel is mounted on is ignored. |
 | `load_migrations` | `true` | Run the package migrations from the package. Turn off if you publish them. |
 | `frontend.panel_path` | `js/panel` | Where `vendor:publish` puts the panel's components. |
 | `frontend.pages_path` | `js/pages/Panels` | Where the generators scaffold components. |

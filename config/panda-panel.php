@@ -90,6 +90,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Home redirect
+    |--------------------------------------------------------------------------
+    |
+    | The other half of the guest redirect. A Laravel Vue starter kit ships a
+    | `/dashboard` route with an empty placeholder page, and points Fortify's
+    | post-login redirect at it. Installing a panel changes neither, so the
+    | first screen after signing in is that placeholder and the panel is
+    | somewhere you have to know the URL of.
+    |
+    | With this on, a signed-in user who lands on one of these paths is sent to
+    | the first panel they can enter instead. Nothing is rewritten to do it:
+    | the application keeps its route, its route name, and its page component,
+    | and turning this off gives all three back.
+    |
+    | The paths are `Request::is()` patterns, so `'reports/*'` hands over a
+    | whole section. A path a panel itself is mounted on is ignored — the panel
+    | answers for its own URLs, and redirecting one to itself is a loop.
+    |
+    | Set enabled to false for an application whose `/dashboard` is a real
+    | screen it means to keep.
+    |
+    */
+
+    'home_redirect' => [
+        'enabled' => true,
+
+        'paths' => ['dashboard'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Migrations
     |--------------------------------------------------------------------------
     |
@@ -109,6 +140,75 @@ return [
     */
 
     'load_migrations' => true,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Integrations
+    |--------------------------------------------------------------------------
+    |
+    | A resource with `integrations()->isEnabled(true)` gets a screen where an
+    | administrator configures outbound HTTP requests fired on its writes. The
+    | server issues those requests, which makes the screen a server-side
+    | request forgery surface by construction — the destination is typed into
+    | a form rather than written in code.
+    |
+    | Two gates, and a URL has to pass both.
+    |
+    | `allowed_hosts` is an allowlist of `Str::is()` patterns, and it is empty,
+    | so nothing is reachable until a destination is added here. Deny by
+    | default: a panel installed and left alone can call nowhere, and adding a
+    | destination is a deploy rather than a form submission.
+    |
+    | `block_private_networks` refuses any host that resolves into the private,
+    | loopback or link-local ranges — `169.254.169.254` above all, which is the
+    | unauthenticated cloud metadata endpoint that hands out IAM credentials.
+    | Checked when an integration is saved and again immediately before each
+    | request, because a name approved last week can resolve elsewhere today.
+    |
+    | Leave the second on. It is what makes relaxing the first survivable.
+    |
+    */
+
+    'integrations' => [
+
+        'allowed_hosts' => [
+            // 'api.example.com',
+            // '*.partner.io',
+        ],
+
+        'block_private_networks' => true,
+
+        /*
+        | Delivery history.
+        |
+        | One row per attempt, which on a busy resource is a table that
+        | outgrows the records it describes. So it is bounded twice, and both
+        | bounds are applied immediately after each delivery rather than by
+        | anything you have to schedule:
+        |
+        |   keep_per_integration — a hard cap. Only this many rows survive per
+        |   integration, so the table is bounded at cap × integrations however
+        |   much traffic there is. This is the bound that holds in an
+        |   application with no scheduler at all.
+        |
+        |   retention_days — a window, so integrations that fire twice a year
+        |   do not keep rows from three years ago. Set it to 0 to keep the cap
+        |   and nothing else.
+        |
+        | Bodies are stored truncated. Headers never are: they hold the API
+        | keys these requests carry, and a log of them would be a credential
+        | store nobody meant to create.
+        */
+
+        'history' => [
+            'enabled' => true,
+
+            'keep_per_integration' => 50,
+
+            'retention_days' => 30,
+        ],
+
+    ],
 
     /*
     |--------------------------------------------------------------------------

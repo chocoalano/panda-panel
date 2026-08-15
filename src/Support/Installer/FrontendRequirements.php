@@ -62,10 +62,28 @@ final class FrontendRequirements
         'components/TwoFactorSetupModal',
         'composables/useTwoFactorAuth',
         'types',
+        // `FlashToast`, which the panel's broadcasting and flash bridge both
+        // import. It was missing from this list, and could not have been
+        // caught while a bare directory counted as a module — see below.
+        'types/ui',
     ];
 
-    /** @var list<string> */
-    private const EXTENSIONS = ['.ts', '.vue', '/index.ts', '/index.vue', ''];
+    /**
+     * How a specifier may be spelled on disk.
+     *
+     * A bare `''` used to be in this list, which made every directory-shaped
+     * entry vacuous: `File::exists()` answers true for a directory, so
+     * `@/types` was satisfied by the *folder* this package publishes into and
+     * the check could never fail — however empty the folder was of the module
+     * actually being imported.
+     *
+     * `.d.ts` is here because a starter kit writes its shared types as
+     * `resources/js/types/index.d.ts`, which is a real answer to `@/types`
+     * and was not being looked for.
+     *
+     * @var list<string>
+     */
+    private const EXTENSIONS = ['.ts', '.vue', '.d.ts', '/index.ts', '/index.vue', '/index.d.ts'];
 
     /**
      * The npm packages an application needs, as `name@range` pairs ready to
@@ -185,6 +203,87 @@ final class FrontendRequirements
         }
 
         return $missing;
+    }
+
+    /**
+     * The application entry files, in the order they are worth reporting.
+     *
+     * @var list<string>
+     */
+    private const ENTRY_FILES = ['js/app.ts', 'js/app.js', 'js/ssr.ts', 'js/ssr.js'];
+
+    /**
+     * Places where the application's Inertia entry overwrites a layout the
+     * page declared for itself.
+     *
+     * Every panel page now names its own layout, so a host that does not
+     * mention `panel/` at all is correct and is not reported. What is not
+     * correct is the other common shape:
+     *
+     *     page.default.layout = AppLayout
+     *
+     * — an unconditional assignment, which replaces the panel shell with the
+     * application's own after the page has already asked for it. The panel
+     * then renders inside the starter kit's sidebar: no error, HTTP 200, and
+     * navigation that silently belongs to somebody else. It is the one thing
+     * about this seam that cannot be fixed from inside the package, which is
+     * why it is checked rather than documented.
+     *
+     * `||=`, `??=`, and any assignment whose right-hand side already falls
+     * back (`page.default.layout || AppLayout`) are all correct and pass.
+     *
+     * @return list<array{file: string, line: int, code: string}>
+     */
+    public static function layoutOverrides(): array
+    {
+        $found = [];
+
+        foreach (self::ENTRY_FILES as $entry) {
+            $path = resource_path($entry);
+
+            if (! File::exists($path)) {
+                continue;
+            }
+
+            foreach (self::offendingLines(File::get($path)) as $line => $code) {
+                $found[] = [
+                    'file' => 'resources/'.$entry,
+                    'line' => $line,
+                    'code' => $code,
+                ];
+            }
+        }
+
+        return $found;
+    }
+
+    /**
+     * @return array<int, string> one-indexed line number => the line itself
+     */
+    private static function offendingLines(string $contents): array
+    {
+        $offending = [];
+
+        foreach (preg_split('/\R/', $contents) ?: [] as $index => $line) {
+            // `||=` and `??=` are already the safe forms, and an assignment
+            // that mentions either operator is falling back rather than
+            // overwriting.
+            if (preg_match('/\.layout\s*(\|\||\?\?)=/', $line) === 1) {
+                continue;
+            }
+
+            if (preg_match('/\.layout\s*=/', $line) !== 1) {
+                continue;
+            }
+
+            if (preg_match('/\|\||\?\?/', $line) === 1) {
+                continue;
+            }
+
+            $offending[$index + 1] = trim($line);
+        }
+
+        return $offending;
     }
 
     private static function exists(string $module): bool

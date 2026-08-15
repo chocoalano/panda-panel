@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace PandaPanel\Forms;
 
+use BadMethodCallException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\Components\Field;
 use PandaPanel\Forms\Components\FormComponent;
 use PandaPanel\Forms\Components\PasswordInput;
 use PandaPanel\Forms\Components\Select;
 use PandaPanel\Forms\Layouts\Relationship;
 use PandaPanel\Forms\Layouts\Wizard;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * The declarative description of a resource form.
@@ -51,9 +54,40 @@ final class FormSchema
 
     public function columns(int $columns): self
     {
-        $this->columns = max(1, $columns);
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
+    }
+
+    /**
+     * Turns a call meant for a field into a sentence saying so.
+     *
+     * `columnSpanFull()` reads naturally at the end of a `$schema->columns(2)
+     * ->schema([...])` chain, and PHP's own answer — "Call to unknown method
+     * PandaPanel\Forms\FormSchema::columnSpanFull()" — names the class without
+     * naming the mistake, which is that a span belongs to a component inside
+     * the schema rather than to the schema. The schema is the root; there is
+     * nothing outside it to span.
+     *
+     * Only the calls that have an obvious right home are translated. Anything
+     * else gets the ordinary error, because a guess dressed up as a
+     * suggestion is worse than no suggestion.
+     *
+     * @param  list<mixed>  $arguments
+     */
+    public function __call(string $method, array $arguments): never
+    {
+        $onAField = ['columnSpan', 'columnSpanFull', 'hidden', 'visible', 'required', 'disabled'];
+
+        throw new BadMethodCallException(in_array($method, $onAField, true)
+            ? sprintf(
+                '%s() belongs to a field, not to the form schema. Move it onto the '
+                    ."component you meant:\n\n    \$schema->columns(2)->schema([\n"
+                    ."        TextInput::make('name')->%s(),\n    ]);",
+                $method,
+                $method,
+            )
+            : sprintf('Call to undefined method %s::%s().', self::class, $method));
     }
 
     /**
@@ -205,6 +239,8 @@ final class FormSchema
     public function validationRules(?Model $record = null): array
     {
         $this->hydrateRelationshipFields();
+
+        $this->assertUniqueFieldNames();
 
         $rules = [];
 
@@ -487,11 +523,42 @@ final class FormSchema
     }
 
     /**
+     * Refuses a form that submits the same name twice.
+     *
+     * After hydration rather than in `schema()`, because a relation group
+     * namespaces its children — `profile.bio` and `bio` are two names, and
+     * checking before that ran would call them one.
+     *
+     * Two fields with one name is not a cosmetic problem: only one rule
+     * survives into the validator and only one value survives into the write,
+     * so the other field is rendered, filled in, submitted, and discarded
+     * without a word.
+     */
+    private function assertUniqueFieldNames(): void
+    {
+        $names = [];
+
+        foreach ($this->components as $component) {
+            foreach ($component->fields() as $field) {
+                $names[] = $field->getName();
+            }
+        }
+
+        $duplicates = array_values(array_unique(array_diff_assoc($names, array_unique($names))));
+
+        if ($duplicates !== []) {
+            throw PanelSchemaException::duplicateFields($duplicates);
+        }
+    }
+
+    /**
      * @return array{columns: int, schema: list<array<string, mixed>>}
      */
     public function toArray(?Model $record = null): array
     {
         $this->hydrateRelationshipFields();
+
+        $this->assertUniqueFieldNames();
         $this->fillManyToManySelects($record);
 
         return [

@@ -7,18 +7,18 @@ namespace PandaPanel\Forms\Layouts;
 use Illuminate\Database\Eloquent\Model;
 use PandaPanel\Forms\Components\Field;
 use PandaPanel\Forms\Components\FormComponent;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * An untitled column grid.
  *
- * The column count is clamped to what the renderer has literal Tailwind
- * classes for, because an interpolated `grid-cols-{n}` would compile to
- * nothing.
+ * The column count is clamped by `ColumnCount` to what the renderer has
+ * literal Tailwind classes for, because an interpolated `grid-cols-{n}` would
+ * compile to nothing — and an unclamped count fell through to the renderer's
+ * one-column fallback, which is the opposite of what was asked for.
  */
 final class Grid extends FormComponent
 {
-    private const MAX_COLUMNS = 4;
-
     /** @var list<FormComponent> */
     private array $components = [];
 
@@ -26,7 +26,7 @@ final class Grid extends FormComponent
 
     public static function make(int $columns = 2): self
     {
-        return new self(min(max($columns, 1), self::MAX_COLUMNS));
+        return new self(ColumnCount::clamp($columns));
     }
 
     /**

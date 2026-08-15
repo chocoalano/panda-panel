@@ -6,6 +6,9 @@ import PanelAuthLayout from '@/panel/layouts/PanelAuthLayout.vue';
 import type { PanelDefinition } from '@/panel/types/panel';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
+import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+
+defineOptions({ layout: PanelBlankLayout });
 
 defineProps<{
     panel: PanelDefinition;

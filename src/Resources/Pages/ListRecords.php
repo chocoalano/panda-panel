@@ -133,9 +133,7 @@ abstract class ListRecords extends ResourcePage
         $resource = static::$resource;
 
         return [
-            'title' => $resource::pluralLabel(),
-            'heading' => $resource::pluralLabel(),
-            'subheading' => null,
+            ...$this->headingMetadata(),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 Breadcrumb::make('Dashboard')->url($this->dashboardUrl()),
                 ...$this->parentBreadcrumbs(),

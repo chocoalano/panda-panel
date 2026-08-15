@@ -11,6 +11,9 @@ import { Label } from '@/components/ui/label';
 import PageHeader from '@/panel/components/PageHeader.vue';
 import type { PageMetadata } from '@/panel/types/page';
 import { send } from '@/routes/verification';
+import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+
+defineOptions({ layout: PanelLayout });
 
 /**
  * The panel's profile page.

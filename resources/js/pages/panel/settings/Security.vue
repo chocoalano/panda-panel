@@ -12,6 +12,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import PageHeader from '@/panel/components/PageHeader.vue';
 import type { PageMetadata } from '@/panel/types/page';
+import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+
+defineOptions({ layout: PanelLayout });
 
 type Props = {
     page: PageMetadata;

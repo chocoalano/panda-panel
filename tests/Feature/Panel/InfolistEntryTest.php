@@ -238,3 +238,22 @@ it('describes every entry type on the frontend as well', function (): void {
     // cannot see is a PHP case that never reached the union at all.
     expect(array_diff($declared, $matches[1]))->toBe([]);
 });
+
+/*
+ * Column spans
+ */
+
+it('serializes a full-width entry as full rather than as a number', function (): void {
+    $record = new Project(['name' => 'Apollo']);
+
+    $definition = TextEntry::make('name')->columnSpanFull()->toArray($record);
+
+    expect($definition['columnSpan'])->toBe('full');
+});
+
+it('refuses an entry span below one', function (): void {
+    $record = new Project(['name' => 'Apollo']);
+
+    expect(TextEntry::make('name')->columnSpan(0)->toArray($record)['columnSpan'])->toBe(1)
+        ->and(TextEntry::make('name')->columnSpan(2)->toArray($record)['columnSpan'])->toBe(2);
+});

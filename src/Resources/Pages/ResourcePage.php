@@ -57,6 +57,87 @@ abstract class ResourcePage
      */
     protected static ?string $routePath = null;
 
+    /**
+     * The document title, shown in the browser tab.
+     *
+     * Null takes the page's own default — the resource's plural label on an
+     * index, "New {label}" on a create, the record's title on a view. Declare
+     * one on the page class to override it, exactly as a standalone `Page`
+     * does.
+     */
+    protected static ?string $title = null;
+
+    /**
+     * The heading rendered above the page's content.
+     *
+     * Null follows `$title`, except where a page says otherwise: an edit page
+     * heads with the record rather than with "Edit {record}".
+     */
+    protected static ?string $heading = null;
+
+    /**
+     * The line beneath the heading. Null takes the page's default, which is
+     * nothing on most pages.
+     */
+    protected static ?string $subheading = null;
+
+    /**
+     * Override any of these three when the text depends on something a static
+     * property cannot say — the record, the tenant, a count.
+     */
+    public function getTitle(?Model $record = null): string
+    {
+        return static::$title ?? $this->defaultTitle($record);
+    }
+
+    public function getHeading(?Model $record = null): string
+    {
+        return static::$heading ?? $this->defaultHeading($record);
+    }
+
+    public function getSubheading(?Model $record = null): ?string
+    {
+        return static::$subheading ?? $this->defaultSubheading($record);
+    }
+
+    /**
+     * What the page is called when it says nothing. The resource's label is
+     * the only thing every page has in common, so that is the fallback a
+     * custom page inherits.
+     */
+    protected function defaultTitle(?Model $record): string
+    {
+        return static::$resource::pluralLabel();
+    }
+
+    /**
+     * The heading follows the title unless a page separates the two.
+     */
+    protected function defaultHeading(?Model $record): string
+    {
+        return $this->getTitle($record);
+    }
+
+    protected function defaultSubheading(?Model $record): ?string
+    {
+        return null;
+    }
+
+    /**
+     * The three heading keys every page's metadata carries, resolved once so
+     * no page repeats the fallback logic.
+     *
+     * @return array{title: string, heading: string, subheading: string|null}
+     */
+    protected function headingMetadata(?Model $record = null): array
+    {
+        return [
+            'title' => $this->getTitle($record),
+            'heading' => $this->getHeading($record),
+            'subheading' => $this->getSubheading($record),
+        ];
+    }
+
     public static function routePath(string $key): string
     {
         return static::$routePath ?? $key;

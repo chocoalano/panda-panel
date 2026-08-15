@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use PandaPanel\Forms\Components\Field;
 use PandaPanel\Forms\Components\FormComponent;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * One tab of a form.
@@ -63,7 +64,7 @@ final class Tab extends FormComponent
 
     public function columns(int $columns): self
     {
-        $this->columns = max(1, $columns);
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

@@ -173,6 +173,23 @@ final class PanelRegistrationException extends RuntimeException
      * exactly the kind of ambiguity that shows up as a page that renders the
      * wrong thing rather than as an error.
      */
+    /**
+     * A `$tenantRelationship` that names a method which is not a relationship.
+     */
+    public static function tenantRelationshipIsNotARelation(string $resource, string $model, string $relation): self
+    {
+        return new self(sprintf(
+            '[%s] scopes by the tenant relationship [%s], and [%s::%s()] exists but does not '
+                .'return an Eloquent relationship. A scope or an accessor cannot be traversed to '
+                .'a tenant — name a belongsTo, belongsToMany or hasOneThrough, or override '
+                .'query() and scope it yourself.',
+            $resource,
+            $relation,
+            $model,
+            $relation,
+        ));
+    }
+
     public static function collidingRoutePath(string $path, string $existing, string $incoming): self
     {
         return new self(

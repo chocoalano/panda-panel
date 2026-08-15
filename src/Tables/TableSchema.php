@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 use PandaPanel\Actions\Action;
+use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Tables\Columns\Column;
+use PandaPanel\Tables\Enums\ColumnPin;
 use PandaPanel\Tables\Enums\RecordActionsPosition;
 use PandaPanel\Tables\Enums\SortDirection;
 use PandaPanel\Tables\Filters\Filter;
@@ -149,6 +151,14 @@ final class TableSchema
 
     private RecordActionsPosition $recordActionsPosition = RecordActionsPosition::AfterColumns;
 
+    /**
+     * Whether the row actions stay in view while the table scrolls sideways.
+     *
+     * Off by default: it costs horizontal room, and a table narrow enough not
+     * to scroll gains nothing from it.
+     */
+    private bool $frozenActions = false;
+
     private ?string $recordActionsLabel = null;
 
     /** A component key for a table that draws its own empty state. */
@@ -166,7 +176,48 @@ final class TableSchema
     {
         $this->columns = array_values($columns);
 
+        self::assertUniqueNames(
+            array_map(static fn (Column $column): string => $column->getName(), $this->columns),
+            PanelSchemaException::duplicateColumns(...),
+        );
+
         return $this;
+    }
+
+    /**
+     * Refuses a set that names the same thing twice.
+     *
+     * At the setter rather than at serialization, so the stack trace points at
+     * the line in the resource that declared it — which is the only place the
+     * mistake can be fixed.
+     *
+     * @param  list<string>  $names
+     * @param  callable(list<string>): PanelSchemaException  $exception
+     */
+    private static function assertUniqueNames(array $names, callable $exception): void
+    {
+        $duplicates = array_values(array_unique(array_diff_assoc($names, array_unique($names))));
+
+        if ($duplicates !== []) {
+            throw $exception($duplicates);
+        }
+    }
+
+    /**
+     * @param  list<Action>  $actions
+     */
+    private static function assertUsableActions(string $set, array $actions): void
+    {
+        self::assertUniqueNames(
+            array_map(static fn (Action $action): string => $action->getName(), $actions),
+            static fn (array $names): PanelSchemaException => PanelSchemaException::duplicateActions($set, $names),
+        );
+
+        foreach ($actions as $action) {
+            if ($action->isInert()) {
+                throw PanelSchemaException::inertAction($action->getName());
+            }
+        }
     }
 
     /**
@@ -175,6 +226,14 @@ final class TableSchema
     public function filters(array $filters): self
     {
         $this->filters = array_values($filters);
+
+        // Filter state travels in the query string keyed by name, so two
+        // filters with one name are one filter the table cannot tell apart —
+        // and the second one's control writes over the first one's value.
+        self::assertUniqueNames(
+            array_map(static fn (Filter $filter): string => $filter->getName(), $this->filters),
+            PanelSchemaException::duplicateFilters(...),
+        );
 
         return $this;
     }
@@ -582,6 +641,8 @@ final class TableSchema
     {
         $this->recordActions = array_values($actions);
 
+        self::assertUsableActions('row actions', $this->recordActions);
+
         return $this;
     }
 
@@ -594,6 +655,8 @@ final class TableSchema
     public function bulkActions(array $actions): self
     {
         $this->bulkActions = array_values($actions);
+
+        self::assertUsableActions('bulk actions', $this->bulkActions);
 
         if ($this->bulkActions !== []) {
             $this->selectable = true;
@@ -615,6 +678,8 @@ final class TableSchema
     {
         $this->headerActions = array_values($actions);
 
+        self::assertUsableActions('header actions', $this->headerActions);
+
         return $this;
     }
 
@@ -631,6 +696,8 @@ final class TableSchema
     {
         $this->toolbarActions = array_values($actions);
 
+        self::assertUsableActions('toolbar actions', $this->toolbarActions);
+
         return $this;
     }
 
@@ -646,7 +713,48 @@ final class TableSchema
     {
         $this->emptyStateActions = array_values($actions);
 
+        self::assertUsableActions('empty state actions', $this->emptyStateActions);
+
         return $this;
+    }
+
+    /**
+     * Keeps the row actions pinned to the right edge.
+     *
+     * The companion to `Column::frozen()` for the far side of a wide table:
+     * scrolling out to column fourteen to read a value, and then having to
+     * scroll back to act on the row, is the same problem in the other
+     * direction.
+     */
+    public function frozenActions(bool $frozen = true): self
+    {
+        $this->frozenActions = $frozen;
+
+        return $this;
+    }
+
+    public function hasFrozenActions(): bool
+    {
+        return $this->frozenActions;
+    }
+
+    /**
+     * Whether anything is pinned to the leading edge.
+     *
+     * The reorder handle and the selection checkbox are frozen with the first
+     * frozen column rather than on their own account: they sit to the left of
+     * every data column, and letting them scroll while a column beside them
+     * stays put would be two elements disagreeing about where the row begins.
+     */
+    public function hasFrozenStart(): bool
+    {
+        foreach ($this->columns as $column) {
+            if ($column->getFrozen() === ColumnPin::Start) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function recordActionsPosition(RecordActionsPosition $position): self
@@ -1134,6 +1242,33 @@ final class TableSchema
      *
      * @return array<string, mixed>
      */
+    /**
+     * The default sort column, checked against the columns that exist.
+     *
+     * Here rather than in `defaultSort()`, which can be called before
+     * `columns()` and would then have nothing to check against. A column that
+     * is not in the schema is not in the sort whitelist either, so the table
+     * would quietly fall back to its natural order — the declaration read as
+     * applied and was not.
+     */
+    private function assertKnownDefaultSort(): ?string
+    {
+        if ($this->defaultSortColumn === null) {
+            return null;
+        }
+
+        foreach ($this->columns as $column) {
+            if ($column->getName() === $this->defaultSortColumn) {
+                return $this->defaultSortColumn;
+            }
+        }
+
+        throw PanelSchemaException::unknownDefaultSort(
+            $this->defaultSortColumn,
+            array_map(static fn (Column $column): string => $column->getName(), $this->columns),
+        );
+    }
+
     public function toArray(): array
     {
         return [
@@ -1178,9 +1313,15 @@ final class TableSchema
             ),
             'selectable' => $this->selectable,
             'reorderable' => $this->isReorderable(),
+            // Sent as answers rather than as the rule that produced them, so
+            // the frontend never has to re-derive which side is pinned.
+            'frozen' => [
+                'start' => $this->hasFrozenStart(),
+                'actions' => $this->frozenActions,
+            ],
             'perPageOptions' => $this->perPageOptions,
             'defaultPerPage' => $this->getDefaultPerPage(),
-            'defaultSort' => $this->defaultSortColumn === null ? null : [
+            'defaultSort' => $this->assertKnownDefaultSort() === null ? null : [
                 'column' => $this->defaultSortColumn,
                 'direction' => $this->defaultSortDirection->value,
                 'label' => $this->defaultSortOptionLabel,

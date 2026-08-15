@@ -98,18 +98,27 @@ abstract class ViewRecord extends ResourcePage
         };
     }
 
+    protected function defaultTitle(?Model $record): string
+    {
+        return $record === null
+            ? static::$resource::label()
+            : $this->recordTitle($record);
+    }
+
+    protected function defaultSubheading(?Model $record): ?string
+    {
+        return static::$resource::label();
+    }
+
     /**
      * @return array<string, mixed>
      */
     protected function pageMetadata(Model $record): array
     {
-        $resource = static::$resource;
         $title = $this->recordTitle($record);
 
         return [
-            'title' => $title,
-            'heading' => $title,
-            'subheading' => $resource::label(),
+            ...$this->headingMetadata($record),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 ...$this->baseBreadcrumbs(),
                 Breadcrumb::make($title)->current(),

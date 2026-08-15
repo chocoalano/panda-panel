@@ -38,6 +38,14 @@ interface BaseColumnDefinition {
     wrapHeader: boolean;
     /** A CSS length, applied inline — a Tailwind class cannot be built here. */
     width: string | null;
+    /**
+     * The edge this column stays pinned to while the table scrolls sideways,
+     * or null for one that scrolls with everything else.
+     *
+     * A pinned column is drawn at that edge whatever position it was declared
+     * in — see `DataTable`'s `visibleColumns` for why it has to be.
+     */
+    frozen: 'start' | 'end' | null;
 }
 
 export interface TextColumnDefinition extends BaseColumnDefinition {
@@ -340,6 +348,19 @@ export interface TableDefinition {
     selectable: boolean;
     /** Rows can be dragged into a new order, persisted by the server. */
     reorderable: boolean;
+    /**
+     * Which structural cells take part in freezing.
+     *
+     * Answers rather than the rule that produced them: `start` is true when
+     * any column is pinned to the leading edge, and the reorder handle and
+     * selection checkbox are pinned with it — they sit to the left of every
+     * data column, and letting them scroll while a column beside them stays
+     * put would be two things disagreeing about where the row begins.
+     */
+    frozen: {
+        start: boolean;
+        actions: boolean;
+    };
     perPageOptions: number[];
     defaultPerPage: number;
     defaultSort: {

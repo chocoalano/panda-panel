@@ -28,6 +28,7 @@ use PandaPanel\Core\PanelManager;
 use PandaPanel\Core\PanelProvider;
 use PandaPanel\Core\PanelRegistry;
 use PandaPanel\Discovery\PanelDiscoverer;
+use PandaPanel\Http\Middleware\RedirectPanelHome;
 use PandaPanel\Http\Middleware\RequireEmailCode;
 use PandaPanel\Http\Middleware\RequireTwoFactor;
 use PandaPanel\Http\Middleware\ResetPanelContext;
@@ -35,6 +36,8 @@ use PandaPanel\Http\Middleware\ResolvePanel;
 use PandaPanel\Http\Middleware\ResolveParentRecord;
 use PandaPanel\Http\Middleware\ShareFlashToast;
 use PandaPanel\Http\Middleware\SharePanelData;
+use PandaPanel\Integrations\IntegrationObserver;
+use PandaPanel\Resources\Resource;
 use PandaPanel\Routing\PanelRouteRegistrar;
 use PandaPanel\Support\Installer\PublishedAssets;
 use PandaPanel\Support\NavigationBuilder;
@@ -60,6 +63,11 @@ final class PandaPanelServiceProvider extends ServiceProvider
      * belongs to a panel route group: the first has to run for requests that
      * never reach a panel, and the second for redirects back out of one.
      *
+     * `RedirectPanelHome` sends a signed-in user who lands on the starter
+     * kit's `/dashboard` into the panel instead. It runs before the other two
+     * because a request it answers never reaches a panel screen, so there is
+     * nothing to share props for.
+     *
      * `SharePanelData` shares the props the panel's components are built from.
      * It belongs to the package rather than to the application's own
      * `HandleInertiaRequests`, because a prop added in a new version would
@@ -69,6 +77,7 @@ final class PandaPanelServiceProvider extends ServiceProvider
      */
     private const WEB_MIDDLEWARE = [
         ResetPanelContext::class,
+        RedirectPanelHome::class,
         ShareFlashToast::class,
         SharePanelData::class,
     ];
@@ -115,6 +124,7 @@ final class PandaPanelServiceProvider extends ServiceProvider
         $this->registerMiddleware();
         $this->registerGuestRedirect();
         $this->registerRoutes();
+        $this->registerIntegrations();
         $this->registerMigrations();
         $this->registerPublishing();
         $this->registerCommands();
@@ -171,6 +181,12 @@ final class PandaPanelServiceProvider extends ServiceProvider
                 $manager->registerProvider($provider);
             }
         }
+
+        // After every panel is registered, so the check sees all of their
+        // discovery paths. A no-op unless a manifest exists and this is a
+        // development environment — see `PanelManifest::warnIfStale()`.
+        $this->app->make(PanelManifest::class)
+            ->warnIfStale($this->app->make(PanelRegistry::class));
     }
 
     private function registerMiddleware(): void
@@ -229,6 +245,42 @@ final class PandaPanelServiceProvider extends ServiceProvider
         }
 
         $this->app->make(PanelRouteRegistrar::class)->registerAll();
+    }
+
+    /**
+     * Wires the model events every enabled resource fires its integrations on.
+     *
+     * At boot rather than in a page, because the point of hanging these off
+     * Eloquent is that a record written from a console command or a queued job
+     * fires them too — and neither of those has ever rendered a panel screen.
+     *
+     * A resource that has not opted in registers nothing at all, so the cost
+     * of this feature to everybody else is one method call per resource during
+     * boot.
+     */
+    private function registerIntegrations(): void
+    {
+        $manager = $this->app->make(PanelManager::class);
+
+        foreach ($manager->all() as $panel) {
+            $registry = $manager->resources($panel);
+
+            foreach ($registry->all() as $resource) {
+                /** @var class-string<Resources\Resource> $resource */
+                $settings = $resource::integrationSettings();
+
+                if (! $settings->enabled()) {
+                    continue;
+                }
+
+                IntegrationObserver::register(
+                    $resource::getModel(),
+                    $panel->getId(),
+                    $registry->slugFor($resource),
+                    $settings,
+                );
+            }
+        }
     }
 
     private function registerMigrations(): void

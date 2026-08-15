@@ -271,17 +271,18 @@ abstract class CreateRecord extends ResourcePage
         );
     }
 
+    protected function defaultTitle(?Model $record): string
+    {
+        return 'New '.static::$resource::label();
+    }
+
     /**
      * @return array<string, mixed>
      */
     protected function pageMetadata(): array
     {
-        $resource = static::$resource;
-
         return [
-            'title' => 'New '.$resource::label(),
-            'heading' => 'New '.$resource::label(),
-            'subheading' => null,
+            ...$this->headingMetadata(),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 ...$this->baseBreadcrumbs(),
                 Breadcrumb::make('New')->current(),

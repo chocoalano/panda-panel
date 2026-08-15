@@ -7,6 +7,7 @@ namespace PandaPanel\Actions\Exports;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use PandaPanel\Exceptions\PanelSchemaException;
 
 /**
  * One column of an export.
@@ -28,7 +29,12 @@ final class ExportColumn
 
     private bool $enabledByDefault = true;
 
-    public function __construct(private readonly string $name) {}
+    public function __construct(private readonly string $name)
+    {
+        if (trim($name) === '') {
+            throw PanelSchemaException::emptyName('export column');
+        }
+    }
 
     public static function make(string $name): self
     {

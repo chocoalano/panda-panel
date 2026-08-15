@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import EmptyState from '@/panel/components/EmptyState.vue';
+import DashboardGuide from '@/panel/components/DashboardGuide.vue';
 import PageHeader from '@/panel/components/PageHeader.vue';
 import type { FormDefinition } from '@/panel/types/form';
 import type { PageMetadata } from '@/panel/types/page';
 import type { WidgetData, WidgetDefinition } from '@/panel/types/widget';
 import WidgetFilters from '@/panel/widgets/WidgetFilters.vue';
 import WidgetGrid from '@/panel/widgets/WidgetGrid.vue';
+import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+
+defineOptions({ layout: PanelLayout });
 
 /**
  * `widgetData` is deferred: the prop is absent from the first response and
@@ -48,11 +51,12 @@ withDefaults(
             :reload-props="['widgets', 'widgetData']"
         />
 
-        <EmptyState
-            v-else
-            icon="chart-column"
-            heading="No widgets on this dashboard"
-            description="Register a widget with this panel and it will appear here."
-        />
+        <!--
+            Not an `EmptyState`: that component states a fact and offers a
+            slot, which is right for a filtered table and wrong for the first
+            screen of a new panel. See `DashboardGuide` for what this says
+            instead.
+        -->
+        <DashboardGuide v-else />
     </div>
 </template>

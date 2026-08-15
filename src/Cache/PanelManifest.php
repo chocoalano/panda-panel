@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PandaPanel\Cache;
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelRegistry;
 use PandaPanel\Discovery\PanelDiscoverer;
@@ -27,6 +28,9 @@ final class PanelManifest
     private ?array $panels = null;
 
     private bool $loaded = false;
+
+    /** What discovery looked like when the manifest was written, if recorded. */
+    private ?string $fingerprint = null;
 
     public function __construct(private readonly PanelDiscoverer $discoverer) {}
 
@@ -91,7 +95,13 @@ final class PanelManifest
 
         $temporary = self::path().'.'.getmypid().'.tmp';
 
-        File::put($temporary, $this->render($manifest));
+        File::put($temporary, $this->render([
+            'panels' => $manifest,
+            // What discovery would have found, so a later boot can notice
+            // that it would now find something else — see
+            // `DiscoveryFingerprint`.
+            'fingerprint' => DiscoveryFingerprint::of(array_values($registry->all())),
+        ]));
         File::move($temporary, self::path());
 
         $this->panels = $manifest;
@@ -125,7 +135,64 @@ final class PanelManifest
 
         $manifest = require self::path();
 
-        return $this->panels = is_array($manifest) ? $manifest : [];
+        if (! is_array($manifest)) {
+            return $this->panels = [];
+        }
+
+        // A manifest written before the fingerprint existed is a flat map of
+        // panel id to classes. Reading both shapes means an upgrade does not
+        // need a cache clear to boot.
+        if (isset($manifest['panels']) && is_array($manifest['panels'])) {
+            $this->fingerprint = is_string($manifest['fingerprint'] ?? null)
+                ? $manifest['fingerprint']
+                : null;
+
+            /** @var array<string, array{resources: list<string>, pages: list<string>, widgets: list<string>}> $panels */
+            $panels = $manifest['panels'];
+
+            return $this->panels = $panels;
+        }
+
+        /** @var array<string, array{resources: list<string>, pages: list<string>, widgets: list<string>}> $manifest */
+        return $this->panels = $manifest;
+    }
+
+    /**
+     * Says so when the manifest no longer matches what is on disk.
+     *
+     * Development only, and only when a manifest exists at all — which in
+     * development is the unusual case, so this normally costs nothing. When it
+     * does exist, the cost is a `stat` per PHP file under the discovery paths,
+     * against a failure whose symptom is a resource that is simply absent:
+     * no route, no sidebar entry, no error, and no way to guess that
+     * `panel:clear` is the answer.
+     */
+    public function warnIfStale(PanelRegistry $registry): void
+    {
+        if (! $this->exists()) {
+            return;
+        }
+
+        // Never in production, where the manifest is the authority and
+        // nothing should touch the filesystem. `testing` counts as
+        // development: a suite that caches panels and then adds a resource has
+        // exactly the problem this reports.
+        if (! app()->hasDebugModeEnabled() && ! app()->environment('local', 'testing')) {
+            return;
+        }
+
+        $this->load();
+
+        if (! DiscoveryFingerprint::isStale(array_values($registry->all()), $this->fingerprint)) {
+            return;
+        }
+
+        Log::warning(
+            '[panel] The cached panel manifest is out of date: the classes under the discovery '
+                .'paths have changed since `php artisan panel:cache` last ran. Until you run '
+                .'`php artisan panel:clear`, anything added since then is invisible — no route, '
+                .'no navigation entry, and no error to say so.'
+        );
     }
 
     /**
@@ -146,6 +213,9 @@ final class PanelManifest
      * `return [...]` that opcache can hold and a human can read.
      *
      * @param  array<string, array<string, list<string>>>  $manifest
+     */
+    /**
+     * @param  array{panels: array<string, array{resources: list<string>, pages: list<string>, widgets: list<string>}>, fingerprint: string}  $manifest
      */
     private function render(array $manifest): string
     {

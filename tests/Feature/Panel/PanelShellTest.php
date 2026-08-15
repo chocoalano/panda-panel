@@ -86,10 +86,10 @@ it('sends page metadata in the shape the layout reads', function (): void {
 
 it('keeps the starter kit shell on non-panel pages', function (): void {
     $this->actingAs(User::factory()->create())
-        ->get('/dashboard')
+        ->get('/')
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('Dashboard')
+            ->component('Welcome')
             ->where('panel', null)
         );
 });

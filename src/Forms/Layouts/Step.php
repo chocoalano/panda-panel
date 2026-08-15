@@ -7,6 +7,7 @@ namespace PandaPanel\Forms\Layouts;
 use Illuminate\Database\Eloquent\Model;
 use PandaPanel\Forms\Components\Field;
 use PandaPanel\Forms\Components\FormComponent;
+use PandaPanel\Support\ColumnCount;
 
 /**
  * One step of a wizard.
@@ -62,7 +63,7 @@ final class Step extends FormComponent
 
     public function columns(int $columns): self
     {
-        $this->columns = $columns;
+        $this->columns = ColumnCount::clamp($columns);
 
         return $this;
     }

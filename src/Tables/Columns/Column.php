@@ -9,8 +9,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use PandaPanel\Actions\Action;
+use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Tables\Columns\Concerns\HasRelationshipState;
 use PandaPanel\Tables\Enums\Alignment;
+use PandaPanel\Tables\Enums\ColumnPin;
 use PandaPanel\Tables\Enums\ColumnType;
 use PandaPanel\Tables\Enums\SortDirection;
 use PandaPanel\Tables\Summaries\Summarizer;
@@ -109,6 +111,12 @@ abstract class Column
      */
     protected ?string $width = null;
 
+    /**
+     * Which edge this column stays pinned to while the table scrolls
+     * sideways, or null for a column that scrolls with everything else.
+     */
+    protected ?ColumnPin $frozen = null;
+
     /** @var (Closure(Model): array<array-key, mixed>)|array<array-key, mixed> */
     protected Closure|array $extraAttributes = [];
 
@@ -127,7 +135,12 @@ abstract class Column
      */
     protected ?Action $action = null;
 
-    final public function __construct(protected readonly string $name) {}
+    final public function __construct(protected readonly string $name)
+    {
+        if (trim($name) === '') {
+            throw PanelSchemaException::emptyName('column');
+        }
+    }
 
     public static function make(string $name): static
     {
@@ -297,6 +310,45 @@ abstract class Column
         $this->width = $width;
 
         return $this;
+    }
+
+    /**
+     * Keeps this column in view while the rest of the table scrolls sideways.
+     *
+     * The reason a wide table is usable at all: without it, scrolling to
+     * column fourteen means scrolling the name that identifies the row off
+     * the screen, and every cell after that is a value with nothing attached
+     * to it.
+     *
+     * ```php
+     * TextColumn::make('name')->frozen(),                 // to the left edge
+     * TextColumn::make('total')->frozen(ColumnPin::End),  // to the right
+     * ```
+     *
+     * Freezing a column freezes everything structural on the same side of it
+     * — the reorder handle and the selection checkbox to the left, the row
+     * actions to the right if the table asked for those — because a frozen
+     * column with a scrolling checkbox beside it is two things that disagree
+     * about where the row starts.
+     *
+     * The offsets are worked out in the browser from the widths the columns
+     * actually take, so a frozen column does not have to declare a `width()`
+     * and one that is resized stays lined up.
+     */
+    public function frozen(ColumnPin|bool $pin = true): static
+    {
+        $this->frozen = match (true) {
+            $pin === false => null,
+            $pin === true => ColumnPin::Start,
+            default => $pin,
+        };
+
+        return $this;
+    }
+
+    public function getFrozen(): ?ColumnPin
+    {
+        return $this->frozen;
     }
 
     /**
@@ -569,6 +621,7 @@ abstract class Column
             'headerTooltip' => $this->headerTooltip,
             'wrapHeader' => $this->wrapHeader,
             'width' => $this->width,
+            'frozen' => $this->frozen?->value,
             ...$this->extraArray(),
         ];
     }

