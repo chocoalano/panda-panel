@@ -179,7 +179,7 @@ The one thing publishing the frontend has always cost: a package update cannot
 improve a file the application owns. There is now a way through it.
 
 ```bash
-composer update pandapanel/panda-panel
+composer update panda/panel
 php artisan panel:assets            # report
 php artisan panel:assets --update   # write the safe ones
 npm run build
@@ -189,7 +189,7 @@ npm run build
 have never edited. Anything you changed is left alone. Anything changed on
 *both* sides is reported by path and never written, because resolving that by
 guessing is how an upgrade eats somebody's work; diff those against
-`vendor/pandapanel/panda-panel`, merge by hand, then `--force`.
+`vendor/panda/panel`, merge by hand, then `--force`.
 
 **Coming from a version before this existed**, there is no
 `.panel-assets.json` yet, so the first run has no record to compare against.

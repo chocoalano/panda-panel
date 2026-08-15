@@ -48,6 +48,14 @@ const props = defineProps<{
      * one and cannot be edited into something else.
      */
     context?: Record<string, unknown>;
+    /**
+     * Pins the submit row to the bottom of the viewport.
+     *
+     * On for a full-page record form, where the form is long enough that the
+     * buttons would otherwise be a scroll away. Off inside a dialog, which
+     * has a footer of its own.
+     */
+    stickyActions?: boolean;
 }>();
 
 // Provided rather than passed down: a field can sit four layouts deep, and
@@ -439,7 +447,28 @@ const { hook } = usePanelStyling();
             @change="onChange"
         />
 
-        <div v-if="!wizard" class="flex items-center gap-2">
+        <!--
+            Sticky on a full-page form, in the flow everywhere else.
+
+            An ERP record form is long, and the buttons used to sit at the
+            very bottom of it: saving a forty-field form meant scrolling past
+            everything to reach Save, and reviewing a field after that meant
+            scrolling back. Pinned to the bottom of the viewport, Save is
+            wherever the user is.
+
+            Not the default, because this same renderer draws the form inside
+            an action dialog, where the dialog already owns its footer and a
+            second pinned bar inside it would be two.
+        -->
+        <div
+            v-if="!wizard"
+            class="flex items-center gap-2"
+            :class="
+                stickyActions
+                    ? 'panel-form-actions sticky bottom-0 z-10 -mx-1 border-t bg-background px-1 py-3'
+                    : ''
+            "
+        >
             <Button type="submit" :disabled="processing">
                 <Spinner v-if="processing" class="size-4" />
                 {{ label }}

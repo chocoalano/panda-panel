@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `pandapanel/panda-panel` are documented here.
+All notable changes to `panda-panel` are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -86,6 +86,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Clearing a table filter now clears it.** The server's rule is that the request wins whenever it
+  mentions a value — including saying it is empty — and that absence is the only case that falls
+  back to the session. The client broke that contract by *deleting* keys when clearing, so
+  "cleared" and "never mentioned" arrived as the same request and the session put the filter
+  straight back. Clearing the last filter, the "Clear filters" button, and clearing the search box
+  were all affected. The client now says `filters=` and `search=` out loud.
+- **A filter default could never be cleared.** `resolvedFilters()` re-applied a default whenever the
+  resolved map was empty, which is also what "the user just cleared everything" looks like. It now
+  distinguishes an empty map from an unspoken one, so a default fills genuine silence and nothing
+  else.
 - **Import column mapping past column Z.** The mapping select was built with `chr(65 + $index)`
   over `range(0, 25)`: correct for exactly twenty-six columns, and unfixable by hand after that —
   a spreadsheet with thirty columns had its last four unmappable, and index 26 would have rendered
@@ -141,6 +151,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The resource index is laid out as one object rather than five.** Tabs, the toolbar, the rows and
+  the pagination are joined into a single bordered surface divided by rules, instead of four blocks
+  floating in equal 24px gutters — which said they were four equally-related things and cost about
+  120px of nothing above the first row. The page heading is `text-xl` rather than `text-2xl`, and
+  the page rhythm is 16px. All of it buys rows on screen, which is what a dense screen is for.
+- **The selection bar and the form's save row are sticky.** Selecting a row used to insert a block
+  that pushed every row down, moving the checkbox out from under the pointer mid-selection; and on
+  a long form, Save was a scroll away from wherever you were. Both are now pinned to the bottom of
+  the viewport. This also required `overflow-x-clip` in place of `overflow-x-hidden` on the content
+  wrapper: `hidden` on one axis computes the other to `auto`, which makes that element a scroll
+  container and silently captures every `position: sticky` inside it. `StylingTest` guards it,
+  because that failure is invisible.
+- `DataTable` takes a `bordered` prop. True standalone — a relation table, a table widget — and
+  false on the resource index, where the surface around it is already the frame.
 - **PHP 8.2 is supported.** The floor was `^8.3` and nothing required it — no typed class
   constants, no `#[\Override]`, no 8.3 standard library. PHP 8.2 resolves through Laravel
   12, and CI runs that combination. Laravel 11 remains unsupported and cannot be

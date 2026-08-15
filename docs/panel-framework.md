@@ -1,6 +1,6 @@
 # Panel Framework
 
-The reference for `pandapanel/panda-panel`: Laravel owns registration,
+The reference for `panda-panel`: Laravel owns registration,
 routing, authorization, queries, validation, and metadata; Vue owns
 rendering. Inertia is the only bridge.
 

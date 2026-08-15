@@ -138,3 +138,45 @@ it('ships the theme and the hooks with every panel page', function (): void {
                 ->and($panel['cssHooks'])->toBe([]);
         });
 });
+
+/*
+ * Layout mechanics that fail quietly
+ */
+
+it('never puts a scroll container between the viewport and a sticky bar', function (): void {
+    // `overflow-x: hidden` computes the *other* axis to `auto`, which makes
+    // the element a scroll container — and a scroll container captures every
+    // `position: sticky` inside it, because sticky resolves against its
+    // nearest scrolling ancestor rather than against the viewport.
+    //
+    // The panel's selection bar and its form save row are both sticky, and
+    // both sit inside this element. Putting `overflow-x-hidden` back would
+    // not break a test, throw, or log anything: the bars would simply stop
+    // sticking, on a screen nobody re-checks. `overflow-x-clip` clips without
+    // scrolling, which is the whole reason it is spelled that way.
+    $layouts = [
+        'resources/js/panel/layouts/SidebarPanelLayout.vue',
+        'resources/js/panel/layouts/HeaderPanelLayout.vue',
+    ];
+
+    foreach ($layouts as $path) {
+        $markup = (string) file_get_contents(base_path($path));
+
+        // Comments stripped first: the reason this rule exists is written
+        // above the line it governs, and a check that read the explanation
+        // as a violation would fail on the very file that gets it right.
+        $markup = (string) preg_replace('/<!--.*?-->/s', '', $markup);
+
+        expect($markup)->not->toContain('overflow-x-hidden');
+    }
+});
+
+it('keeps the resource index sticky bars sticky', function (): void {
+    // The companion to the check above: if these stop being sticky the
+    // clipping rule is load-bearing for nothing, and somebody will "tidy" it
+    // back to `hidden`.
+    expect(file_get_contents(base_path('resources/js/panel/tables/DataTableBulkActions.vue')))
+        ->toContain('sticky bottom-4')
+        ->and(file_get_contents(base_path('resources/js/panel/forms/FormRenderer.vue')))
+        ->toContain('sticky bottom-0');
+});

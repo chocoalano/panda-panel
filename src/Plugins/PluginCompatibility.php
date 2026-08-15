@@ -40,7 +40,7 @@ use Throwable;
 final class PluginCompatibility
 {
     /** This package, as composer knows it. */
-    private const PACKAGE = 'pandapanel/panda-panel';
+    private const PACKAGE = 'panda-panel';
 
     /**
      * @param  string|null  $installed  the framework version to check against,

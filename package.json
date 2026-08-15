@@ -1,10 +1,10 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
-    "name": "@pandapanel/panda-panel",
+    "name": "@panda/panel",
     "version": "0.0.0",
     "private": true,
     "type": "module",
-    "description": "Development toolchain for the Vue frontend that ships with pandapanel/panda-panel. Not published to npm — the components are published into an application by vendor:publish.",
+    "description": "Development toolchain for the Vue frontend that ships with panda/panel. Not published to npm — the components are published into an application by vendor:publish.",
     "license": "MIT",
     "engines": {
         "node": ">=20.19"

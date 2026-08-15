@@ -41,7 +41,7 @@ const props = withDefaults(
 <template>
     <Head :title="page.title" />
 
-    <div class="flex max-w-3xl flex-col gap-6">
+    <div class="flex max-w-3xl flex-col gap-4">
         <PageHeader :heading="page.heading" :subheading="page.subheading" />
 
         <PageWidgets :widgets="headerWidgets" :widget-data="widgetData" />
@@ -59,6 +59,7 @@ const props = withDefaults(
                 props.canCreateAnother ? 'Create & create another' : undefined
             "
             :cancel-url="resource.indexUrl"
+            sticky-actions
         />
 
         <PageWidgets :widgets="footerWidgets" :widget-data="widgetData" />

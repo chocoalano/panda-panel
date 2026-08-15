@@ -323,9 +323,7 @@ const { hook } = usePanelStyling();
 </script>
 
 <template>
-    <div
-        :class="[bordered ? 'rounded-lg border' : '', hook('table')]"
-    >
+    <div :class="[bordered ? 'rounded-lg border' : '', hook('table')]">
         <Table>
             <TableHeader>
                 <TableRow>

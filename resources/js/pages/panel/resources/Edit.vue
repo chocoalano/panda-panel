@@ -71,6 +71,7 @@ withDefaults(
             method="put"
             submit-label="Save changes"
             :cancel-url="resource.indexUrl"
+            sticky-actions
         />
 
         <RelationManagerList

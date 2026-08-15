@@ -131,7 +131,7 @@ const headerActions = computed(() => [
 <template>
     <Head :title="page.title" />
 
-    <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-4">
         <PageHeader :heading="page.heading" :subheading="page.subheading">
             <template #actions>
                 <ActionButton
@@ -146,57 +146,88 @@ const headerActions = computed(() => [
 
         <PageWidgets :widgets="headerWidgets" :widget-data="widgetData" />
 
-        <DataTableTabs :tabs="tabs" @select="setTab" />
+        <!--
+            Tabs, controls, rows and paging are one object, so they are drawn
+            as one: a single bordered surface divided by rules rather than four
+            floating blocks separated by gutters.
 
-        <DataTableToolbar
-            :table="table"
-            :state="state"
-            @search="setSearch"
-            @filter="setFilter"
-            @filters="setFilters"
-            @run-action="runTable"
-            @clear="clearFilters"
+            The old layout gave all four the same 24px gap, which said they
+            were four equally-related things — and cost about 120px of nothing
+            above the first row. On an ERP screen, where the job of the page is
+            to show as many rows as will fit and make it obvious which controls
+            act on them, both halves of that are wrong.
+        -->
+        <section
+            class="panel-data-panel flex flex-col overflow-hidden rounded-lg border bg-card"
         >
-            <template #actions>
-                <DataTableColumnManager
-                    :table="table"
-                    :visible="state.columns.visible"
-                    :order="state.columns.order"
-                    @change="setColumns"
-                    @reset="resetColumns"
-                />
-            </template>
-        </DataTableToolbar>
+            <DataTableTabs :tabs="tabs" @select="setTab" />
 
+            <div class="border-b px-3 py-2.5">
+                <DataTableToolbar
+                    :table="table"
+                    :state="state"
+                    @search="setSearch"
+                    @filter="setFilter"
+                    @filters="setFilters"
+                    @run-action="runTable"
+                    @clear="clearFilters"
+                >
+                    <template #actions>
+                        <DataTableColumnManager
+                            :table="table"
+                            :visible="state.columns.visible"
+                            :order="state.columns.order"
+                            @change="setColumns"
+                            @reset="resetColumns"
+                        />
+                    </template>
+                </DataTableToolbar>
+            </div>
+
+            <!-- Borderless: the surface around it is already the frame. -->
+            <DataTable
+                ref="tableRef"
+                :table="table"
+                :rows="rows"
+                :state="state"
+                :summaries="summaries"
+                :group-summaries="groupSummaries"
+                :bordered="false"
+                @sort="setSort"
+                @column-search="setColumnSearch"
+                @selection-change="onSelectionChange"
+                @run-action="onRunAction"
+                @edit-cell="editCell"
+                @run-table-action="runTable"
+                @reorder="reorder"
+            />
+
+            <!--
+                The panel's footer. Muted, so the eye reads it as chrome
+                belonging to the rows above rather than as another control
+                block of its own.
+            -->
+            <div class="border-t bg-muted/30 px-3 py-2">
+                <DataTablePagination
+                    :pagination="pagination"
+                    :per-page-options="table.perPageOptions"
+                    @page="setPage"
+                    @per-page="setPerPage"
+                />
+            </div>
+        </section>
+
+        <!--
+            After the table in the document, so the tab order runs
+            controls → rows → actions-on-those-rows. It is positioned over the
+            page rather than in the flow, so selecting a row moves nothing.
+        -->
         <DataTableBulkActions
             :actions="table.bulkActions"
             :selected="selected"
             :processing="processing"
             @run="onRunBulk"
             @clear="clearSelection"
-        />
-
-        <DataTable
-            ref="tableRef"
-            :table="table"
-            :rows="rows"
-            :state="state"
-            :summaries="summaries"
-            :group-summaries="groupSummaries"
-            @sort="setSort"
-            @column-search="setColumnSearch"
-            @selection-change="onSelectionChange"
-            @run-action="onRunAction"
-            @edit-cell="editCell"
-            @run-table-action="runTable"
-            @reorder="reorder"
-        />
-
-        <DataTablePagination
-            :pagination="pagination"
-            :per-page-options="table.perPageOptions"
-            @page="setPage"
-            @per-page="setPerPage"
         />
 
         <ActionModal

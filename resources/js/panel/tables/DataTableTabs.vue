@@ -23,7 +23,7 @@ const emit = defineEmits<{
     <nav
         v-if="tabs.length > 0"
         aria-label="Filter"
-        class="flex items-center gap-1 border-b"
+        class="flex items-center gap-1 overflow-x-auto border-b px-3"
     >
         <button
             v-for="tab in tabs"

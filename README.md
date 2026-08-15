@@ -22,7 +22,7 @@ is in [docs/compatibility.md](docs/compatibility.md).
 ## Installation
 
 ```bash
-composer require pandapanel/panda-panel
+composer require panda/panel
 php artisan panel:install
 ```
 
@@ -152,7 +152,7 @@ npm run build
 | changed | changed | **conflict** | never written |
 
 A conflict is named by path and left exactly as it is. Diff it against
-`vendor/pandapanel/panda-panel`, merge by hand, then `--force`. Commit
+`vendor/panda/panel`, merge by hand, then `--force`. Commit
 `.panel-assets.json`: it is the record of what your application published, the same way
 `composer.lock` records what it installed.
 

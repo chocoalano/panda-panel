@@ -19,7 +19,7 @@ const isSide = computed(() => props.subNavigation.position !== 'top');
 </script>
 
 <template>
-    <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-4">
         <slot name="header" />
 
         <template v-if="!hasItems">

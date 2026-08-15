@@ -186,7 +186,7 @@ final class PanelAssetsCommand extends Command
         $this->components->warn(sprintf(
             '%d file(s) changed both here and upstream. Neither copy is safe to throw away, so '
             .'nothing was written. Diff each against the package copy under '
-            .'vendor/pandapanel/panda-panel, then re-run with --force once you have merged:',
+            .'vendor/panda/panel, then re-run with --force once you have merged:',
             count($conflicts),
         ));
         $this->newLine();

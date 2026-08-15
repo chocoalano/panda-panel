@@ -270,3 +270,14 @@ function demandingPlugin(string $constraint): Plugin
 it('lists what is registered, with versions', function (): void {
     $this->artisan('panel:plugins')->assertSuccessful();
 });
+
+it('looks up its own version under the name composer knows it by', function (): void {
+    $reflection = new ReflectionClass(PluginCompatibility::class);
+
+    // A rename that missed this constant would not fail anything: the lookup
+    // would simply never find a version, `installedVersion()` would answer
+    // null, and every `requiresPanel` constraint would be silently skipped
+    // for good. The check would still be there, and would never say no again.
+    expect($reflection->getConstant('PACKAGE'))
+        ->toBe(json_decode((string) file_get_contents(base_path('composer.json')), true)['name']);
+});

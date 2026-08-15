@@ -62,7 +62,19 @@ const cluster = computed(() => pageMetadata.value?.cluster ?? null);
              rather than hidden, so nothing is rendered and nothing is sent. -->
         <component :is="sidebar" v-if="shell.navigation" />
 
-        <AppContent variant="sidebar" class="overflow-x-hidden">
+        <!--
+            `overflow-x-clip`, not `overflow-x-hidden`.
+
+            Both stop a wide table from widening the page. But `hidden` on one
+            axis computes the other axis to `auto`, which makes this element a
+            scroll container — and a scroll container swallows every
+            `position: sticky` inside it, because sticky resolves against its
+            nearest scrolling ancestor rather than the viewport. That is why
+            the selection bar and the form's save row are sticky and *work*:
+            `clip` clips without scrolling, so the viewport stays the
+            reference.
+        -->
+        <AppContent variant="sidebar" class="overflow-x-clip">
             <PanelHeader v-if="shell.topbar" :breadcrumbs="breadcrumbs" />
             <!--
                 The dashboard block's content rhythm: a vertical gap that grows
