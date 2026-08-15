@@ -1,5 +1,5 @@
 {
-    "name": "panda/panel",
+    "name": "chocoalano/panel",
     "description": "An Inertia + Vue admin panel framework for Laravel: resources, tables, forms, infolists, widgets, actions and multi-panel routing.",
     "keywords": ["laravel", "panel", "admin", "inertia", "vue", "crud", "panda-panel"],
     "homepage": "https://github.com/chocoalano/panda-panel",
