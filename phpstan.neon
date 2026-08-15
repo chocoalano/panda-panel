@@ -1,0 +1,12 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    # Level 5 adds the "view-string" check, which cannot resolve namespaced
+    # package views (panda-panel::*) because the service provider never boots
+    # during analysis. Raise this once you only reference application views.
+    level: 4
+    paths:
+        - src
+        - database
+    tmpDir: build/phpstan

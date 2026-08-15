@@ -1,0 +1,215 @@
+<script setup lang="ts">
+import { Head } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import ActionButton from '@/panel/actions/ActionButton.vue';
+import ActionModal from '@/panel/actions/ActionModal.vue';
+import PageHeader from '@/panel/components/PageHeader.vue';
+import { useActions } from '@/panel/composables/useActions';
+import { useResource } from '@/panel/composables/useResource';
+import DataTable from '@/panel/tables/DataTable.vue';
+import DataTableBulkActions from '@/panel/tables/DataTableBulkActions.vue';
+import DataTableColumnManager from '@/panel/tables/DataTableColumnManager.vue';
+import DataTablePagination from '@/panel/tables/DataTablePagination.vue';
+import DataTableTabs from '@/panel/tables/DataTableTabs.vue';
+import DataTableToolbar from '@/panel/tables/DataTableToolbar.vue';
+import type { ActionDefinition, ActionEndpoints } from '@/panel/types/action';
+import type { PageMetadata } from '@/panel/types/page';
+import type {
+    PaginationMeta,
+    ResourceMeta,
+    TableDefinition,
+    TableRow,
+    TableState,
+    TableGroupSummaries,
+    TableSummaries,
+    TableTab,
+} from '@/panel/types/table';
+import type { WidgetData, WidgetDefinition } from '@/panel/types/widget';
+import PageWidgets from '@/panel/widgets/PageWidgets.vue';
+
+const props = withDefaults(
+    defineProps<{
+        page: PageMetadata;
+        resource: ResourceMeta;
+        table: TableDefinition;
+        state: TableState;
+        rows: TableRow[];
+        pagination: PaginationMeta;
+        /** Figures under the table; empty for one that declares none. */
+        summaries?: TableSummaries;
+        groupSummaries?: TableGroupSummaries;
+        actionEndpoints: ActionEndpoints;
+        /** Filter tabs; empty for a table that declares none. */
+        tabs?: TableTab[];
+        /** Placed by the page above and below its own content. */
+        headerWidgets?: WidgetDefinition[];
+        footerWidgets?: WidgetDefinition[];
+        /** Deferred: absent from the first response, so optional. */
+        widgetData?: WidgetData | null;
+    }>(),
+    {
+        summaries: () => ({}),
+        groupSummaries: () => ({}),
+        tabs: () => [],
+        headerWidgets: () => [],
+        footerWidgets: () => [],
+        widgetData: null,
+    },
+);
+
+/**
+ * The generic index page for every resource. It holds no table state of its
+ * own: every control writes to the URL and the server answers with the props
+ * above. The only local state is the current row selection, which is a
+ * client concern until a bulk action is actually run.
+ */
+const {
+    setSearch,
+    setSort,
+    setPage,
+    setPerPage,
+    setFilter,
+    setFilters,
+    setColumnSearch,
+    setColumns,
+    resetColumns,
+    setTab,
+    clearFilters,
+} = useResource(
+    () => props.resource,
+    () => props.state,
+);
+
+const {
+    pending,
+    processing,
+    formUrl,
+    formContext,
+    runRecord,
+    runBulk,
+    reorder,
+    editCell,
+    runTable,
+    confirm,
+    cancel,
+} = useActions(
+    () => props.resource.slug,
+    () => props.actionEndpoints,
+    () => props.resource.parentKey,
+);
+
+const selected = ref<Array<string | number>>([]);
+const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
+
+function onSelectionChange(keys: Array<string | number>): void {
+    selected.value = keys;
+}
+
+function onRunAction(action: ActionDefinition, record: string | number): void {
+    runRecord(action, record);
+}
+
+function onRunBulk(action: ActionDefinition): void {
+    runBulk(action, selected.value);
+}
+
+function clearSelection(): void {
+    tableRef.value?.clearSelection();
+    selected.value = [];
+}
+
+/**
+ * The page's own header actions plus whatever the table declared. Both are
+ * server-resolved and already authorized, so this only concatenates them.
+ */
+const headerActions = computed(() => [
+    ...(props.page.headerActions as ActionDefinition[]),
+    ...props.table.headerActions,
+]);
+</script>
+
+<template>
+    <Head :title="page.title" />
+
+    <div class="flex flex-col gap-6">
+        <PageHeader :heading="page.heading" :subheading="page.subheading">
+            <template #actions>
+                <ActionButton
+                    v-for="action in headerActions"
+                    :key="action.name"
+                    :action="action"
+                    size="default"
+                    @run="runTable"
+                />
+            </template>
+        </PageHeader>
+
+        <PageWidgets :widgets="headerWidgets" :widget-data="widgetData" />
+
+        <DataTableTabs :tabs="tabs" @select="setTab" />
+
+        <DataTableToolbar
+            :table="table"
+            :state="state"
+            @search="setSearch"
+            @filter="setFilter"
+            @filters="setFilters"
+            @run-action="runTable"
+            @clear="clearFilters"
+        >
+            <template #actions>
+                <DataTableColumnManager
+                    :table="table"
+                    :visible="state.columns.visible"
+                    :order="state.columns.order"
+                    @change="setColumns"
+                    @reset="resetColumns"
+                />
+            </template>
+        </DataTableToolbar>
+
+        <DataTableBulkActions
+            :actions="table.bulkActions"
+            :selected="selected"
+            :processing="processing"
+            @run="onRunBulk"
+            @clear="clearSelection"
+        />
+
+        <DataTable
+            ref="tableRef"
+            :table="table"
+            :rows="rows"
+            :state="state"
+            :summaries="summaries"
+            :group-summaries="groupSummaries"
+            @sort="setSort"
+            @column-search="setColumnSearch"
+            @selection-change="onSelectionChange"
+            @run-action="onRunAction"
+            @edit-cell="editCell"
+            @run-table-action="runTable"
+            @reorder="reorder"
+        />
+
+        <DataTablePagination
+            :pagination="pagination"
+            :per-page-options="table.perPageOptions"
+            @page="setPage"
+            @per-page="setPerPage"
+        />
+
+        <ActionModal
+            :action="pending?.action ?? null"
+            :processing="processing"
+            :form-url="formUrl"
+            :context="formContext"
+            @confirm="confirm"
+            @cancel="cancel"
+            @saved="cancel"
+            @run="runTable"
+        />
+
+        <PageWidgets :widgets="footerWidgets" :widget-data="widgetData" />
+    </div>
+</template>

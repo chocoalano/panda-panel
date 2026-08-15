@@ -1,0 +1,48 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "types": ["vite/client"],
+
+        "strict": true,
+        "noImplicitOverride": true,
+        "noUncheckedIndexedAccess": false,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "exactOptionalPropertyTypes": false,
+        "forceConsistentCasingInFileNames": true,
+
+        "jsx": "preserve",
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "isolatedModules": true,
+        "verbatimModuleSyntax": true,
+        "skipLibCheck": true,
+        "noEmit": true,
+
+        // `resources/js` first, then the host seam. Order is the whole point:
+        // a module the package ships resolves to the package's own file, and
+        // only the eighteen it genuinely does not ship fall through to the
+        // stand-ins in `frontend/host` — see that directory's README.
+        //
+        // `vite.config.ts` implements the same two-step resolution for the
+        // bundler, from this same list, so a build and a type-check never
+        // disagree about what `@/x` means.
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["resources/js/*", "frontend/host/*"]
+        }
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.d.ts",
+        "resources/js/**/*.vue",
+        "frontend/**/*.ts",
+        "frontend/**/*.vue",
+        "vite.config.ts"
+    ],
+    "exclude": ["node_modules", "build", "vendor"]
+}

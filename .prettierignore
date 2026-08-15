@@ -1,0 +1,12 @@
+build
+node_modules
+vendor
+bootstrap
+examples
+resources/views
+
+# Vendored from shadcn-vue, in that project's formatting rather than this
+# one's. Reformatting them would make every upstream update a merge conflict
+# over whitespace — and these are the files an application is most likely to
+# re-pull from shadcn-vue directly.
+resources/js/components/ui

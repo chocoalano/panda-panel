@@ -1,0 +1,36 @@
+* text=auto eol=lf
+
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+*.vue diff=html
+*.ts  diff=typescript
+
+# Kept out of the distributed package. `src`, `config`, `database`, `stubs`
+# and `resources` are what an application installs; everything else is how
+# this repository is developed.
+/.github            export-ignore
+/.ai                export-ignore
+/.claude            export-ignore
+/.codex             export-ignore
+/docs               export-ignore
+/examples           export-ignore
+/integration        export-ignore
+/tests              export-ignore
+/frontend           export-ignore
+/.editorconfig      export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/CHANGELOG.md       export-ignore
+/phpstan.neon       export-ignore
+/phpunit.xml        export-ignore
+/pint.json          export-ignore
+/package.json       export-ignore
+/package-lock.json  export-ignore
+/tsconfig.json      export-ignore
+/vite.config.ts     export-ignore
+/eslint.config.js   export-ignore
+/.prettierrc.json   export-ignore
+/.prettierignore    export-ignore

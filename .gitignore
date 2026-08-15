@@ -1,0 +1,27 @@
+/vendor
+/node_modules
+
+# Created by the test suite, which runs with this package as the application's
+# base path, and by `npm run build`. Nothing here is shipped;
+# `rm -rf build bootstrap resources/views` is a complete clean.
+/build
+/bootstrap
+/resources/views
+/.phpunit.cache
+.phpunit.result.cache
+composer.lock
+.DS_Store
+.idea
+.vscode
+.ai
+.claude
+.github
+.codex
+
+# Written by the generator test, which scaffolds into the example app.
+/examples/app/Panels/Testing
+
+# In an application this is a committed record of what was published. Here it
+# is test output: this repository is its own test application, so a suite that
+# exercises `panel:assets` writes one at the root.
+/.panel-assets.json
