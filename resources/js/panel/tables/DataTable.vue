@@ -235,22 +235,28 @@ const columnTerms = ref<Record<string, string>>({
     ...props.state.columnSearches,
 });
 
-watch(
-    () => props.state.columnSearches,
-    (value) => {
-        columnTerms.value = { ...value };
-    },
-);
-
 const emitColumnSearch = useDebounceFn(
     (name: string, term: string) => emit('columnSearch', name, term),
     computed(() => props.table.searchDebounce),
+);
+
+watch(
+    () => props.state.columnSearches,
+    (value) => {
+        emitColumnSearch.cancel();
+        columnTerms.value = { ...value };
+    },
 );
 
 function onColumnSearch(name: string, term: string): void {
     columnTerms.value = { ...columnTerms.value, [name]: term };
 
     emitColumnSearch(name, term);
+}
+
+function clearColumnSearches(): void {
+    emitColumnSearch.cancel();
+    columnTerms.value = {};
 }
 
 /**
@@ -415,7 +421,7 @@ function clearSelection(): void {
     emit('selectionChange', []);
 }
 
-defineExpose({ tableInstance, clearSelection });
+defineExpose({ tableInstance, clearSelection, clearColumnSearches });
 
 const { hook } = usePanelStyling();
 </script>

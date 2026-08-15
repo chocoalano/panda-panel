@@ -102,19 +102,37 @@ const debounceMs = computed(() => props.table.searchDebounce);
  */
 const term = ref(props.state.search ?? '');
 
-watch(
-    () => props.state.search,
-    (value) => {
-        term.value = value ?? '';
-    },
-);
-
 const emitSearch = useDebounceFn(
     (value: string) => emit('search', value),
     debounceMs,
 );
 
+let skipNextSearchEmit = false;
+
+function syncTerm(value: string): void {
+    if (term.value === value) {
+        return;
+    }
+
+    skipNextSearchEmit = true;
+    term.value = value;
+}
+
+watch(
+    () => props.state.search,
+    (value) => {
+        emitSearch.cancel();
+        syncTerm(value ?? '');
+    },
+);
+
 watch(term, (value) => {
+    if (skipNextSearchEmit) {
+        skipNextSearchEmit = false;
+
+        return;
+    }
+
     // On blur, typing changes nothing until focus leaves — so the watcher
     // that would ask on every keystroke must not run at all.
     if (!props.table.searchOnBlur) {
@@ -128,10 +146,19 @@ function onBlur(): void {
     }
 }
 
+function clearFilters(): void {
+    emitSearch.cancel();
+    pending.value = {};
+    syncTerm('');
+    emit('clear');
+}
+
 const hasActiveFilters = computed(
     () =>
         Object.keys(props.state.filters).length > 0 ||
         Object.keys(props.state.columnSearches).length > 0 ||
+        Object.keys(pending.value).length > 0 ||
+        term.value.trim() !== '' ||
         (props.state.search ?? '') !== '',
 );
 
@@ -168,7 +195,7 @@ const defaultSortLabel = computed(() =>
                 v-if="hasActiveFilters && behaviour.showReset"
                 variant="ghost"
                 size="sm"
-                @click="emit('clear')"
+                @click="clearFilters"
             >
                 <X />
                 {{ behaviour.resetLabel }}

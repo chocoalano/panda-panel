@@ -87,6 +87,11 @@ function clearSelection(): void {
     selected.value = [];
 }
 
+function clearTableFilters(): void {
+    tableRef.value?.clearColumnSearches();
+    clearFilters();
+}
+
 const headerActions = computed(() => props.relation.headerActions);
 </script>
 
@@ -115,7 +120,7 @@ const headerActions = computed(() => props.relation.headerActions);
                 @search="setSearch"
                 @filter="setFilter"
                 @filters="setFilters"
-                @clear="clearFilters"
+                @clear="clearTableFilters"
             >
                 <template #actions>
                     <DataTableColumnManager

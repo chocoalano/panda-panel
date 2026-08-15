@@ -121,6 +121,11 @@ function clearSelection(): void {
     selected.value = [];
 }
 
+function clearTableFilters(): void {
+    tableRef.value?.clearColumnSearches();
+    clearFilters();
+}
+
 /**
  * The page's own header actions plus whatever the table declared. Both are
  * server-resolved and already authorized, so this only concatenates them.
@@ -173,7 +178,7 @@ const headerActions = computed(() => [
                     @filter="setFilter"
                     @filters="setFilters"
                     @run-action="runTable"
-                    @clear="clearFilters"
+                    @clear="clearTableFilters"
                 >
                     <template #actions>
                         <DataTableColumnManager

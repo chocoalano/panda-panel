@@ -4,16 +4,14 @@ import { Bell } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { usePanel } from '@/panel/composables/usePanel';
 import { postJson } from '@/panel/forms/http';
 import { resolveIcon } from '@/panel/icons/registry';
@@ -209,34 +207,37 @@ async function run(
 </script>
 
 <template>
-    <Popover v-if="settings.enabled" v-model:open="open">
-        <Tooltip>
-            <TooltipTrigger as-child>
-                <PopoverTrigger as-child>
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        class="relative"
-                        aria-label="Notifications"
-                    >
-                        <Bell />
-                        <span
-                            v-if="count > 0"
-                            class="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-medium text-white"
-                        >
-                            {{ count > 99 ? '99+' : count }}
-                        </span>
-                    </Button>
-                </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-                {{ count > 0 ? `${count} unread` : 'Notifications' }}
-            </TooltipContent>
-        </Tooltip>
+    <Sheet v-if="settings.enabled" v-model:open="open">
+        <SheetTrigger as-child>
+            <Button
+                variant="ghost"
+                size="icon-sm"
+                class="relative"
+                :title="count > 0 ? `${count} unread` : 'Notifications'"
+                aria-label="Notifications"
+            >
+                <Bell />
+                <span
+                    v-if="count > 0"
+                    class="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-medium text-white"
+                >
+                    {{ count > 99 ? '99+' : count }}
+                </span>
+            </Button>
+        </SheetTrigger>
 
-        <PopoverContent align="end" class="w-96 p-0">
-            <div class="flex items-center justify-between border-b px-3 py-2">
-                <p class="text-sm font-medium">Notifications</p>
+        <SheetContent side="right" class="gap-0 p-0 sm:max-w-md">
+            <SheetHeader class="border-b px-4 py-3 pr-12">
+                <SheetTitle>Notifications</SheetTitle>
+                <SheetDescription>
+                    {{ count > 0 ? `${count} unread` : 'Notification center' }}
+                </SheetDescription>
+            </SheetHeader>
+
+            <div
+                v-if="count > 0 || items.length > 0"
+                class="flex items-center justify-end border-b px-3 py-2"
+            >
                 <div class="flex items-center gap-1">
                     <Button
                         v-if="count > 0"
@@ -259,7 +260,7 @@ async function run(
                 </div>
             </div>
 
-            <div class="max-h-96 overflow-y-auto">
+            <div class="min-h-0 flex-1 overflow-y-auto">
                 <div v-if="loading" class="flex justify-center py-8">
                     <Spinner class="size-5" />
                 </div>
@@ -337,6 +338,6 @@ async function run(
                     </li>
                 </ul>
             </div>
-        </PopoverContent>
-    </Popover>
+        </SheetContent>
+    </Sheet>
 </template>
