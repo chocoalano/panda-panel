@@ -17,6 +17,7 @@ composer.lock
 .claude
 .github
 .codex
+/UPDATE.md
 
 # Written by the generator test, which scaffolds into the example app.
 /examples/app/Panels/Testing
