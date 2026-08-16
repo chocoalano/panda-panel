@@ -236,14 +236,30 @@ Only the hook names the shell actually emits are accepted; `widget` is one of th
 
 `headerWidgets()` and `footerWidgets()` each render their own `WidgetGrid`, so the two groups do not share a row: a header widget spanning two columns and a footer widget spanning two do not sit beside each other. A page with no widgets in a group renders no markup for it at all.
 
+The standard resource pages read resource-level defaults first. `Resource::getWidgets()` appears above the index table, `Resource::getHeaderWidgets($page)` controls the header group for any page, and `Resource::getFooterWidgets($page)` controls the footer group.
+
 ```php
 use PandaPanel\Resources\Pages\ListRecords;
+use PandaPanel\Resources\Resource;
+use PandaPanel\Widgets\Widget;
+
+final class OrderResource extends Resource
+{
+    /** @return list<class-string<Widget>> */
+    public static function getWidgets(): array
+    {
+        return [OrderStats::class];
+    }
+}
 
 final class ListOrders extends ListRecords
 {
     public function headerWidgets(): array
     {
-        return [OrderStats::class];       // grid above the table
+        return [
+            ...parent::headerWidgets(),   // resource defaults
+            RevenueChart::class,
+        ];
     }
 
     public function footerWidgets(): array

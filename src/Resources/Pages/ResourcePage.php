@@ -21,6 +21,7 @@ use PandaPanel\Support\ClusterNavigation;
 use PandaPanel\Support\ParentRecord;
 use PandaPanel\Support\RecordSubNavigation;
 use PandaPanel\Widgets\PageContext;
+use PandaPanel\Widgets\Support\WidgetFilters;
 use PandaPanel\Widgets\Widget;
 
 /**
@@ -36,6 +37,15 @@ abstract class ResourcePage
 
     /** @var class-string<PanelResource> */
     protected static string $resource;
+
+    /**
+     * The key this page is known by in `Resource::pages()`.
+     *
+     * Standard pages override this where they need to. The base default is
+     * the index page because `ListRecords` is the only standard page that
+     * does not already need the key for form endpoints.
+     */
+    protected static string $page = 'index';
 
     /**
      * Whether this page's write runs in a transaction.
@@ -198,7 +208,7 @@ abstract class ResourcePage
      */
     public function headerWidgets(): array
     {
-        return [];
+        return static::$resource::getHeaderWidgets($this->widgetPageKey());
     }
 
     /**
@@ -206,7 +216,7 @@ abstract class ResourcePage
      */
     public function footerWidgets(): array
     {
-        return [];
+        return static::$resource::getFooterWidgets($this->widgetPageKey());
     }
 
     /**
@@ -221,14 +231,62 @@ abstract class ResourcePage
      */
     protected function widgetProps(?PageContext $context = null): array
     {
-        $header = WidgetCollection::for($this->headerWidgets(), $context);
-        $footer = WidgetCollection::for($this->footerWidgets(), $context);
+        $headerClasses = $this->headerWidgets();
+        $footerClasses = $this->footerWidgets();
+        $filters = $this->resolveWidgetFilters($context, $headerClasses, $footerClasses);
+
+        $header = WidgetCollection::for($headerClasses, $context, $filters);
+        $footer = WidgetCollection::for($footerClasses, $context, $filters);
 
         return [
             'headerWidgets' => $header->definitions(),
             'footerWidgets' => $footer->definitions(),
             'widgetData' => $header->merge($footer)->deferred(),
         ];
+    }
+
+    /**
+     * The page key used for resource-level widget selection.
+     */
+    protected function widgetPageKey(): string
+    {
+        return static::$page;
+    }
+
+    /**
+     * Widget filters are scoped to the exact resource page they belong to.
+     *
+     * A record page also includes the record key, so a filter chosen while
+     * viewing one record is never restored over another record.
+     *
+     * @param  list<class-string<Widget>>  $header
+     * @param  list<class-string<Widget>>  $footer
+     */
+    private function resolveWidgetFilters(?PageContext $context, array $header, array $footer): WidgetFilters
+    {
+        return WidgetFilters::fromRequest(
+            request(),
+            widgetSchemas: WidgetCollection::filterSchemas([...$header, ...$footer]),
+            sessionKey: $this->widgetFilterSessionKey($context),
+        );
+    }
+
+    protected function widgetFilterSessionKey(?PageContext $context = null): string
+    {
+        $key = sprintf(
+            'panel.%s.resource.%s.page.%s',
+            $this->panel()->getId(),
+            static::$resource::slug(),
+            $this->widgetPageKey(),
+        );
+
+        $record = $context?->record();
+
+        if ($record !== null) {
+            $key .= '.record.'.$record->getKey();
+        }
+
+        return $key;
     }
 
     /**

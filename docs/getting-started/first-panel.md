@@ -89,7 +89,7 @@ fully warm for request-scoped bindings.
 | --- | --- | --- |
 | `path` | `path(string $path): self` | The URL prefix, with leading and trailing slashes trimmed. Defaults to the panel id when never called. |
 | `name` | `name(string $name): self` | The panel's display name. Defaults to `Str::headline($id)`. |
-| `icon` | `icon(?string $icon): self` | A Lucide name from the build-time registry. Run `panel:icons` after adding one. |
+| `icon` | `icon(?string $icon, ?string $darkIcon = null): self` | A Lucide name from the build-time registry. Run `panel:icons` after adding one. |
 | `auth` | `auth(bool $verified = true): self` | Appends `auth` and — unless `verified: false` — `verified` to the panel's auth middleware. |
 | `discoverResources` | `discoverResources(string ...$paths): self` | Directories to scan for `Resource` subclasses. Accumulates. |
 | `discoverPages` | `discoverPages(string ...$paths): self` | Same, for `Page` subclasses. |

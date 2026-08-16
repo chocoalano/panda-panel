@@ -85,6 +85,7 @@ Three places, and the difference between them is what the widget is handed.
 use PandaPanel\Pages\Dashboard;
 use PandaPanel\Pages\Page;
 use PandaPanel\Resources\Pages\ListRecords;
+use PandaPanel\Resources\Resource;
 use PandaPanel\Widgets\Widget;
 
 // 1. The panel dashboard: every widget in the panel's registry.
@@ -115,9 +116,20 @@ final class ListOrders extends ListRecords
         return [];
     }
 }
+
+// Or declare resource-wide widgets once. The standard index page places
+// getWidgets() in its header; individual pages can still override.
+final class OrderResource extends Resource
+{
+    /** @return list<class-string<Widget>> */
+    public static function getWidgets(): array
+    {
+        return [OrderStats::class];
+    }
+}
 ```
 
-A dashboard or standalone page gives its widgets **filters** but no page context. A resource page gives its widgets **page context** but no filters — see [Filters](filters.md) and the notes below.
+A dashboard or standalone page gives its widgets **filters** but no page context. A resource page gives its widgets **page context** and widget-level filters — see [Filters](filters.md) and the notes below.
 
 ## Registering widgets
 
@@ -322,7 +334,8 @@ final class SelectionSummary extends StatsWidget
 ## Gotchas
 
 - `canView()` is static and takes no arguments. It runs before the widget exists, so it cannot see the page's record. Per-record hiding has to happen inside `data()`, or by not naming the widget in `headerWidgets()`.
-- Filters are resolved by `Page`, not by `ResourcePage`. A widget with a `filterSchema()` placed in `headerWidgets()` will render its controls, but nothing reads the values back — `$this->filter()` returns the default every time.
+- `Resource::getWidgets()` is an index-page convenience. Use `getHeaderWidgets(string $page)` or `getFooterWidgets(string $page)` on the resource when view, edit or relation pages need their own widgets.
+- Resource widget filters are remembered per panel, resource, page and record. A filter chosen while viewing one record is not restored over another.
 - Widget data is never cached by `panel:cache`. The manifest caches class names; counts, rows and series are computed per request.
 - `widgetData` is *absent* from the first response rather than null, because it is a deferred prop. A Vue component reading it must declare it optional.
 - Two widgets whose class basenames kebab-case to the same string cannot live in one panel. `App\Panels\Admin\Widgets\UserStats` and `App\Panels\Admin\Reports\UserStats` are both `user-stats`, and registering the second throws.

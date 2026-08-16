@@ -251,17 +251,38 @@ Every page of a resource shares its scope, so a hook scoped to `resource:posts` 
 
 ## Page widgets
 
-Any resource page may place widgets above or below its content.
+Any resource may declare widgets once, and any resource page may place widgets above or below its own content.
 
 ```php
+use PandaPanel\Resources\Resource;
 use PandaPanel\Widgets\Widget;
+
+final class PostResource extends Resource
+{
+    /** @return list<class-string<Widget>> */
+    public static function getWidgets(): array
+    {
+        return [PostsThisWeek::class];   // header of the index page
+    }
+
+    /** @return list<class-string<Widget>> */
+    public static function getHeaderWidgets(string $page): array
+    {
+        return $page === 'view'
+            ? [PostEngagement::class]
+            : parent::getHeaderWidgets($page);
+    }
+}
 
 /**
  * @return list<class-string<Widget>>
  */
 public function headerWidgets(): array
 {
-    return [PostsThisWeek::class];
+    return [
+        ...parent::headerWidgets(),
+        DraftWarnings::class,
+    ];
 }
 
 /**
@@ -273,7 +294,9 @@ public function footerWidgets(): array
 }
 ```
 
-Both return `[]` by default. The page turns them into props with one call:
+`Resource::getWidgets()` is an index-page shortcut. `Resource::getHeaderWidgets($page)` and `Resource::getFooterWidgets($page)` default to that behavior and `[]`, respectively. Page methods can override or merge with `parent::headerWidgets()` and `parent::footerWidgets()`.
+
+The page turns them into props with one call:
 
 ```php
 use PandaPanel\Widgets\PageContext;

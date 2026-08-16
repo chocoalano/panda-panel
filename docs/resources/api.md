@@ -95,6 +95,9 @@ public static function relationManagers(): array;                            // 
 public static function relationManager(string $key): ?string;                // class-string<RelationManager>|null
 public static function integrations(Integrations $integrations): Integrations;
 public static function integrationSettings(): Integrations;                  // resolved once per class per request
+public static function getWidgets(): array;                                  // list<class-string<Widget>>, empty
+public static function getHeaderWidgets(string $page): array;                 // index gets getWidgets()
+public static function getFooterWidgets(string $page): array;                 // empty
 ```
 
 `relationManager()` throws `PanelRegistrationException` when two managers answer to one key: the endpoint's answer would otherwise depend on declaration order.
@@ -269,6 +272,8 @@ public static function resource(): string;                          // class-str
 public function headerWidgets(): array;                             // list<class-string<Widget>>
 public function footerWidgets(): array;
 protected function widgetProps(?PageContext $context = null): array;
+protected function widgetPageKey(): string;
+protected function widgetFilterSessionKey(?PageContext $context = null): string;
 
 protected function fillForm(FormSchema $schema, ?Model $record = null): array;
 protected function validateStepFor(Request $r, FormSchema $s, ?Model $record = null): JsonResponse;

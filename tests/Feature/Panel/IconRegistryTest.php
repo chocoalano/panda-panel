@@ -47,6 +47,7 @@ function requestedIconNames(): array
 
     foreach ($manager->all() as $panel) {
         $names[] = $panel->getIcon();
+        $names[] = $panel->getDarkIcon();
 
         foreach ($builder->for($panel, '/'.$panel->getPath()) as $group) {
             foreach ($group['items'] as $item) {

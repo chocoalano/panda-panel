@@ -95,7 +95,7 @@ Grouped by what they configure. Every one is documented with its default in [Pan
 | Landing page | `dashboard`, `dashboards` | `getDashboard`, `getExtraDashboards` |
 | Navigation | `navigationGroups`, `navigation`, `topbar`, `breadcrumbs`, `userMenuItems` | `getNavigationGroups`, `getNavigationGroupParents`, `hasNavigation`, `hasTopbar`, `hasBreadcrumbs`, `getUserMenuItems` |
 | Shell | `sidebar`, `topNavigation`, `sidebarWidth`, `collapsedSidebarWidth`, `sidebarComponent`, `topbarComponent`, `maxContentWidth` | `getSidebar`, `getShell`, `getMaxContentWidth` |
-| Branding | `brandName`, `brandLogo`, `icon`, `favicon`, `darkMode`, `colors`, `cssHooks` | `getBrandName`, `getBrandLogo`, `getIcon`, `getFavicon`, `hasDarkMode`, `getTheme`, `getCssHooks` |
+| Branding | `brandName`, `brandLogo`, `darkBrandLogo`, `icon`, `darkIcon`, `favicon`, `darkFavicon`, `darkMode`, `colors`, `cssHooks` | `getBrandName`, `getBrandLogo`, `getDarkBrandLogo`, `getIcon`, `getDarkIcon`, `getFavicon`, `getDarkFavicon`, `hasDarkMode`, `getTheme`, `getCssHooks` |
 | Behaviour | `databaseTransactions`, `strictAuthorization`, `unsavedChangesAlerts`, `settings`, `bootUsing`, `configureActions` | `hasDatabaseTransactions`, `hasStrictAuthorization`, `hasUnsavedChangesAlerts`, `hasSettings`, `getBootCallbacks`, `actionConfigurator` |
 | Navigation behaviour | `prefetch`, `fullPageUrls`, `errorNotification`, `hideErrorNotification` | `getPrefetch`, `getFullPageUrls`, `isFullPageUrl`, `getErrorNotifications` |
 | Search and realtime | `globalSearch`, `broadcasting`, `notifications` | `hasGlobalSearch`, `getGlobalSearchLimit`, `getGlobalSearchDebounce`, `getGlobalSearchKeyBindings`, `hasBroadcasting`, `getBroadcastChannel`, `hasNotifications` |
@@ -163,7 +163,7 @@ $panel->bootUsing(function (Panel $panel): void {
 public function toSharedArray(): array;
 ```
 
-The `panel` prop. Keys: `id`, `name`, `path`, `brandName`, `brandLogo`, `icon`, `favicon`, `darkMode`, `maxContentWidth`, `unsavedChangesAlerts`, `prefetch`, `errorNotifications`, `renderHooks`, `sidebar`, `shell`, `theme`, `cssHooks`. Middleware, discovery paths, transactions, and strict authorization are deliberately absent: they are server concerns and never cross.
+The `panel` prop. Keys: `id`, `name`, `path`, `brandName`, `brandLogo`, `darkBrandLogo`, `icon`, `darkIcon`, `favicon`, `darkFavicon`, `darkMode`, `maxContentWidth`, `unsavedChangesAlerts`, `prefetch`, `errorNotifications`, `renderHooks`, `sidebar`, `shell`, `theme`, `cssHooks`. Middleware, discovery paths, transactions, and strict authorization are deliberately absent: they are server concerns and never cross.
 
 ## `PanelProvider`
 

@@ -40,7 +40,7 @@ class.
 | Access | `middleware`, `authMiddleware`, `auth`, `canAccess`, `requireTwoFactor` |
 | Front door | `login`, `registration`, `passwordReset`, `emailVerification` |
 | Registration | `resources`, `pages`, `widgets`, `discoverResources`, `discoverPages`, `discoverWidgets` |
-| Presentation | `navigationGroups`, `brandName`, `brandLogo`, `icon`, `favicon`, `darkMode`, `colors`, `cssHooks`, `maxContentWidth` |
+| Presentation | `navigationGroups`, `brandName`, `brandLogo`, `darkBrandLogo`, `icon`, `darkIcon`, `favicon`, `darkFavicon`, `darkMode`, `colors`, `cssHooks`, `maxContentWidth` |
 | Shell | `sidebar`, `topNavigation`, `sidebarWidth`, `collapsedSidebarWidth`, `navigation`, `topbar`, `breadcrumbs`, `sidebarComponent`, `topbarComponent`, `userMenuItems` |
 | Landing page | `dashboard`, `dashboards` |
 | Built-ins | `settings`, `notifications`, `broadcasting`, `globalSearch` |

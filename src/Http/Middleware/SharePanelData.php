@@ -263,6 +263,7 @@ final class SharePanelData
                 'brandName' => $panel->getBrandName(),
                 'path' => '/'.$panel->getPath(),
                 'icon' => $panel->getIcon(),
+                'darkIcon' => $panel->getDarkIcon(),
                 'url' => route($panel->routeName('dashboard'), absolute: false),
                 'current' => $panel->getId() === $current->getId(),
             ],

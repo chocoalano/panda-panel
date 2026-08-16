@@ -12,8 +12,11 @@ export interface PanelDefinition {
     path: string;
     brandName: string;
     brandLogo: string | null;
+    darkBrandLogo: string | null;
     icon: string | null;
+    darkIcon: string | null;
     favicon: string | null;
+    darkFavicon: string | null;
     darkMode: boolean;
     maxContentWidth: string | null;
     /** Server-side settings stay on the server; only these are acted on here. */
@@ -125,6 +128,7 @@ export interface PanelSummary {
     brandName: string;
     path: string;
     icon: string | null;
+    darkIcon: string | null;
     url: string;
     current: boolean;
 }

@@ -149,7 +149,7 @@ setter/getter returning `string|static` is exactly the kind of magic this framew
 | Built-ins | `settings` | on — profile, security and appearance pages |
 | Landing | `dashboard`, `dashboards` | `PandaPanel\Pages\Dashboard` |
 | Shell | `sidebar`, `topNavigation`, `sidebarWidth`, `collapsedSidebarWidth`, `navigation`, `topbar`, `breadcrumbs`, `maxContentWidth` | collapsible sidebar, `inset` appearance, `16rem` / `3rem`, all three shell parts on, no max width |
-| Branding | `brandName`, `brandLogo`, `icon`, `favicon`, `darkMode`, `colors`, `cssHooks` | brand name is `config('app.name')`, dark mode on |
+| Branding | `brandName`, `brandLogo`, `darkBrandLogo`, `icon`, `darkIcon`, `favicon`, `darkFavicon`, `darkMode`, `colors`, `cssHooks` | brand name is `config('app.name')`, dark mode on |
 | Behaviour | `databaseTransactions`, `strictAuthorization`, `unsavedChangesAlerts`, `bootUsing` | transactions on, strict authorization off, alerts on |
 | Navigation behaviour | `prefetch`, `fullPageUrls`, `errorNotification`, `hideErrorNotification` | prefetch `'hover'`, no full-page URLs, six default error notifications |
 | Search | `globalSearch` | enabled, limit 50, debounce 300ms, `['mod+k']` |

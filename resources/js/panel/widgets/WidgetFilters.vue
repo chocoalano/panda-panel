@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
+import { SlidersHorizontal } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -106,7 +107,8 @@ function onChange(name: string, value: FormValue): void {
     </div>
 
     <template v-else>
-        <Button variant="outline" size="sm" @click="open = true">
+        <Button variant="outline" size="sm" class="gap-2" @click="open = true">
+            <SlidersHorizontal class="size-4" />
             Filters
         </Button>
 

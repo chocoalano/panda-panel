@@ -920,6 +920,12 @@ A page renders `widgets`, `widgetData` and `filters` props.
 ### On a resource page
 
 ```php
+// On the resource.
+public static function getWidgets(): array
+public static function getHeaderWidgets(string $page): array
+public static function getFooterWidgets(string $page): array
+
+// On an individual page.
 /** @return list<class-string<Widget>> */
 public function headerWidgets(): array
 
@@ -932,20 +938,32 @@ protected function widgetProps(?PageContext $context = null): array
 
 ```php
 use PandaPanel\Resources\Pages\ListRecords;
+use PandaPanel\Resources\Resource;
 use PandaPanel\Widgets\Widget;
+
+final class OrderResource extends Resource
+{
+    /** @return list<class-string<Widget>> */
+    public static function getWidgets(): array
+    {
+        return [OrderStats::class];
+    }
+}
 
 final class ListOrders extends ListRecords
 {
     /** @return list<class-string<Widget>> */
     public function headerWidgets(): array
     {
-        return [OrderStats::class];
+        return [...parent::headerWidgets(), RevenueChart::class];
     }
 }
 ```
 
 `widgetProps()` ships `headerWidgets`, `footerWidgets` and one shared
-`widgetData` deferred prop covering both.
+`widgetData` deferred prop covering both. Resource page widget filters are
+resolved from `widgets[{id}]` and remembered per panel, resource, page and
+record key.
 
 ### Discovery
 

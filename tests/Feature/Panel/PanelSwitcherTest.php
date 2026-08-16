@@ -59,8 +59,9 @@ it('serializes only what the switcher renders', function (): void {
             $entry = $page->toArray()['props']['panels'][0];
 
             expect(array_keys($entry))
-                ->toBe(['id', 'name', 'brandName', 'path', 'icon', 'url', 'current'])
+                ->toBe(['id', 'name', 'brandName', 'path', 'icon', 'darkIcon', 'url', 'current'])
                 ->and($entry['icon'])->toBe('shield')
+                ->and($entry['darkIcon'])->toBeNull()
                 ->and($entry['path'])->toBe('/admin')
                 ->and($entry['name'])->toBe('Administrator');
         });

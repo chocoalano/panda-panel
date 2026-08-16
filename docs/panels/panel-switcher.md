@@ -64,6 +64,7 @@ never builds it.
 | `brandName` | `string` | `Panel::getBrandName()` — `brandName()`, or `config('app.name')` |
 | `path` | `string` | `'/'.Panel::getPath()` — `path()`, or the id |
 | `icon` | `string\|null` | `Panel::getIcon()`, an icon registry key |
+| `darkIcon` | `string\|null` | `Panel::getDarkIcon()`, used in dark mode when present |
 | `url` | `string` | `route($panel->routeName('dashboard'), absolute: false)` |
 | `current` | `bool` | Whether this is the panel the request is in |
 
@@ -80,7 +81,7 @@ $this->actingAs($admin)
 
 Nothing else about a panel crosses in this prop. `brandLogo`, middleware,
 discovery paths and boot callbacks stay on the server; the switcher renders a
-name, a brand, a path and an icon, so that is what it is sent.
+name, a brand, a path and an icon pair, so that is what it is sent.
 
 ## Who sees which entry
 
@@ -148,13 +149,15 @@ $panel
     ->name('Administrator')      // "Administrator"
     ->brandName('Acme')          // "Acme · /admin"
     ->path('admin')
-    ->icon('shield');
+    ->icon('sun', darkIcon: 'moon');
 ```
 
 The icon is a registry key, never a component or a path. Names resolve through
 `resources/js/panel/icons/registry.ts` and nothing else, so a name that is not
 a key there renders no icon at all — silently, because a decorative icon must
-not be able to break a header. The registry is generated:
+not be able to break a header. `darkIcon` is used only when the resolved
+appearance is dark; otherwise the switcher falls back to `icon`. The registry
+is generated:
 
 ```bash
 php artisan panel:icons          # rewrite it from the names the PHP declares
@@ -311,7 +314,7 @@ redirect to itself.
   which is not where that panel is served. Cross-domain switching needs a
   replacement bar that builds the absolute URL itself.
 - `brandLogo` is shared with the panel shell but is not part of a switcher
-  entry. The badge draws `icon` and nothing else.
+  entry. The badge draws `icon` or `darkIcon` and nothing else.
 - The tenant switcher beside it is a different control with different rules —
   see [Tenant Switcher](../tenancy/switcher.md).
 - The behaviour above is pinned by `tests/Feature/Panel/PanelSwitcherTest.php`,

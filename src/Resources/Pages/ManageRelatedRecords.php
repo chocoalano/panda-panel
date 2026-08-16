@@ -128,4 +128,9 @@ abstract class ManageRelatedRecords extends ResourcePage
     {
         return static::$relationManager::key();
     }
+
+    protected function widgetPageKey(): string
+    {
+        return 'relation:'.static::relationPageKey();
+    }
 }

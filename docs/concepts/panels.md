@@ -221,9 +221,9 @@ in navigation, and carries its own filters.
 ```php
 $panel
     ->brandName('Acme Admin')
-    ->brandLogo('/images/logo.svg')
-    ->icon('shield')
-    ->favicon('/favicon-admin.ico')
+    ->brandLogo('/images/logo-light.svg', '/images/logo-dark.svg')
+    ->icon('sun', darkIcon: 'moon')
+    ->favicon('/favicon-light.ico', '/favicon-dark.ico')
     ->darkMode()
     ->maxContentWidth('7xl');
 ```
@@ -231,9 +231,12 @@ $panel
 | Method | Signature | Default |
 | --- | --- | --- |
 | `brandName` | `brandName(string $brandName): self` | `config('app.name')` |
-| `brandLogo` | `brandLogo(?string $brandLogo): self` | `null` |
-| `icon` | `icon(?string $icon): self` | `null` — an icon registry key, never a path |
-| `favicon` | `favicon(?string $favicon): self` | `null` |
+| `brandLogo` | `brandLogo(?string $brandLogo, ?string $darkBrandLogo = null): self` | `null` |
+| `darkBrandLogo` | `darkBrandLogo(?string $brandLogo): self` | `null` |
+| `icon` | `icon(?string $icon, ?string $darkIcon = null): self` | `null` — an icon registry key, never a path |
+| `darkIcon` | `darkIcon(?string $icon): self` | `null` |
+| `favicon` | `favicon(?string $favicon, ?string $darkFavicon = null): self` | `null` |
+| `darkFavicon` | `darkFavicon(?string $favicon): self` | `null` |
 | `darkMode` | `darkMode(bool $darkMode = true): self` | `true` |
 | `maxContentWidth` | `maxContentWidth(?string $maxContentWidth): self` | `null` |
 
@@ -542,8 +545,8 @@ pages and nowhere else. The list never crosses to the frontend — see
 $panel->toSharedArray();
 ```
 
-Returns `id`, `name`, `path`, `brandName`, `brandLogo`, `icon`, `favicon`,
-`darkMode`, `maxContentWidth`, `unsavedChangesAlerts`, `prefetch`,
+Returns `id`, `name`, `path`, `brandName`, `brandLogo`, `darkBrandLogo`,
+`icon`, `darkIcon`, `favicon`, `darkFavicon`, `darkMode`, `maxContentWidth`, `unsavedChangesAlerts`, `prefetch`,
 `errorNotifications`, `renderHooks`, `sidebar`, `shell`, `theme`, and
 `cssHooks`. Nothing else: transactions, strict authorization, boot callbacks,
 middleware, discovery paths, and the asset list are server concerns and stay

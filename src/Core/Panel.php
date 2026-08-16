@@ -116,9 +116,15 @@ final class Panel implements PanelContract
 
     private ?string $brandLogo = null;
 
+    private ?string $darkBrandLogo = null;
+
     private ?string $favicon = null;
 
+    private ?string $darkFavicon = null;
+
     private ?string $icon = null;
+
+    private ?string $darkIcon = null;
 
     private bool $darkMode = true;
 
@@ -552,9 +558,20 @@ final class Panel implements PanelContract
         return $this;
     }
 
-    public function brandLogo(?string $brandLogo): self
+    public function brandLogo(?string $brandLogo, ?string $darkBrandLogo = null): self
     {
         $this->brandLogo = $brandLogo;
+
+        if ($darkBrandLogo !== null) {
+            $this->darkBrandLogo = $darkBrandLogo;
+        }
+
+        return $this;
+    }
+
+    public function darkBrandLogo(?string $brandLogo): self
+    {
+        $this->darkBrandLogo = $brandLogo;
 
         return $this;
     }
@@ -616,9 +633,20 @@ final class Panel implements PanelContract
         return $this->cssHooks->toArray();
     }
 
-    public function favicon(?string $favicon): self
+    public function favicon(?string $favicon, ?string $darkFavicon = null): self
     {
         $this->favicon = $favicon;
+
+        if ($darkFavicon !== null) {
+            $this->darkFavicon = $darkFavicon;
+        }
+
+        return $this;
+    }
+
+    public function darkFavicon(?string $favicon): self
+    {
+        $this->darkFavicon = $favicon;
 
         return $this;
     }
@@ -626,9 +654,20 @@ final class Panel implements PanelContract
     /**
      * An icon registry key, never a component class or path.
      */
-    public function icon(?string $icon): self
+    public function icon(?string $icon, ?string $darkIcon = null): self
     {
         $this->icon = $icon;
+
+        if ($darkIcon !== null) {
+            $this->darkIcon = $darkIcon;
+        }
+
+        return $this;
+    }
+
+    public function darkIcon(?string $icon): self
+    {
+        $this->darkIcon = $icon;
 
         return $this;
     }
@@ -1604,14 +1643,29 @@ final class Panel implements PanelContract
         return $this->brandLogo;
     }
 
+    public function getDarkBrandLogo(): ?string
+    {
+        return $this->darkBrandLogo;
+    }
+
     public function getFavicon(): ?string
     {
         return $this->favicon;
     }
 
+    public function getDarkFavicon(): ?string
+    {
+        return $this->darkFavicon;
+    }
+
     public function getIcon(): ?string
     {
         return $this->icon;
+    }
+
+    public function getDarkIcon(): ?string
+    {
+        return $this->darkIcon;
     }
 
     public function hasDarkMode(): bool
@@ -1700,7 +1754,7 @@ final class Panel implements PanelContract
      * The panel props shared with Inertia. Nothing here may leak a closure,
      * middleware internals, or discovery paths.
      *
-     * @return array{id: string, name: string, path: string, brandName: string, brandLogo: string|null, icon: string|null, favicon: string|null, darkMode: bool, maxContentWidth: string|null, unsavedChangesAlerts: bool, prefetch: 'hover'|'mount'|'click'|null, errorNotifications: array<int, array{title: string, body: string|null}|null>, renderHooks: array<string, list<array{component: string, data: array<string, mixed>, scopes: list<string>}>>, sidebar: array<string, mixed>, shell: array<string, mixed>, theme: array{light: array<string, string>, dark: array<string, string>}, cssHooks: array<string, string>}
+     * @return array{id: string, name: string, path: string, brandName: string, brandLogo: string|null, darkBrandLogo: string|null, icon: string|null, darkIcon: string|null, favicon: string|null, darkFavicon: string|null, darkMode: bool, maxContentWidth: string|null, unsavedChangesAlerts: bool, prefetch: 'hover'|'mount'|'click'|null, errorNotifications: array<int, array{title: string, body: string|null}|null>, renderHooks: array<string, list<array{component: string, data: array<string, mixed>, scopes: list<string>}>>, sidebar: array<string, mixed>, shell: array<string, mixed>, theme: array{light: array<string, string>, dark: array<string, string>}, cssHooks: array<string, string>}
      */
     public function toSharedArray(): array
     {
@@ -1710,8 +1764,11 @@ final class Panel implements PanelContract
             'path' => $this->getPath(),
             'brandName' => $this->getBrandName(),
             'brandLogo' => $this->getBrandLogo(),
+            'darkBrandLogo' => $this->getDarkBrandLogo(),
             'icon' => $this->getIcon(),
+            'darkIcon' => $this->getDarkIcon(),
             'favicon' => $this->getFavicon(),
+            'darkFavicon' => $this->getDarkFavicon(),
             'darkMode' => $this->hasDarkMode(),
             'maxContentWidth' => $this->getMaxContentWidth(),
             // Only the settings the frontend acts on cross the wire.

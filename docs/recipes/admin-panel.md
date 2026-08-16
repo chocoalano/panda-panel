@@ -100,9 +100,9 @@ Readers are prefixed `get`: `getId()`, `getPath()`, `getName()`, `getDomain()`. 
 
 ```php
 public function brandName(string $brandName): self
-public function brandLogo(?string $brandLogo): self
-public function icon(?string $icon): self
-public function favicon(?string $favicon): self
+public function brandLogo(?string $brandLogo, ?string $darkBrandLogo = null): self
+public function icon(?string $icon, ?string $darkIcon = null): self
+public function favicon(?string $favicon, ?string $darkFavicon = null): self
 public function darkMode(bool $darkMode = true): self
 public function maxContentWidth(?string $maxContentWidth): self
 public function sidebar(

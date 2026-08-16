@@ -145,7 +145,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
 
         <!-- `py-0` and `overflow-hidden`: the rows sit flush inside the card
              and the header row is clipped by its radius. -->
-        <Card class="overflow-hidden py-0 shadow-xs">
+        <Card class="overflow-hidden rounded-lg py-0 shadow-xs">
             <Table>
                 <TableHeader>
                     <TableRow>

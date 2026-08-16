@@ -385,7 +385,7 @@ function deactivate(): void {
 </script>
 
 <template>
-    <Card class="overflow-hidden border-border/60 bg-card py-0 shadow-xs">
+    <Card class="overflow-hidden rounded-lg border-border/60 bg-card py-0 shadow-xs">
         <CardContent class="p-5">
             <!-- Legend -->
             <div
@@ -431,7 +431,7 @@ function deactivate(): void {
                 >
                     <div
                         v-if="activeIndex !== null && activeItems.length"
-                        class="pointer-events-none absolute top-2 z-30 w-52 overflow-hidden rounded-lg border border-border/70 bg-popover/95 text-popover-foreground shadow-lg shadow-black/6 backdrop-blur-md dark:shadow-black/30"
+                        class="pointer-events-none absolute top-2 z-30 w-52 overflow-hidden rounded-lg border border-border/70 bg-popover/95 text-popover-foreground shadow-lg shadow-black/5 backdrop-blur-md dark:shadow-black/30"
                         :style="tooltipStyle"
                     >
                         <!-- Tooltip heading -->
@@ -439,7 +439,7 @@ function deactivate(): void {
                             class="border-b border-border/60 bg-muted/25 px-3 py-2.5"
                         >
                             <p
-                                class="text-[11px] font-medium tracking-wide text-muted-foreground"
+                                class="text-[11px] font-medium text-muted-foreground"
                             >
                                 {{ activeLabel }}
                             </p>
@@ -466,7 +466,7 @@ function deactivate(): void {
                                 </div>
 
                                 <span
-                                    class="shrink-0 text-sm font-semibold tracking-tight tabular-nums"
+                                    class="shrink-0 text-sm font-semibold tabular-nums"
                                 >
                                     {{ formatValue(item.value) }}
                                 </span>

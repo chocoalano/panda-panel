@@ -9,6 +9,7 @@ import PanelHeader from '@/panel/components/PanelHeader.vue';
 import PanelRenderHook from '@/panel/components/PanelRenderHook.vue';
 import { useNavigation } from '@/panel/composables/useNavigation';
 import { usePanel } from '@/panel/composables/usePanel';
+import { usePanelBranding } from '@/panel/composables/usePanelBranding';
 import { usePanelPage } from '@/panel/composables/usePanelPage';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import { resolveIcon } from '@/panel/icons/registry';
@@ -28,6 +29,7 @@ const { panel, maxContentWidthClass, shell } = usePanel();
 const { themeStyle, hook } = usePanelStyling();
 const { groups } = useNavigation();
 const pageMetadata = usePanelPage();
+const { iconName, logo } = usePanelBranding(() => panel.value);
 
 /**
  * A panel may replace the top bar entirely.
@@ -51,7 +53,7 @@ const topbar = computed(() => {
 
 const cluster = computed(() => pageMetadata.value?.cluster ?? null);
 
-const brandIcon = computed(() => resolveIcon(panel.value?.icon));
+const brandIcon = computed(() => resolveIcon(iconName.value));
 const homeHref = computed(() => `/${panel.value?.path ?? ''}`);
 
 /**
@@ -82,9 +84,15 @@ const topLevelItems = computed(() =>
                     :href="homeHref"
                     class="flex items-center gap-2 font-semibold"
                 >
+                    <img
+                        v-if="logo"
+                        :src="logo"
+                        alt=""
+                        class="size-5 object-contain"
+                    />
                     <component
+                        v-else-if="brandIcon"
                         :is="brandIcon"
-                        v-if="brandIcon"
                         class="size-5"
                     />
                     <span>{{ panel?.brandName }}</span>

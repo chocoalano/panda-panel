@@ -117,6 +117,9 @@ public static function relationManagers(): array;            // []
 public static function relationManager(string $key): ?string;
 public static function integrations(Integrations $integrations): Integrations;  // returns it unchanged
 public static function integrationSettings(): Integrations;  // resolved once per class per request
+public static function getWidgets(): array;                  // []
+public static function getHeaderWidgets(string $page): array; // index gets getWidgets()
+public static function getFooterWidgets(string $page): array; // []
 ```
 
 `form()` is abstract rather than defaulting to an empty schema: a resource with no form should say so explicitly rather than inherit a create page that silently saves nothing.
@@ -338,8 +341,8 @@ public static function routePath(string $key): string;
 public static function hasDatabaseTransactions(): ?bool;
 public static function renderHookScope(): string;      // 'resource:{slug}'
 public static function resource(): string;
-public function headerWidgets(): array;                // []
-public function footerWidgets(): array;                // []
+public function headerWidgets(): array;                // Resource::getHeaderWidgets($page)
+public function footerWidgets(): array;                // Resource::getFooterWidgets($page)
 ```
 
 Override the three heading methods when the text depends on something a static property cannot say:

@@ -285,7 +285,7 @@ The values in that form are what the server *applied*, not what was asked for �
 
 ## Gotchas
 
-- **Resource pages do not resolve filters.** `ResourcePage::widgetProps()` passes page context but no `WidgetFilters`, so a widget with a `filterSchema()` in `headerWidgets()` or `footerWidgets()` renders its controls and changes the URL, but `$this->filter()` always returns the default. Filters are a dashboard and standalone-page feature.
+- **Resource page filters are widget-level only.** `ResourcePage::widgetProps()` does not have a page-wide filter form like `Dashboard` and `Page`, but it does resolve every widget's own `filterSchema()`. The state is remembered per panel, resource, page and record key.
 - **Table widgets share the group.** A `TableWidget`'s search, sort and page state lives under `widgets[{id}]` too. Paging the table makes the group *present*, which resolves the widget's own filters to `null` under the rule above. Reading them with an explicit default — `$this->filter('months', 6)` — makes this a non-event, which is why every example does.
 - `live()` fields have no state endpoint inside a widget filter, so they behave as ordinary fields: no request, no rebuild, no `afterStateUpdated()`. See [Live fields](../forms/live-fields.md).
 - A `Toggle` switched off writes no parameter, so an "off" toggle and an untouched one look the same in the URL. Give the field a `default(false)` and read it with `$this->filter('flag', false)`.

@@ -38,6 +38,8 @@ final class SyncPanelIconsCommand extends Command
      */
     private const PATTERNS = [
         "/->icon\(\s*'([a-z0-9-]+)'/",
+        "/->icon\(\s*'[^']+'\s*,\s*'([a-z0-9-]+)'/",
+        "/->darkIcon\(\s*'([a-z0-9-]+)'/",
         "/\\\$navigationIcon\s*=\s*'([a-z0-9-]+)'/",
         "/icon:\s*'([a-z0-9-]+)'/",
         "/'icon'\s*=>\s*'([a-z0-9-]+)'/",

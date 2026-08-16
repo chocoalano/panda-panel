@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Check, LayoutGrid } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     Sheet,
@@ -11,7 +11,9 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import { useAppearance } from '@/composables/useAppearance';
 import { usePanel } from '@/panel/composables/usePanel';
+import { themedPanelIcon } from '@/panel/composables/usePanelBranding';
 import { resolveIcon } from '@/panel/icons/registry';
 
 /**
@@ -26,8 +28,18 @@ import { resolveIcon } from '@/panel/icons/registry';
  * Renders nothing when the user may enter only one panel.
  */
 const { panels, canSwitchPanels } = usePanel();
+const { resolvedAppearance } = useAppearance();
 
 const open = ref(false);
+
+const entries = computed(() =>
+    panels.value.map((entry) => ({
+        ...entry,
+        resolvedIcon: resolveIcon(
+            themedPanelIcon(entry, resolvedAppearance.value),
+        ),
+    })),
+);
 </script>
 
 <template>
@@ -49,7 +61,7 @@ const open = ref(false);
 
             <nav class="flex flex-col gap-2 overflow-y-auto p-4">
                 <Link
-                    v-for="entry in panels"
+                    v-for="entry in entries"
                     :key="entry.id"
                     :href="entry.url"
                     class="flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -63,8 +75,8 @@ const open = ref(false);
                         class="flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
                     >
                         <component
-                            :is="resolveIcon(entry.icon)"
-                            v-if="resolveIcon(entry.icon)"
+                            :is="entry.resolvedIcon"
+                            v-if="entry.resolvedIcon"
                             class="size-5"
                         />
                     </span>

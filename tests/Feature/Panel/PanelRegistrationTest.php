@@ -103,8 +103,8 @@ it('shares only serializable panel configuration', function (): void {
     $shared = app(PanelManager::class)->get('admin')->toSharedArray();
 
     expect($shared)->toHaveKeys([
-        'id', 'name', 'path', 'brandName', 'brandLogo',
-        'icon', 'favicon', 'darkMode', 'maxContentWidth',
+        'id', 'name', 'path', 'brandName', 'brandLogo', 'darkBrandLogo',
+        'icon', 'darkIcon', 'favicon', 'darkFavicon', 'darkMode', 'maxContentWidth',
         'unsavedChangesAlerts', 'prefetch', 'errorNotifications', 'sidebar',
     ])
         // Server-side configuration must not leak to the client.
@@ -118,4 +118,20 @@ it('shares only serializable panel configuration', function (): void {
     array_walk_recursive($shared, function (mixed $value): void {
         expect($value)->not->toBeInstanceOf(Closure::class);
     });
+});
+
+it('shares dark-mode branding variants without replacing the light values', function (): void {
+    $shared = Panel::make('brand')
+        ->path('brand')
+        ->brandLogo('/logo-light.svg', '/logo-dark.svg')
+        ->favicon('/favicon-light.ico', '/favicon-dark.ico')
+        ->icon('sun', 'moon')
+        ->toSharedArray();
+
+    expect($shared['brandLogo'])->toBe('/logo-light.svg')
+        ->and($shared['darkBrandLogo'])->toBe('/logo-dark.svg')
+        ->and($shared['favicon'])->toBe('/favicon-light.ico')
+        ->and($shared['darkFavicon'])->toBe('/favicon-dark.ico')
+        ->and($shared['icon'])->toBe('sun')
+        ->and($shared['darkIcon'])->toBe('moon');
 });

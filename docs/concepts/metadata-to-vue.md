@@ -69,7 +69,7 @@ of those seven keys off `usePage()`.
 | --- | --- |
 | `id`, `name`, `path` | `string` |
 | `brandName` | `string` |
-| `brandLogo`, `icon`, `favicon` | `string\|null` |
+| `brandLogo`, `darkBrandLogo`, `icon`, `darkIcon`, `favicon`, `darkFavicon` | `string\|null` |
 | `darkMode` | `bool` |
 | `maxContentWidth` | `string\|null` |
 | `unsavedChangesAlerts` | `bool` |

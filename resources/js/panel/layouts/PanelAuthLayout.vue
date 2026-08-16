@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { Toaster } from '@/components/ui/sonner';
+import { usePanelBranding } from '@/panel/composables/usePanelBranding';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { PanelDefinition } from '@/panel/types/panel';
 
@@ -19,7 +20,8 @@ const props = defineProps<{
     description?: string;
 }>();
 
-const icon = computed(() => resolveIcon(props.panel.icon));
+const { iconName, logo } = usePanelBranding(() => props.panel);
+const icon = computed(() => resolveIcon(iconName.value));
 </script>
 
 <template>
@@ -32,7 +34,13 @@ const icon = computed(() => resolveIcon(props.panel.icon));
                 <span
                     class="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground"
                 >
-                    <component :is="icon" v-if="icon" class="size-5" />
+                    <img
+                        v-if="logo"
+                        :src="logo"
+                        alt=""
+                        class="size-5 object-contain"
+                    />
+                    <component v-else-if="icon" :is="icon" class="size-5" />
                 </span>
                 <span>{{ panel.brandName }}</span>
             </Link>

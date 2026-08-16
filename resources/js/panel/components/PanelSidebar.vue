@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import PanelNavigation from '@/panel/components/PanelNavigation.vue';
 import PanelRenderHook from '@/panel/components/PanelRenderHook.vue';
+import { usePanelBranding } from '@/panel/composables/usePanelBranding';
 import { usePanel } from '@/panel/composables/usePanel';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import { resolveIcon } from '@/panel/icons/registry';
@@ -28,8 +29,9 @@ const DEFAULT_APPEARANCE: PanelSidebarAppearance = 'inset';
 
 const { panel } = usePanel();
 const { hook } = usePanelStyling();
+const { iconName, logo } = usePanelBranding(() => panel.value);
 
-const brandIcon = computed(() => resolveIcon(panel.value?.icon));
+const brandIcon = computed(() => resolveIcon(iconName.value));
 const homeHref = computed(() => `/${panel.value?.path ?? ''}`);
 const collapsible = computed(() =>
     panel.value?.sidebar.collapsible === false ? 'none' : 'icon',
@@ -73,9 +75,15 @@ const appearance = computed<PanelSidebarAppearance>(() => {
                             <div
                                 class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
                             >
+                                <img
+                                    v-if="logo"
+                                    :src="logo"
+                                    alt=""
+                                    class="size-5 object-contain"
+                                />
                                 <component
+                                    v-else-if="brandIcon"
                                     :is="brandIcon"
-                                    v-if="brandIcon"
                                     class="size-4"
                                 />
                             </div>

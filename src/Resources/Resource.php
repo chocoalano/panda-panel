@@ -30,6 +30,7 @@ use PandaPanel\Support\ParentRecord;
 use PandaPanel\Support\PolicyGate;
 use PandaPanel\Tables\TableSchema;
 use PandaPanel\Tenancy\Tenancy;
+use PandaPanel\Widgets\Widget;
 
 /**
  * Base class for a panel resource.
@@ -379,6 +380,45 @@ abstract class Resource implements ResourceContract
     public static function integrations(Integrations $integrations): Integrations
     {
         return $integrations;
+    }
+
+    /**
+     * Widgets this resource exposes by default.
+     *
+     * The standard list page places these above the table. Other pages can
+     * opt into the same list, or into a different one, through
+     * `getHeaderWidgets()` and `getFooterWidgets()`.
+     *
+     * @return list<class-string<Widget>>
+     */
+    public static function getWidgets(): array
+    {
+        return [];
+    }
+
+    /**
+     * Widgets shown above one of this resource's pages.
+     *
+     * `$page` is the resource page key: `index`, `create`, `view`, `edit`, or
+     * `relation:{key}` for a dedicated relation page. The index page receives
+     * `getWidgets()` by default because that is where aggregate widgets most
+     * often belong.
+     *
+     * @return list<class-string<Widget>>
+     */
+    public static function getHeaderWidgets(string $page): array
+    {
+        return $page === 'index' ? static::getWidgets() : [];
+    }
+
+    /**
+     * Widgets shown below one of this resource's pages.
+     *
+     * @return list<class-string<Widget>>
+     */
+    public static function getFooterWidgets(string $page): array
+    {
+        return [];
     }
 
     /**

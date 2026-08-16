@@ -26,11 +26,11 @@ withDefaults(
     },
 );
 
-const { appearance, updateAppearance } = useAppearance();
+const { resolvedAppearance, updateAppearance } = useAppearance();
 const { shell } = usePanel();
 const { hook } = usePanelStyling();
 
-const isDark = computed(() => appearance.value === 'dark');
+const isDark = computed(() => resolvedAppearance.value === 'dark');
 
 function toggleAppearance(): void {
     updateAppearance(isDark.value ? 'light' : 'dark');

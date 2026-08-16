@@ -180,9 +180,12 @@ $panel->getNavigationGroupParents();   // ['Access' => 'System']
 | Method | Signature | Default |
 | --- | --- | --- |
 | `brandName` | `brandName(string $brandName): self` | `config('app.name')` |
-| `brandLogo` | `brandLogo(?string $brandLogo): self` | `null` |
-| `favicon` | `favicon(?string $favicon): self` | `null` |
-| `icon` | `icon(?string $icon): self` | `null`, an icon registry key |
+| `brandLogo` | `brandLogo(?string $brandLogo, ?string $darkBrandLogo = null): self` | `null` |
+| `darkBrandLogo` | `darkBrandLogo(?string $brandLogo): self` | `null` |
+| `favicon` | `favicon(?string $favicon, ?string $darkFavicon = null): self` | `null` |
+| `darkFavicon` | `darkFavicon(?string $favicon): self` | `null` |
+| `icon` | `icon(?string $icon, ?string $darkIcon = null): self` | `null`, an icon registry key |
+| `darkIcon` | `darkIcon(?string $icon): self` | `null` |
 | `darkMode` | `darkMode(bool $darkMode = true): self` | `true` |
 | `colors` | `colors(array $light, array $dark = []): self` | `[]` / `[]` |
 | `cssHooks` | `cssHooks(array $classes): self` | `[]` |
@@ -310,8 +313,11 @@ public function toSharedArray(): array
     'path' => 'admin',
     'brandName' => 'Acme',
     'brandLogo' => null,
+    'darkBrandLogo' => null,
     'icon' => 'shield',
+    'darkIcon' => null,
     'favicon' => null,
+    'darkFavicon' => null,
     'darkMode' => true,
     'maxContentWidth' => null,
     'unsavedChangesAlerts' => true,
