@@ -140,6 +140,21 @@ it('refuses a file that is not a workbook', function (): void {
         ->toThrow(SpreadsheetException::class);
 });
 
+it('refuses a workbook whose xml expands past the read limit', function (): void {
+    $path = scratchFile('xlsx');
+
+    $zip = new ZipArchive;
+    $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    $zip->addFromString(
+        'xl/worksheets/sheet1.xml',
+        '<worksheet><sheetData>'.str_repeat(' ', 2048).'</sheetData></worksheet>',
+    );
+    $zip->close();
+
+    expect(static fn () => iterator_to_array(Xlsx::read($path, maxXmlPartBytes: 128), false))
+        ->toThrow(SpreadsheetException::class, 'too large');
+});
+
 /*
  * Formats
  */

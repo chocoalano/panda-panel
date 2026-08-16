@@ -40,7 +40,7 @@ No published file changes, so there is nothing to re-publish and nothing to rebu
 | Publish tags | `panda-panel`, `panda-panel-config`, `panda-panel-assets`, `panda-panel-migrations`, `panda-panel-stubs` |
 | Artisan commands | `panel:install`, `panel:user`, `panel:assets`, `panel:cache`, `panel:clear`, `panel:icons`, `panel:plugins`, `panel:publish`, and the five `make:panel*` generators |
 | Route names | `panel.{id}.*` |
-| Published paths | `resources/js/panel`, `resources/js/pages`, `resources/css/panda-panel.css` |
+| Published paths | `resources/js/{panel,pages,components,composables,lib,types}`, `resources/css/panda-panel.css` |
 | The project's name | Panda Panel |
 
 So an application's own code needs no edit at all. No `use` statement changes, no config rename,

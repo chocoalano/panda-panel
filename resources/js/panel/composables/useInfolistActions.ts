@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type { Ref } from 'vue';
+import { safeUrl } from '@/lib/utils';
 import type { ActionDefinition, ActionEndpoints } from '@/panel/types/action';
 
 export type UseInfolistActionsReturn = {
@@ -93,8 +94,10 @@ export function useInfolistActions(
         formContext,
 
         run(action): void {
-            if (action.type === 'link' && action.url) {
-                router.visit(action.url);
+            const url = safeUrl(action.url);
+
+            if (action.type === 'link' && url) {
+                router.visit(url);
 
                 return;
             }

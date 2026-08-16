@@ -10,3 +10,25 @@ export function cn(...inputs: ClassValue[]) {
 export function toUrl(href: NonNullable<InertiaLinkProps['href']>) {
     return typeof href === 'string' ? href : href?.url;
 }
+
+export function safeUrl(value: string | null | undefined): string | null {
+    const trimmed = value?.trim();
+
+    if (!trimmed) {
+        return null;
+    }
+
+    const compact = trimmed.replace(/[\u0000-\u0020\u007f]+/g, '');
+
+    if (compact === '' || compact.startsWith('//') || compact.startsWith('\\')) {
+        return null;
+    }
+
+    const scheme = compact.match(/^([a-z][a-z0-9+.-]*):/i)?.[1]?.toLowerCase();
+
+    if (!scheme) {
+        return trimmed;
+    }
+
+    return ['http', 'https', 'mailto', 'tel'].includes(scheme) ? trimmed : null;
+}

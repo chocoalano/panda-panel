@@ -44,12 +44,16 @@ that never reaches a panel pays for none of them.
 | `notifications` | `{enabled, indexUrl, readUrl, clearUrl, unread}` | disabled |
 | `tenancy` | `{current, available}` | `null` |
 
-Read them through one accessor rather than `usePage()` directly:
+Read them through the panel's own composables rather than `usePage()` directly.
+`usePanel()` covers six of the seven; `navigation` is read through
+`useNavigation()`, which also owns the collapsed-group state:
 
 ```ts
+import { useNavigation } from '@/panel/composables/useNavigation';
 import { usePanel } from '@/panel/composables/usePanel';
 
-const { panel, navigation, panels, search, notifications, tenancy } = usePanel();
+const { panel, panels, broadcasting, search, notifications, tenancy } = usePanel();
+const { groups } = useNavigation();
 ```
 
 `resources/js/panel/types/shared.ts` performs the single cast in the whole
@@ -194,7 +198,7 @@ A create or edit page ships `form` instead of `table`, built by
 A widget serializes in two parts.
 
 ```php
-public function toDefinition(): array   // id, type, sort, columnSpan, lazy, heading, description, polling, filters
+public function toDefinition(): array   // id, type, sort, columnSpan, lazy, heading, description, polling, filters, data
 ```
 
 ```php

@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type { Ref } from 'vue';
+import { safeUrl } from '@/lib/utils';
 import type { ActionDefinition, ActionEndpoints } from '@/panel/types/action';
 
 /**
@@ -191,8 +192,10 @@ export function useActions(
     }
 
     function start(request: PendingAction): void {
-        if (request.action.type === 'link' && request.action.url) {
-            router.visit(request.action.url);
+        const url = safeUrl(request.action.url);
+
+        if (request.action.type === 'link' && url) {
+            router.visit(url);
 
             return;
         }

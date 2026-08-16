@@ -79,7 +79,7 @@ A selection introduces a question a row action does not have, so there are two c
 | Method | Signature | Asked | Refusal |
 | --- | --- | --- | --- |
 | `authorize()` | `authorize(Closure $callback): static` | once, with `null` | 403 before anything is loaded |
-| `authorizeEachUsing()` | `authorizeEachUsing(Closure $callback): static` | for every selected record | 403 before anything is written |
+| `authorizeEachUsing()` | `authorizeEachUsing(Closure $callback): static` | for every selected record, or `authorize($record)` when absent | 403 before anything is written |
 
 ```php
 use Illuminate\Database\Eloquent\Model;
@@ -91,7 +91,7 @@ $action
 
 `authorize()` answers for the *action* — whether the button appears at all, and whether the endpoint will proceed. On a bulk action it is called with `null`, because the answer has to exist before anything is selected.
 
-`authorizeEachUsing()` answers for each record the action is about to touch. `executeBulk()` walks the whole collection and calls `isAuthorizedForEach()` on every record **before** the handler runs, whatever the handler is. A refusal throws:
+`authorizeEachUsing()` answers for each record the action is about to touch. If it is absent, `isAuthorizedForEach()` falls back to `authorize($record)`, so a row-level `authorize()` closure still protects a bulk run. `executeBulk()` walks the whole collection and calls that check on every record **before** the handler runs, whatever the handler is. A refusal throws:
 
 ```php
 Symfony\Component\HttpKernel\Exception\HttpException(403, 'You may not approve every selected record.')
@@ -159,7 +159,7 @@ $table->bulkActions([
 | `ForceDeleteBulkAction::make(string $resource)` | `forceDelete` | `canForceDeleteAny()` | `canForceDelete()` |
 | `ExportAction::bulk(string $exporter, string $resource)` | `export` | `canViewAny()` | — |
 
-The three destructive ones re-check every record inside the handler and throw a 403 before writing, then run in one explicit `DB::transaction()`. `RestoreBulkAction` leaves an already-live record alone rather than refusing it — the user asked for those rows to be restored, and the ones already live are in the state that was asked for.
+The delete, restore, and force-delete ones re-check every record inside the handler and throw a 403 before writing, then run in one explicit `DB::transaction()`. `RestoreBulkAction` leaves an already-live record alone rather than refusing it — the user asked for those rows to be restored, and the ones already live are in the state that was asked for.
 
 A relation manager has its own set: `DetachBulkAction`, `RestoreBulkAction`, and `ForceDeleteBulkAction` under `PandaPanel\Actions\Relations`. See [Relation actions](relation-actions.md).
 
@@ -218,7 +218,7 @@ The checks, in order:
 | `authorize()` refuses with `null` | 403 |
 | no scalar keys survive filtering | 422 |
 | any key outside `Resource::findRecords()` | 404 |
-| `authorizeEachUsing()` refuses any record | 403 |
+| the per-record check refuses any record | 403 |
 
 Keys are de-duplicated and the resulting count is compared against the records the lookup returned, so a key outside the resource scope is a visible 404 rather than a partial run.
 
@@ -264,8 +264,8 @@ expect(fn () => $action->executeBulk($records))->toThrow(HttpException::class);
 
 - **500 keys is the ceiling.** The endpoint validates `max:500`. "Select everything matching these filters" over ten thousand rows is a table action that queues a job, not a bulk action.
 - **The selection is keys, not a query.** Select-all selects the page. To act on a whole filtered result, use a table action and read the table state.
-- **`authorize()` receives `null` here.** A closure that dereferences `$record` fails on the first render.
-- **A custom bulk action with no `authorizeEachUsing()` has only the collective check.** The built-ins do their own per-record check inside the handler; a custom one has to say so.
+- **`authorize()` receives `null` before a selection is loaded.** A closure that dereferences `$record` fails on the first render.
+- **A custom bulk action with no `authorizeEachUsing()` falls back to `authorize($record)`.** Add `authorizeEachUsing()` when the per-record rule is different from the row action's rule.
 - **`executeBulk()` opens no transaction.** See above — this is the difference between "all or nothing" and "as far as it got".
 - **The success message is flashed once**, after the whole run. Per-record feedback is not this shape.
 - **A record in the selection the action does not apply to is the handler's problem.** `RestoreBulkAction` filters nothing and restores whatever it was given; a custom action that must skip rows should filter inside the handler rather than refuse in `authorizeEachUsing()`, which aborts the whole batch.

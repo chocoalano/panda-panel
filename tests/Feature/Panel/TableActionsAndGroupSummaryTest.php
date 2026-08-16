@@ -100,6 +100,27 @@ it('authorizes every record before touching any, whatever the handler', function
     expect($touched)->toBe(0);
 });
 
+it('uses the action authorization as the per-record bulk fallback', function (): void {
+    $one = $this->apollo->tasks()->create(['name' => 'One']);
+    $two = $this->apollo->tasks()->create(['name' => 'Two']);
+
+    $touched = 0;
+
+    $action = Action::make('approve')
+        ->authorize(static fn (?Model $record): bool => $record === null
+            || $record->getAttribute('name') !== 'Two')
+        ->bulkAction(static function (Collection $records) use (&$touched): void {
+            $touched = $records->count();
+        });
+
+    expect(fn () => $action->executeBulk(Task::query()->whereKey([
+        $one->getKey(),
+        $two->getKey(),
+    ])->get()))->toThrow(HttpException::class);
+
+    expect($touched)->toBe(0);
+});
+
 it('counts what a bulk run touched, for a message that says so', function (): void {
     $this->apollo->tasks()->create(['name' => 'One']);
     $this->apollo->tasks()->create(['name' => 'Two']);

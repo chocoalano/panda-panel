@@ -179,6 +179,13 @@ it('refuses a javascript link inside stored HTML', function (): void {
     expect($sanitized)->not->toContain('javascript:');
 });
 
+it('refuses an encoded javascript link inside stored HTML', function (): void {
+    $sanitized = RichEditor::make('body')
+        ->sanitize('<a href="&#x6a;avascript:alert(1)">click</a>');
+
+    expect($sanitized)->toBe('<a>click</a>');
+});
+
 it('sanitizes on the way to the record, not merely on display', function (): void {
     $mutated = RichEditor::make('body')
         ->mutate('<p>ok</p><iframe src="https://evil.test"></iframe>', null);

@@ -64,6 +64,7 @@ final class IntegrationDispatcher
 
         try {
             $request = Http::timeout($timeout)
+                ->withoutRedirecting()
                 ->withHeaders([
                     ...self::headers($integration),
                     ...self::signature($integration, $encoded, $deliveryId),

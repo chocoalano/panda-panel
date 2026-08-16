@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use PandaPanel\Actions\Action;
 use PandaPanel\Exceptions\PanelSchemaException;
+use PandaPanel\Support\SafeUrl;
 use PandaPanel\Tables\Columns\Concerns\HasRelationshipState;
 use PandaPanel\Tables\Enums\Alignment;
 use PandaPanel\Tables\Enums\ColumnPin;
@@ -536,7 +537,7 @@ abstract class Column
         }
 
         if ($this->urlUsing !== null) {
-            $url = ($this->urlUsing)($record);
+            $url = SafeUrl::sanitize(($this->urlUsing)($record));
 
             if (is_string($url) && $url !== '') {
                 $meta['url'] = $url;

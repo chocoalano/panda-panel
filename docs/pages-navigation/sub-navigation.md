@@ -1,6 +1,6 @@
 # Sub Navigation
 
-The links that move between the pages of one record — view, edit, and any relation page the resource declares. It is built by the server from the resource's own `pages()` map, authorized per record, and shipped with the page as `page.subNavigation`. Nothing is declared twice: a resource that has no view page simply has no link to one.
+The links that move between the pages of one record — view, edit, and any relation page the resource declares. It is built by the server from the resource's own `pages()` map, authorized per record, and shipped with the page as `page.subNavigation`. Nothing is declared twice: a resource that has no view page has no link to one.
 
 A cluster's bar is a different thing with a similar name; see [Clusters](clusters.md).
 
@@ -210,7 +210,7 @@ protected function pageMetadata(Model $record): array
 }
 ```
 
-Passing a key that is not in the list simply means nothing is active — `'audit'` matches no item, so the strip renders with no highlight. A custom page is not itself a sub-navigation item; see the notes below.
+Passing a key that is not in the list means nothing is active — `'audit'` matches no item, so the strip renders with no highlight. A custom page is not itself a sub-navigation item; see the notes below.
 
 `subNavigationPosition()` resolves the resource's declaration first and the panel's second:
 

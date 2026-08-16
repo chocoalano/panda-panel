@@ -148,7 +148,7 @@ from the `panel` prop:
 $panel
     ->brandName('Acme Operations')   // getBrandName(), defaults to config('app.name')
     ->icon('shield')                 // resolved through the panel icon registry
-    ->theme([...]);                  // the CSS variables the page is painted with
+    ->colors([...]);                 // the CSS variables the page is painted with
 ```
 
 The layout links the brand back to `/{panel.path}`, and the "forgot your
@@ -168,7 +168,7 @@ public static function for(Illuminate\Http\Request $request): ?string
 | The request resolves to a panel with `hasLogin()` | That panel's `auth.login` route |
 | The request resolves to a panel without one | `route('login')`, or `null` when the application has no such route |
 | The request resolves to no panel | The same |
-| The panel's login route is not registered | `route('login')` or `null` |
+| The panel's login route is not registered | `null` — once a panel claims a login, the application's is not consulted |
 
 It is registered by `PandaPanelServiceProvider` into
 `Illuminate\Auth\Middleware\Authenticate::redirectUsing()` and
@@ -262,8 +262,9 @@ That is `tests/Feature/Panel/PanelAuthTest.php`, near enough verbatim.
 - **A panel with `login()` but no `auth()` has a door on a building with no
   walls.** The page registers from `hasLogin()` alone.
 - **Logging out is the application's route.** The package registers no logout;
-  the panel shell and the verify-email page both link to Wayfinder's `logout`
-  from `@/routes`.
+  the verify-email page links to Wayfinder's `logout` from `@/routes`, and the
+  panel shell's user menu is the application's own `UserMenuContent`, which the
+  package imports but never ships.
 - **`/{panel}/login` for an already signed-in user renders the login page.**
   There is no `guest` middleware on it, by design — the stack that would add it
   is the application's `redirectUsersTo`, not the panel's.

@@ -43,7 +43,7 @@ export function useNavigation(): UseNavigationReturn {
 
     const collapsed: Ref<Record<string, boolean>> = useStorage<
         Record<string, boolean>
-    >(storageKey, {});
+    >(storageKey, {}, undefined, { initOnMounted: true });
 
     function keyFor(group: NavigationGroup): string {
         return group.label ?? '__ungrouped__';

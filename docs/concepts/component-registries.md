@@ -160,7 +160,7 @@ something neutral:
 | Hooks | nothing at all — a decorative injection must not break the page it decorates |
 | Shell | the built-in sidebar or topbar — a typo must not strand somebody on a page they cannot leave |
 
-Three registries say so out loud in development:
+The form and widget registries say so out loud in development:
 
 ```
 [panel] The widget component [Panels/Admin/Widgets/SystemInfo] is not in the
@@ -203,10 +203,12 @@ php artisan panel:icons --check  # fail if it is out of date, for CI
 
 The command scans two trees — the application's `app/` and the package's own
 source — for every shape an icon name is declared in: `->icon('x')`,
-`$navigationIcon = 'x'`, the `icon:` named argument, and `'icon' => 'x'` in a
-serialized array. It checks each against the icons Lucide actually ships and
-rewrites the map. Lucide ships over a thousand icons; a panel uses a couple of
-dozen, and only those belong in the bundle.
+`$navigationIcon = 'x'`, the `icon:` named argument, `'icon' => 'x'` in a
+serialized array, `Icon::make('x')`, and every string literal inside a method
+named `icon()`, which is where an enum keeps its per-case icons. It checks each
+against the icons Lucide actually ships and rewrites the map. Lucide ships over
+a thousand icons; a panel uses a couple of dozen, and only those belong in the
+bundle.
 
 The package's own source is not optional in that scan: half the icons a panel
 renders belong to actions the framework ships — delete, edit, export — and a

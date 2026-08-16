@@ -116,7 +116,7 @@ All three of the modal ones are declared in `headerActions()`, `toolbarActions()
 | `ForceDeleteBulkAction` | `canForceDeleteAny()` | `canForceDelete($record)` | `Selected records permanently deleted.` |
 | `ExportAction::bulk()` | `canViewAny()` | — | `Your export is ready.` |
 
-The three destructive ones share a shape: the collective ability answers before there is a record to ask about, then the handler re-checks every record, then everything runs inside one explicit `DB::transaction()` — whatever the panel's transaction setting is, because "all or nothing" is what they advertise rather than a default they inherit.
+The delete, restore, and force-delete ones share a shape: the collective ability answers before there is a record to ask about, then the handler re-checks every record, then everything runs inside one explicit `DB::transaction()` — whatever the panel's transaction setting is, because "all or nothing" is what they advertise rather than a default they inherit.
 
 ## Overriding one
 

@@ -188,9 +188,11 @@ should not resolve on its own.
 
 - **`prefer-lowest` is part of the contract.** If your application pins a dependency below the
   bottom of a range here, nothing tests that combination — including this package's own CI.
-- **The frontend ranges are not shipped as a lockfile.** `package.json`, `package-lock.json`, the
-  Vite config, the tsconfig and the lint configs are all `export-ignore`d in `.gitattributes`, so
-  `composer require` pulls none of them. Your application installs from the *ranges*.
+- **The frontend ranges are not shipped as a lockfile.** `package-lock.json`, the Vite config, the
+  tsconfig and the lint configs are all `export-ignore`d in `.gitattributes`, so `composer require`
+  pulls none of them. `package.json` is deliberately *not* in that list: `panel:install` reads the
+  dependency list out of `vendor/` to tell an application what to install, and export-ignoring it
+  made that check return an empty list. Your application installs from the *ranges*.
 - **`panel:assets` returning findings is not a failure.** It exits `0` even with conflicts:
   breaking a deploy over a file somebody edited on purpose would be wrong.
 

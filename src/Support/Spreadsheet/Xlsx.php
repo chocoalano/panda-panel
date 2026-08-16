@@ -26,6 +26,8 @@ use ZipArchive;
  */
 final class Xlsx
 {
+    private const MAX_XML_PART_BYTES = 64 * 1024 * 1024;
+
     private const CONTENT_TYPES = <<<'XML'
         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -106,7 +108,7 @@ final class Xlsx
      *
      * @return Generator<int, list<string>>
      */
-    public static function read(string $path): Generator
+    public static function read(string $path, int $maxXmlPartBytes = self::MAX_XML_PART_BYTES): Generator
     {
         $zip = new ZipArchive;
 
@@ -115,10 +117,10 @@ final class Xlsx
         }
 
         try {
-            $shared = self::sharedStrings($zip);
-            $sheet = self::firstSheet($zip);
+            $shared = self::sharedStrings($zip, $maxXmlPartBytes);
+            $sheet = self::firstSheet($zip, $maxXmlPartBytes);
 
-            $xml = @simplexml_load_string($sheet);
+            $xml = @simplexml_load_string($sheet, SimpleXMLElement::class, LIBXML_NONET);
 
             if ($xml === false) {
                 throw new SpreadsheetException('That spreadsheet could not be read.');
@@ -179,15 +181,15 @@ final class Xlsx
     /**
      * @return array<int, string>
      */
-    private static function sharedStrings(ZipArchive $zip): array
+    private static function sharedStrings(ZipArchive $zip, int $maxBytes): array
     {
-        $contents = $zip->getFromName('xl/sharedStrings.xml');
+        $contents = self::part($zip, 'xl/sharedStrings.xml', $maxBytes, required: false);
 
-        if ($contents === false) {
+        if ($contents === null) {
             return [];
         }
 
-        $xml = @simplexml_load_string($contents);
+        $xml = @simplexml_load_string($contents, SimpleXMLElement::class, LIBXML_NONET);
 
         if ($xml === false) {
             return [];
@@ -207,17 +209,52 @@ final class Xlsx
         return $strings;
     }
 
-    private static function firstSheet(ZipArchive $zip): string
+    private static function firstSheet(ZipArchive $zip, int $maxBytes): string
     {
         foreach (['xl/worksheets/sheet1.xml', 'xl/worksheets/Sheet1.xml'] as $name) {
-            $contents = $zip->getFromName($name);
+            $contents = self::part($zip, $name, $maxBytes, required: false);
 
-            if ($contents !== false) {
+            if ($contents !== null) {
                 return $contents;
             }
         }
 
         throw new SpreadsheetException('That workbook has no readable sheet.');
+    }
+
+    private static function part(ZipArchive $zip, string $name, int $maxBytes, bool $required): ?string
+    {
+        $stat = $zip->statName($name);
+
+        if ($stat === false) {
+            if ($required) {
+                throw new SpreadsheetException('That workbook has no readable sheet.');
+            }
+
+            return null;
+        }
+
+        $size = (int) ($stat['size'] ?? 0);
+
+        if ($size > $maxBytes) {
+            throw new SpreadsheetException('That spreadsheet is too large to read safely.');
+        }
+
+        $contents = $zip->getFromName($name);
+
+        if ($contents === false) {
+            if ($required) {
+                throw new SpreadsheetException('That workbook has no readable sheet.');
+            }
+
+            return null;
+        }
+
+        if (strlen($contents) > $maxBytes) {
+            throw new SpreadsheetException('That spreadsheet is too large to read safely.');
+        }
+
+        return $contents;
     }
 
     private static function workbook(string $sheetName): string

@@ -117,7 +117,7 @@ They are different questions and both are asked.
 ```
 
 - **`authorize()`** answers for the *action*. On a bulk action it is called with `null`, because the answer has to exist before anything is selected — that is what decides whether the button appears at all, and the endpoint asks it again before running.
-- **`authorizeEachUsing()`** answers for each record the action is about to touch. `executeBulk()` walks the whole collection and checks every one **before** the handler runs, whatever that handler does. A refusal throws a 403 and nothing is written.
+- **`authorizeEachUsing()`** answers for each record the action is about to touch. If it is absent, the per-record check falls back to `authorize($record)`. `executeBulk()` walks the whole collection and checks every one **before** the handler runs, whatever that handler does. A refusal throws a 403 and nothing is written.
 
 "May run this" is not "may run this on these", and all-or-nothing has to be decided before the first write rather than discovered halfway through.
 
@@ -175,7 +175,7 @@ The checks, in order:
 | `authorize()` refuses with `null` | 403 |
 | no usable keys after filtering to scalars | 422 |
 | any key outside `Resource::findRecords()` | 404 |
-| `authorizeEachUsing()` refuses any record | 403 |
+| the per-record check refuses any record | 403 |
 
 Keys are de-duplicated and compared by count, so a key outside the resource scope is a visible failure rather than a partial run. An action carrying a form submits to `POST {panel}/actions/form` with `scope=bulk` instead, and lands on the same `executeBulk()`.
 
@@ -207,7 +207,7 @@ it('authorizes every record before touching any', function (): void {
 - **500 records is the ceiling.** The endpoint validates `max:500` on the array. A "select all matching filters" over ten thousand rows is a table action that queues a job, not a bulk action.
 - **The selection is keys, not a query.** Selecting every row on a page selects that page. Filtering the table and running a table action is the way to act on a whole result.
 - **`authorize()` receives `null` on a bulk action.** A closure that dereferences `$record` without a null check fails on the very first render.
-- **A bulk action with no `authorizeEachUsing()` inherits only the collective check.** The built-in destructive actions do their own per-record check inside the handler; a custom one has to say so.
+- **A bulk action with no `authorizeEachUsing()` falls back to `authorize($record)`.** Add `authorizeEachUsing()` when the collective answer and the row-level answer are deliberately different.
 - **Falling back to `execute()` per record means one transaction per record.** If the whole batch must succeed or fail together, write a `bulkAction()` and wrap it yourself.
 - **The success message is flashed once**, after the whole run. Per-record feedback is not a bulk action's shape.
 - **The endpoint carries no parent segment.** A nested resource must send `parent`, which the table does automatically.

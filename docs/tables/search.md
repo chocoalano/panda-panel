@@ -229,7 +229,7 @@ Matching is a case-insensitive substring test against `TableSchema::getSearchCol
 - **The schema is the whitelist.** `?search=` reaches only the declared columns, and `?columnSearch[password]=` reaches nothing. `state` echoes what the server *applied*, not what was requested.
 - **A per-column term narrows the table-wide one**, never widens it. Searching "Apollo" and then "Two" in the name column leaves only rows matching both.
 - **Search never narrows a record lookup.** It lives in `TableQuery::paginate()`, not in `Resource::query()`, so a record the search hides is still openable by URL.
-- **`LIKE` is not full-text search.** Every term becomes `%term%`, which cannot use a plain B-tree index. On a large table, reach for a database index built for it or a search service rather than raising the debounce.
+- **`LIKE` is not full-text search.** Every term becomes `%escaped-term%`, which cannot use a plain B-tree index. On a large table, reach for a database index built for it or a search service rather than raising the debounce.
 - **A relation search costs a subquery per searchable relation per word.** Splitting a three-word term across two relation columns is six `whereHas` clauses; that is the cost of the convenience, and it is worth measuring before making a wide table searchable everywhere.
 - **`searchable()` on a column whose value is computed does nothing useful.** The term is matched against a database column of that name; a column whose value only exists after `formatUsing()` has nothing to match. Point it at real columns with the `columns:` argument.
 

@@ -61,9 +61,9 @@ FrontendRequirements::npmPackages();
 //   'tailwind-merge@^3.0.0',
 //   'tailwindcss@^4.1.0',
 //   'tw-animate-css@^1.2.0',
-//   'vue@^3.5.0',
 //   'vue-input-otp@^0.4.0',
 //   'vue-sonner@^2.0.0',
+//   'vue@^3.5.0',
 // ]
 ```
 
@@ -232,8 +232,8 @@ PublishedAssets::relative($absolute);   // the destination as it reads in a repo
 | `resources/js/types` | `resources/js/types` |
 | `resources/css/panda-panel.css` | `resources/css/panda-panel.css` |
 
-Two of those destinations are configurable, which is why the map is built per call rather than
-frozen in a constant:
+One of those destinations is configurable — `panel_path` — which is why the map is built per call
+rather than frozen in a constant:
 
 ```php
 // config/panda-panel.php
@@ -243,8 +243,9 @@ frozen in a constant:
 ],
 ```
 
-`pages_path` is also the root of the `import.meta.glob` the frontend resolves component names
-through, so moving it means changing that glob too.
+`pages_path` is not a publish destination: it is where the generators write their components, and
+the root of the `import.meta.glob` the frontend resolves component names through, so moving it
+means changing that glob too.
 
 ## The stylesheet
 

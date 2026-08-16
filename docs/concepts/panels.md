@@ -47,10 +47,11 @@ That is a working panel at `/admin`, behind `web`, `auth`, and `verified`,
 with a dashboard, the three account settings pages, and everything found under
 the three discovery paths.
 
-Panels are listed by hand on purpose. Registration order decides which panel a
-user is sent to when a request does not name one, and adding a panel should be
-a deliberate edit rather than a filesystem side effect. The classes *inside* a
-panel are discovered — see [Discovery](discovery.md).
+Panels are listed by hand on purpose. The list is where every panel in the
+application is visible at once, and adding a panel should be a deliberate edit
+rather than a filesystem side effect. The order in it decides nothing: panels
+are walked by id, not by config order. The classes *inside* a panel are
+discovered — see [Discovery](discovery.md).
 
 ## Building a panel outside a provider
 
@@ -135,8 +136,8 @@ $panel
 | Method | Signature | Notes |
 | --- | --- | --- |
 | `middleware` | `middleware(array $middleware): self` | Replaces the base stack. Default `['web']`. |
-| `authMiddleware` | `authMiddleware(array $middleware): self` | Replaces the auth stack, appended after the base one. |
-| `auth` | `auth(bool $verified = true): self` | Merges `auth`, and `verified` unless `$verified` is false. |
+| `authMiddleware` | `authMiddleware(array $middleware): self` | Replaces the auth stack, appended after the base one. Default `['auth']`; pass `[]` only for a public panel. |
+| `auth` | `auth(bool $verified = true): self` | Merges `auth`, and `verified` unless `$verified` is false. The default already includes `auth`. |
 | `canAccess` | `canAccess(Closure $callback): self` | `Closure(?Authenticatable): bool`. |
 
 | Reader | Returns |
@@ -376,7 +377,7 @@ $panel
 
 | Method | Signature | Default |
 | --- | --- | --- |
-| `navigationGroups` | `navigationGroups(array $groups): self` | `[]` — strings or backed enums; a string key names the parent |
+| `navigationGroups` | `navigationGroups(array $groups): self` | `[]` — strings or backed enums; a string key names the child, its value the parent |
 | `prefetch` | `prefetch(bool\|string $prefetch = 'hover'): self` | `'hover'`; `false` becomes `null`, `true` becomes `'hover'` |
 | `fullPageUrls` | `fullPageUrls(string ...$patterns): self` | `[]` — `Str::is()` patterns |
 | `errorNotification` | `errorNotification(int $status, string $title, ?string $body = null): self` | defaults for 403, 404, 419, 429, 500, 503 |

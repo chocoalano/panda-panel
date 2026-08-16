@@ -6,6 +6,7 @@ namespace PandaPanel\Notifications;
 
 use Illuminate\Support\Str;
 use PandaPanel\Actions\Enums\ActionVariant;
+use PandaPanel\Support\SafeUrl;
 
 /**
  * A button on a notification.
@@ -47,7 +48,7 @@ final class NotificationAction
 
     public function url(string $url, bool $newTab = false): self
     {
-        $this->url = $url;
+        $this->url = SafeUrl::sanitize($url);
         $this->newTab = $newTab;
 
         return $this;
@@ -121,7 +122,7 @@ final class NotificationAction
         return [
             'name' => $name,
             'label' => $label,
-            'url' => is_string($url) && $url !== '' ? $url : null,
+            'url' => is_string($url) && $url !== '' ? SafeUrl::sanitize($url) : null,
             'variant' => ($resolved ?? ActionVariant::Outline)->value,
             'markAsRead' => ($data['markAsRead'] ?? true) === true,
             'newTab' => ($data['newTab'] ?? false) === true,

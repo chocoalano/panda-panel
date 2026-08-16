@@ -86,14 +86,34 @@ final class FrontendRequirements
     private const EXTENSIONS = ['.ts', '.vue', '.d.ts', '/index.ts', '/index.vue', '/index.d.ts'];
 
     /**
-     * The npm packages an application needs, as `name@range` pairs ready to
-     * be handed to `npm install`.
+     * This package's own `package.json`, read from wherever it is installed.
      *
-     * @return list<string>
+     * It has to reach the Composer dist for this to resolve, which is why
+     * `.gitattributes` deliberately does not export-ignore it — see
+     * `hasNpmManifest()` for what happens when it does not.
      */
+    public static function npmManifestPath(): string
+    {
+        return dirname(__DIR__, 3).'/package.json';
+    }
+
+    /**
+     * Whether the dependency list can be read at all.
+     *
+     * Asked separately because "no missing packages" and "I could not look"
+     * are the same empty list, and reporting the second as the first is how a
+     * `package.json` left out of the Composer archive turned `panel:install`
+     * into a command that cheerfully said nothing was missing. The one job it
+     * has is to name what is missing.
+     */
+    public static function hasNpmManifest(): bool
+    {
+        return File::exists(self::npmManifestPath());
+    }
+
     public static function npmPackages(): array
     {
-        $manifest = dirname(__DIR__, 3).'/package.json';
+        $manifest = self::npmManifestPath();
 
         if (! File::exists($manifest)) {
             return [];

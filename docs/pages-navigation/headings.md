@@ -168,7 +168,7 @@ final class EditUser extends EditRecord
 }
 ```
 
-Every one of the three is called with `null` on a page that has no record — a create page, or a page resolved for its headings outside a request. A closure that dereferences `$record` unguarded fails there, which is why each built-in default begins with `$record === null ? … : …`.
+Every one of the three is called with `null` on a page that has no record — a create page, or a page resolved for its headings outside a request. Code that dereferences `$record` unguarded fails there, which is why every built-in default that touches the record opens with `$record === null ? … : …`: `ViewRecord::defaultTitle()`, `EditRecord::defaultTitle()` and `defaultHeading()`, and `ManageRelatedRecords::defaultSubheading()`. The ones that never touch it — `defaultTitle()` on the base class, on `CreateRecord`, on `ManageRelatedRecords` — take the parameter and ignore it.
 
 ```php
 $page = new EditUser;

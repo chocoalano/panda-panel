@@ -165,7 +165,7 @@ public function series(): array
 
 The colour comes from the same closed `PandaPanel\Widgets\Enums\StatColor` a stat uses — `Default`, `Success`, `Warning`, `Danger`, `Info` — mapped to literal Tailwind classes on the frontend. Two series left at `Default` are drawn in the same colour, so name a colour per series whenever there is more than one.
 
-Non-finite values (`NAN`, `INF`) are ignored by the renderer: a line skips the point, and a chart whose series contain nothing finite renders "No data for this period."
+Non-finite values (`NAN`, `INF`) are excluded from the axis domain and from the tooltip, and a chart whose series contain nothing finite renders "No data for this period." They are not excluded from the drawn path, so send finite numbers — cast a nullable aggregate to `0` rather than letting `null` become `NAN`.
 
 ## `ChartOptions`
 

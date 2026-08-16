@@ -325,7 +325,7 @@ TextColumn::make('title')
 | `extraAttributes()` | `extraAttributes(Closure\|array $attributes): static` |
 | `action()` | `action(Action $action): static` |
 
-These travel in `cellMeta` beside `cells`, not inside them, so a cell value stays exactly the shape its renderer's guard narrows and a table using none of this ships an empty map. `toCellMeta()` returns `null` when a column has none.
+These travel in `cellMeta` beside `cells`, not inside them, so a cell value stays exactly the shape its renderer's guard narrows and a table using none of this ships an empty map. `toCellMeta()` returns `null` when a column has none. A `url()` value is kept only when it is relative or uses `http`, `https`, `mailto`, or `tel`; unsafe schemes are serialized as `null` and ignored by the Vue renderer too.
 
 `extraAttributes` is spread onto an element, so it takes scalars only and refuses any key starting with `on` — an event handler there would be a way to put executable content on a page from a schema.
 

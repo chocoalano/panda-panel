@@ -42,7 +42,7 @@ Counts are clamped to 1–4 by `PandaPanel\Support\ColumnCount::clamp()` — the
 
 A span is clamped against that table separately at each breakpoint, so `columnSpan(3)` inside `columns(4)` is two columns at `md` and three at `lg`. `columnSpanFull()` crosses the wire as the string `'full'` and becomes `col-span-full` — the whole row at every width.
 
-Spans belong to fields and infolist entries. A layout already takes the whole row wherever it appears, and calling a span on the schema raises a `BadMethodCallException` naming the field it belonged on.
+Spans belong to fields and infolist entries. A layout already takes the whole row wherever it appears, and calling a span on the schema raises a `BadMethodCallException` naming the mistake rather than only the class.
 
 ## `Section`
 
@@ -276,7 +276,7 @@ public function children(): array;                                 // list<FormC
 ## Notes
 
 - **Containers always render.** Only a field can disappear on a page, and its container renders as an empty container rather than as gaps.
-- **A hidden field drops out of its layout entirely.** It is not in `schema`, not in a tab's `fields` list, and not in the rules.
+- **A hidden field drops out of its layout entirely.** It is not in `schema` and not in the rules. A tab's and a step's `fields` list is the exception: it names every field they hold, hidden ones included, because it exists only to point at the tab or step a rejected field sits in.
 - **`Grid::make()` clamps, `Grid` has no setter.** Every other container clamps in `columns()`.
 - **Tab keys are slugs.** Two tabs whose labels slug to the same string produce the same key.
 - **One wizard per form.** `FormSchema::wizard()` returns the first one, and the frontend only hands over when the wizard is the schema's single top-level node.

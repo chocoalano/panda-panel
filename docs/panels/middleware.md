@@ -30,7 +30,7 @@ panel('admin')->getAuthMiddleware();   // ['auth', 'verified']
 | Method | Signature | Default | Behaviour |
 | --- | --- | --- | --- |
 | `middleware` | `middleware(array $middleware): self` | `['web']` | **Replaces** the base stack. |
-| `authMiddleware` | `authMiddleware(array $middleware): self` | `[]` | **Replaces** the auth stack. |
+| `authMiddleware` | `authMiddleware(array $middleware): self` | `['auth']` | **Replaces** the auth stack. Pass `[]` only for a deliberately public panel. |
 | `auth` | `auth(bool $verified = true): self` | — | Merges `auth` (and `verified`) into the auth stack. |
 
 `middleware()` replaces rather than appends, so a panel that sets it must include `web` itself — without a session and CSRF token, no panel page can submit anything:
@@ -39,7 +39,8 @@ panel('admin')->getAuthMiddleware();   // ['auth', 'verified']
 $panel->middleware(['web', 'throttle:panel']);
 ```
 
-`auth()` merges, so it can be called alongside an explicit auth stack without discarding it:
+`auth()` merges, so it can be called alongside an explicit auth stack without discarding it. The
+default already contains `auth`; calling `auth()` mainly adds `verified`:
 
 ```php
 $panel->authMiddleware(['auth:staff'])->auth(verified: false);
@@ -50,6 +51,12 @@ Skip the verified check for a panel that does not require a verified email:
 
 ```php
 $panel->auth(verified: false);   // ['web', 'auth']
+```
+
+Make a panel public only by clearing the auth stack:
+
+```php
+$panel->authMiddleware([]);      // ['web']
 ```
 
 `getMiddleware()` is base plus auth, deduplicated in that order, and is what the route group receives.

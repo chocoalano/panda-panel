@@ -257,9 +257,10 @@ land on the panel's verify-email notice, click the link, come back.
   `createUsersUsing`. A panel that needs to stamp something on the new account
   — a tenant, a role — does it in that action, branching on the panel if it
   must: `app(PanelManager::class)->currentPanel()?->getId()`.
-- **New accounts are unverified.** `->auth()` includes `verified`, so a panel
-  with the default auth stack and no `emailVerification()` page sends a fresh
-  registrant to the *application's* verification notice.
+- **New accounts are unverified.** `->auth()` includes `verified` unless you
+  pass `verified: false`, so a panel that called `auth()` and has no
+  `emailVerification()` page sends a fresh registrant to the *application's*
+  verification notice.
 
 ## See also
 

@@ -3,6 +3,7 @@ import { router } from '@inertiajs/vue3';
 import { Bell } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
+import { safeUrl } from '@/lib/utils';
 import {
     Sheet,
     SheetContent,
@@ -191,18 +192,20 @@ async function run(
         await markRead(item.id);
     }
 
-    if (action.url === null) {
+    const url = safeUrl(action.url);
+
+    if (url === null) {
         return;
     }
 
     if (action.newTab) {
-        window.open(action.url, '_blank', 'noopener');
+        window.open(url, '_blank', 'noopener');
 
         return;
     }
 
     open.value = false;
-    router.visit(action.url);
+    router.visit(url);
 }
 </script>
 

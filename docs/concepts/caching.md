@@ -15,7 +15,7 @@ php artisan panel:clear
 ```
 
 ```
-INFO  Panels cached: 2 panels, 1 resources, 5 pages, 4 widgets.
+INFO  Panels cached: 2 panels, 1 resources, 9 pages, 5 widgets.
 INFO  Panel manifest cleared.
 ```
 

@@ -194,6 +194,19 @@ final class InstallPanelCommand extends Command
                 .'components are Vue and have to be built by something.';
         }
 
+        // Before the list itself, because an empty list means two different
+        // things and only one of them is good news.
+        if (! FrontendRequirements::hasNpmManifest()) {
+            $this->outstanding[] = sprintf(
+                "This package's own package.json is not installed at %s, so the npm dependencies "
+                    ."the published components import could not be checked at all.\n\n"
+                    .'     This is a packaging fault rather than something wrong with your application: '
+                    .'the file is export-ignored out of the Composer archive. Report it, and in the '
+                    .'meantime install the frontend dependencies listed in the package repository by hand.',
+                FrontendRequirements::npmManifestPath(),
+            );
+        }
+
         $packages = FrontendRequirements::missingNpmPackages();
 
         if ($packages !== []) {

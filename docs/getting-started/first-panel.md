@@ -133,7 +133,7 @@ return $panel
 
 | Call | Signature | Notes |
 | --- | --- | --- |
-| `brandName` | `brandName(string $brandName): self` | Shown in the shell. Defaults to the panel name. |
+| `brandName` | `brandName(string $brandName): self` | Shown in the shell. Defaults to `config('app.name')`. |
 | `navigationGroups` | `navigationGroups(array $groups): self` | Declares group order. Accumulates; undeclared groups follow. |
 | `sidebar` | `sidebar(bool $collapsible = true, bool $defaultOpen = true, string $variant = 'sidebar', string $appearance = 'inset'): self` | `variant: 'header'` swaps the rail for top navigation; `appearance` is `inset`, `floating` or `sidebar`. |
 | `dashboard` | `dashboard(string $page): self` | Replaces the page at the panel root. |
@@ -187,7 +187,7 @@ predictable. For a panel with id `admin` at path `admin`:
 | `/admin/exports/{file}` | `panel.admin.export-file` | A finished export, reachable only by the user who produced it |
 | `/admin/imports/{file}` | `panel.admin.import-file` | The rows an import could not accept |
 | `/admin/notifications` | `panel.admin.notifications.index` | The notification centre, scoped to the signed-in user |
-| `/admin/actions/*` | `panel.admin.actions.*` | `record`, `bulk`, `reorder`, `cell`, `table`, `infolist`, `form` |
+| `/admin/actions/*` | `panel.admin.actions.*` | `record`, `bulk`, `reorder`, `cell`, `table`, `infolist`, `form` (GET) and `submit` (POST to the same path) |
 | `/admin/relations/*` | `panel.admin.relations.*` | `form`, `save`, `action`, `bulk` |
 | `/admin/settings/profile` | `panel.admin.pages.settings-profile` | Account pages, unless `settings(false)` |
 | `/admin/settings/security` | `panel.admin.pages.settings-security` | Behind `RequirePassword` |

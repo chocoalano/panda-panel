@@ -83,7 +83,7 @@ final class Panel implements PanelContract
     private array $middleware = ['web'];
 
     /** @var list<string> */
-    private array $authMiddleware = [];
+    private array $authMiddleware = ['auth'];
 
     /** @var list<class-string> */
     private array $resources = [];

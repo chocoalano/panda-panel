@@ -65,7 +65,7 @@ Boot callbacks accumulate, and `Panel::boot()` runs the panel's plugins first so
 
 ## Registration is explicit
 
-Panels are listed by hand in `config/panda-panel.php`. The classes *inside* a panel are discovered; the panels themselves are not. Two reasons: registration order decides which panel a signed-in user is sent to when the request names none, and adding a panel should be a deliberate edit rather than a filesystem side effect.
+Panels are listed by hand in `config/panda-panel.php`. The classes *inside* a panel are discovered; the panels themselves are not. Two reasons: the list is the whole set of panels an application has — and which of them a signed-in user is sent to when the request names none follows from that set, since `firstAccessibleTo()` walks panels in id order — and adding a panel should be a deliberate edit rather than a filesystem side effect.
 
 A class name in that list that does not resolve is skipped rather than fatal, because a fatal during boot happens before the route that would have shown the error. `php artisan panel:cache` reports the same list where a mistake is visible.
 

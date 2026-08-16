@@ -47,7 +47,7 @@ panel('admin')->routeName('dashboard');   // 'panel.admin.dashboard'
 | Method | Signature | Default |
 | --- | --- | --- |
 | `middleware` | `middleware(array $middleware): self` | `['web']`, replaces |
-| `authMiddleware` | `authMiddleware(array $middleware): self` | `[]`, replaces |
+| `authMiddleware` | `authMiddleware(array $middleware): self` | `['auth']`, replaces; pass `[]` for a public panel |
 | `auth` | `auth(bool $verified = true): self` | merges `auth` (+ `verified`) |
 | `getMiddleware` | `getMiddleware(): list<string>` | base + auth, deduplicated |
 | `getBaseMiddleware` | `getBaseMiddleware(): list<string>` | |

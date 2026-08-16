@@ -164,7 +164,7 @@ See [Full page URLs](urls.md).
 - **A prefetch is a real request.** It runs the panel middleware stack, resolves the panel, authorizes, and renders. `mount` on a panel with thirty navigation items is thirty renders.
 - **`prefetch(false)` is not the same as an absent panel.** Both end up as `false` on the frontend, but only the panel setting is deliberate; the composable's `?? false` is a guard for the frame of a navigation that leaves the panel.
 - **The setting does not change what is cached.** Inertia owns the prefetch cache and its lifetime; the panel only chooses when the fetch starts.
-- **Turning it off does not disable client-side navigation.** Links are still Inertia visits; they just start fetching on click.
+- **Turning it off does not disable client-side navigation.** Links are still Inertia visits; the fetch starts on click instead of before it.
 
 ## See also
 

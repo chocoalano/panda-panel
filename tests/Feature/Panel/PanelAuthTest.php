@@ -81,6 +81,47 @@ it('leaves a signed-in user alone', function (): void {
         ->assertOk();
 });
 
+it('protects panel routes with auth by default', function (): void {
+    $manager = app(PanelManager::class);
+
+    if (! $manager->has('default-auth')) {
+        $panel = $manager->register(
+            Panel::make('default-auth')
+                ->path('default-auth')
+                ->settings(false),
+        );
+
+        app(PanelRouteRegistrar::class)->register($panel);
+
+        Route::getRoutes()->refreshNameLookups();
+    }
+
+    $this->get('/default-auth')->assertRedirect('/login');
+
+    $this->actingAs(User::factory()->create())
+        ->get('/default-auth')
+        ->assertOk();
+});
+
+it('makes a public panel an explicit middleware choice', function (): void {
+    $manager = app(PanelManager::class);
+
+    if (! $manager->has('public-door')) {
+        $panel = $manager->register(
+            Panel::make('public-door')
+                ->path('public-door')
+                ->settings(false)
+                ->authMiddleware([]),
+        );
+
+        app(PanelRouteRegistrar::class)->register($panel);
+
+        Route::getRoutes()->refreshNameLookups();
+    }
+
+    $this->get('/public-door')->assertOk();
+});
+
 /*
  * The access contract
  */
@@ -192,6 +233,28 @@ it('lets a user through once a second factor exists', function (): void {
     ])->save();
 
     $this->actingAs($user)->get('/locked')->assertOk();
+});
+
+it('fails closed when required two-factor has no security page', function (): void {
+    $manager = app(PanelManager::class);
+
+    if (! $manager->has('locked-missing-page')) {
+        $panel = $manager->register(
+            Panel::make('locked-missing-page')
+                ->path('locked-missing-page')
+                ->settings(false)
+                ->auth(verified: false)
+                ->requireTwoFactor(),
+        );
+
+        app(PanelRouteRegistrar::class)->register($panel);
+
+        Route::getRoutes()->refreshNameLookups();
+    }
+
+    $this->actingAs(User::factory()->create())
+        ->get('/locked-missing-page')
+        ->assertForbidden();
 });
 
 it('leaves a panel that does not demand one alone', function (): void {

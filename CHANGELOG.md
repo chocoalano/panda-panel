@@ -9,6 +9,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **`package.json` reaches the Composer archive, so `panel:install` can see the frontend
+  dependencies again.** `.gitattributes` carried `/package.json export-ignore`, and
+  `FrontendRequirements::npmPackages()` reads that file at runtime from inside `vendor/` to tell an
+  application which npm packages the published components import. In a dist install it found no
+  manifest, returned an empty list, and `panel:install` reported **no missing npm dependencies** —
+  which reads as "everything is installed" when in fact the check could not look. The one command
+  whose job is to name what is missing said nothing was.
+
+  Nothing in the suite caught it because the suite runs with this repository as the application,
+  where the file is always on disk. `Negative/DistributionTest` now asserts the archive attribute
+  directly, and `FrontendRequirements::hasNpmManifest()` separates "nothing is missing" from "I
+  could not look" so `panel:install` reports the second as a packaging fault rather than as good
+  news. `package-lock.json` stays export-ignored: an application resolves its own.
 - **CSV exports no longer execute what somebody typed into a text field.** A cell beginning with
   `=`, `+`, `-`, `@`, a tab or a carriage return is a formula as far as Excel, LibreOffice and
   Sheets are concerned, and they evaluate it when the file is opened —
@@ -90,6 +103,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   has no policy at all, the panel now logs once per model, naming the `make:policy` command and
   `Panel::strictAuthorization()` — which already turns this into an exception everywhere the panel
   asks, and which nobody finds by staring at a gap in a sidebar.
+- **The documented verification loop can now be run.** `composer run types:check`,
+  `composer run lint:check`, `npm run types:check` and `npm run lint:check` appeared in the master
+  document and in this repository's own agent skill, and none of the four has ever existed in
+  either manifest. The real names are `composer run analyse` / `format-check` / `test` and
+  `npm run typecheck` / `lint` / `format:check` / `build`. `Negative/DistributionTest` now reads
+  every command out of the documentation's own bash blocks and fails when one is not a declared
+  script.
 - **An icon that is not in the registry says so, in development.** `resolveIcon()` answered null
   for an unknown name exactly as it does for no name, so a mistyped icon — or, far more often, one
   declared in PHP after `php artisan panel:icons` was last run — drew nothing with no way to find

@@ -73,7 +73,7 @@ use PandaPanel\Support\FrontendPaths;
 FrontendPaths::panel();                 // /app/resources/js/panel
 FrontendPaths::panel('layouts');        // /app/resources/js/panel/layouts
 FrontendPaths::pages();                 // /app/resources/js/pages/Panels
-FrontendPaths::pages('Admin/Widgets');  // /app/resources/js/pages/Admin/Widgets
+FrontendPaths::pages('Admin/Widgets');  // /app/resources/js/pages/Panels/Admin/Widgets
 ```
 
 | Method | Signature | Config key | Default |

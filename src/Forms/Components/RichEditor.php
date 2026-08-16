@@ -6,6 +6,7 @@ namespace PandaPanel\Forms\Components;
 
 use Illuminate\Database\Eloquent\Model;
 use PandaPanel\Forms\Enums\FieldType;
+use PandaPanel\Support\SafeUrl;
 
 /**
  * Formatted text, stored as HTML.
@@ -115,11 +116,20 @@ final class RichEditor extends Field
 
         $stripped = strip_tags($html, $allowed);
 
-        // `on*` handlers, and any `href`/`src` pointing at a scheme that
-        // executes. `strip_tags` keeps attributes, so it is not enough by
-        // itself — this is the half that matters.
+        // `on*` handlers, and any `href`/`src` whose decoded value is not a
+        // safe navigation target. `strip_tags` keeps attributes, so it is not
+        // enough by itself — this is the half that matters.
         $stripped = preg_replace('/\s+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $stripped) ?? '';
-        $stripped = preg_replace('/\s+(href|src)\s*=\s*("|\')?\s*(javascript|data|vbscript):[^"\'>]*("|\')?/i', '', $stripped) ?? '';
+        $stripped = preg_replace_callback(
+            '/\s+(href|src)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i',
+            static function (array $matches): string {
+                $raw = $matches[2] ?? '';
+                $value = trim($raw, "\"'");
+
+                return SafeUrl::isAllowed($value) ? $matches[0] : '';
+            },
+            $stripped,
+        ) ?? '';
 
         return $stripped;
     }

@@ -132,7 +132,8 @@ It is off by default because it turns a 403 into a 500. In development the failu
 
 ## Guests
 
-A panel that calls `auth()` sends guests to a login. Which login depends on whether the panel has one of its own:
+Panel routes include Laravel's `auth` middleware by default, so guests are sent to a login unless
+you deliberately clear the auth stack. Which login depends on whether the panel has one of its own:
 
 ```php
 $panel->login();   // a login page at /{path}/login, carrying this panel's brand
@@ -140,7 +141,19 @@ $panel->login();   // a login page at /{path}/login, carrying this panel's brand
 
 With `register_guest_redirect` on (the default), `PandaPanel\Support\PanelLoginRedirect` sends a guest who opened a panel URL to that panel's login when it has one, and to `route('login')` otherwise. The intended URL is kept, so they land where they were going.
 
-A panel *without* `auth()` is public. `canAccess()` still runs, and receives `null` for a guest:
+`auth()` is still useful when the panel should also require verified email:
+
+```php
+$panel->auth();                  // auth + verified
+$panel->auth(verified: false);   // auth only
+```
+
+A public panel is now an explicit middleware choice. `canAccess()` still runs, and receives `null`
+for a guest:
+
+```php
+$panel->authMiddleware([]);
+```
 
 ```php
 $panel->canAccess(static fn (?Authenticatable $user): bool => $user !== null || app()->isLocal());
@@ -153,7 +166,7 @@ $panel->canAccess(static fn (?Authenticatable $user): bool => $user !== null || 
 ```php
 use PandaPanel\Core\PanelManager;
 
-app(PanelManager::class)->firstAccessibleTo($user);   // ?Panel, in registration order
+app(PanelManager::class)->firstAccessibleTo($user);   // ?Panel, panels walked in id order
 ```
 
 Both call the predicate outside a panel request. Keep it cheap and keep it free of request state — a `canAccess()` that reads `request()->route()` will be asked questions it cannot answer.

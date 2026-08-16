@@ -176,7 +176,7 @@ public static function configure(FormSchema $schema): FormSchema
 
 | Method | Default | Effect |
 | --- | --- | --- |
-| `confirmed(bool $confirmed = true): self` | `false` | Adds Laravel's `confirmed` rule and tells the renderer to draw the second input, labelled `Confirm {label}`. |
+| `confirmed(bool $confirmed = true): self` | `false` | Adds Laravel's `confirmed` rule and tells the renderer to draw the second input, labelled `Confirm {label}` with the label lower-cased. |
 | `revealable(bool $revealable = true): self` | `true` | Serialized as `revealable`. The bundled renderer draws the show/hide button unconditionally, so this flag currently only carries the intent to a custom one. |
 | `isConfirmed(): bool` | — | Read by `FormSchema`, which adds the `{name}_confirmation` rule. |
 | `optionalWhenFilled(): self` | — | `required(false)` plus a `dehydrateWhen()` that persists only a non-empty string. |

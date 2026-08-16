@@ -115,7 +115,7 @@ Every action endpoint authorizes before it runs anything, whatever the client se
 | --- | --- | --- |
 | `POST actions/record` | `TableSchema::getRecordAction()` | `isAuthorizedFor($record)` |
 | `POST actions/table` | `TableSchema::getTableAction()` | `isAuthorizedFor(null)` |
-| `POST actions/bulk` | `TableSchema::getBulkAction()` | `isAuthorizedFor(null)`, then `isAuthorizedForEach()` per record |
+| `POST actions/bulk` | `TableSchema::getBulkAction()` | `isAuthorizedFor(null)`, then `isAuthorizedForEach()` per record (`authorizeEachUsing()` or `authorize($record)`) |
 | `POST actions/infolist` | `InfolistSchema::getAction()` | `isAuthorizedFor($record)` |
 | `GET actions/form` | the scope's schema | `isAuthorizedFor($record)` |
 | `POST actions/form` | the scope's schema | `isAuthorizedFor($record)`, then the bulk per-record check |
@@ -234,8 +234,8 @@ Both tests matter, and the first one is the one that must never be deleted: it i
 
 - **Overriding a built-in's handler keeps its authorization.** `DeleteAction::make(...)->action(...)` still asks `canDelete()`. Say what the new operation needs.
 - **`visible()` is not a permission.** It is not re-checked by the record endpoint before running — only `authorize()` is. Put anything that matters in `authorize()`.
-- **A bulk action's `authorize()` answers with `null` on the endpoint too**, before the selection is loaded. It cannot see the records.
-- **`authorizeEachUsing()` aborts the whole batch.** It is a permission, not a filter. To skip inapplicable rows, filter inside the handler.
+- **A bulk action's first `authorize()` answers with `null` on the endpoint too**, before the selection is loaded. It cannot see the records at that point.
+- **The per-record bulk check aborts the whole batch.** It uses `authorizeEachUsing()` when present and falls back to `authorize($record)` otherwise. It is a permission, not a filter. To skip inapplicable rows, filter inside the handler.
 - **A link action is authorized twice by two different owners.** The action hides the button; the page it links to authorizes on arrival. Removing the second is a hole the first cannot cover.
 - **Registered modal actions are authorized against the same record as their parent** when the parent is serialized, and again by the endpoint when they run.
 - **The upload endpoint for an action's form authorizes as the action**, not as the resource — an action a user may not run must not be a way to put a file on a disk.

@@ -161,9 +161,10 @@ panel is never also registered bare and claiming its default slug.
 ## What discovery does not do
 
 - **It does not find panels.** Panel providers are listed in
-  `config/panda-panel.php`. Registration order decides which panel a user is
-  sent to when a request does not name one, and adding a panel should be a
-  deliberate edit rather than a filesystem side effect.
+  `config/panda-panel.php`, because the list is where every panel in the
+  application is visible at once and adding a panel should be a deliberate edit
+  rather than a filesystem side effect. The order in it decides nothing: panels
+  are walked by id.
 - **It does not find relation managers.** A resource names those in
   `relationManagers()`, and a manager not named there cannot be addressed by a
   request that names it.

@@ -104,7 +104,7 @@ final class EditPost extends EditRecord
 }
 ```
 
-`mutateFormDataBeforeFill()` sees the flattened values from every layout depth and its result is applied back onto the serialized components. Use it when a value depends on more than one field; use `formatUsing()` when it does not.
+`mutateFormDataBeforeFill()` sees the flattened values of the fields nested under `schema`, at any depth, and its result is applied back onto the serialized components. A wizard's steps and a tab set's tabs nest under `steps` and `tabs` instead, so their fields are not in that map. Use it when a value depends on more than one field; use `formatUsing()` when it does not.
 
 ## Dehydration
 
@@ -242,7 +242,7 @@ This is what the `form-state` endpoint answers with. See [Live fields](live-fiel
 - **`dehydrate()` never reads the request.** It reads validated data, so a key the rules did not produce cannot reach it.
 - **A missing key and a null value are different.** `dehydrate()` skips a field whose key is absent from `$validated` rather than writing null. A `Relationship` group makes the same distinction with its own path check, because `data_get()` cannot tell the two apart.
 - **`forceFill()` is what writes.** `handleRecordCreation()` and `handleRecordUpdate()` bypass `$fillable`, which is safe precisely because the attribute list came from the schema rather than from the request. Override either method to write through a service instead.
-- **A `Checkbox` defaults to `false`, not null.** A checkbox is always present in the payload as true or false, so `required` would reject an unchecked box; `boolean` is the real rule.
+- **A `Checkbox` defaults to `false`, not null.** A checkbox is always present in the payload as true or false, so `required` passes even for an unchecked box; `boolean` is the real rule, and `accepted` is the one that insists on a tick.
 - **A relation group's fields never reach the owner's attributes.** They are excluded by name in step 3 above, which is what stops `profile.bio` being written to a `bio` column on the owner.
 - **Hydration runs on every render, including the `form-state` endpoint.** A `formatUsing()` closure that queries should expect to be called more than once per page.
 

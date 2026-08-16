@@ -325,7 +325,7 @@ final class SelectionSummary extends StatsWidget
 - Filters are resolved by `Page`, not by `ResourcePage`. A widget with a `filterSchema()` placed in `headerWidgets()` will render its controls, but nothing reads the values back — `$this->filter()` returns the default every time.
 - Widget data is never cached by `panel:cache`. The manifest caches class names; counts, rows and series are computed per request.
 - `widgetData` is *absent* from the first response rather than null, because it is a deferred prop. A Vue component reading it must declare it optional.
-- Two widgets whose class basenames kebab-case to the same string cannot live in one panel. `AdminUserStats` and `AdminUserStats` in different namespaces still collide.
+- Two widgets whose class basenames kebab-case to the same string cannot live in one panel. `App\Panels\Admin\Widgets\UserStats` and `App\Panels\Admin\Reports\UserStats` are both `user-stats`, and registering the second throws.
 - There are no widget-specific testing helpers. Widgets are tested through the page's Inertia props, the way the package's own `WidgetRenderingTest` does.
 
 ## See also

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PandaPanel\Widgets\Support;
 
+use PandaPanel\Support\SafeUrl;
 use PandaPanel\Widgets\Enums\StatColor;
 
 /**
@@ -86,7 +87,19 @@ final readonly class Stat
      */
     public function url(string $url): self
     {
-        return $this->with(url: $url);
+        return new self(
+            $this->label,
+            $this->value,
+            $this->description,
+            $this->icon,
+            $this->color,
+            $this->trend,
+            $this->chart,
+            SafeUrl::sanitize($url),
+            $this->prefix,
+            $this->suffix,
+            $this->decimals,
+        );
     }
 
     /**

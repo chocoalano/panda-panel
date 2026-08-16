@@ -3205,16 +3205,25 @@ newly published component is not in the bundle until then.
 
 ## 17. Testing
 
-79 test files under `tests/Feature/Panel/`, 945 tests, 2902 assertions.
+The suite lives under `tests/Feature/Panel/`, including a `Negative/`
+directory whose whole subject is what happens when something is declared
+wrongly or asked for by somebody who may not have it.
 
 ```bash
-php artisan test --compact tests/Feature/Panel
-php artisan test --compact --filter=ResourceQuery
+vendor/bin/pest --compact
+vendor/bin/pest --filter=ResourceQuery
 
-composer run types:check   # PHPStan level 7
-composer run lint:check    # Pint
-npm run types:check && npm run lint:check && npm run build
+composer run analyse         # PHPStan
+vendor/bin/pint src tests    # Pint; `composer run format-check` to check only
+npm run format:check && npm run lint && npm run typecheck && npm run build
 ```
+
+`composer run ci` and `npm run ci` chain each side's checks.
+
+PHPStan runs at the level set in `phpstan.neon`, which states its own reason
+for the level it is at. Read the file rather than trusting a number written
+here — this block previously named four scripts that do not exist and a level
+that was not the configured one.
 
 ### What a new resource should be tested for
 

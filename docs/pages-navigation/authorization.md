@@ -249,7 +249,7 @@ Assert on the route, not on `canAccess()` alone. A test that only calls the stat
 - **A page in a cluster the user cannot access is still routed.** The cluster gate governs navigation and the cluster bar. Put the check on the page too if the page itself must be closed.
 - **Strict authorization does not apply here.** `strictAuthorization()` governs Gate-backed resource abilities and throws when a policy is missing. `Page::canAccess()` is plain PHP and returns `true` by default; a page that forgets to override it is open to everybody who may enter the panel.
 - **Panel access is checked before the panel boots.** Anything registered in the panel's boot callbacks — plugins included — never runs for a refused user.
-- **`Auth::user()` inside `canAccess()` is the panel's guard.** A panel with its own guard resolves the user through the panel middleware stack; a static call made outside a panel request sees the default guard instead.
+- **`Auth::user()` inside `canAccess()` reads whichever guard is current.** There is no guard setting on `Panel`; a panel that authenticates with a non-default guard does it by passing `authMiddleware(['auth:admin'])`, and Laravel's own `Authenticate` middleware is what makes that guard current for the request. The same static call made outside the panel's route group sees the application default instead.
 
 ## See also
 

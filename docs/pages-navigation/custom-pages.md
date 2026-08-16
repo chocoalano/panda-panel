@@ -402,7 +402,7 @@ defineProps<{
 </template>
 ```
 
-`defineOptions({ layout: PanelLayout })` is what puts the page inside the panel shell. The stub written by `--component` already includes it.
+`defineOptions({ layout: PanelLayout })` is what puts the page inside the panel shell, and it is the one line you have to add yourself: `stubs/panel/page-component.stub` writes only a `<Head>` and a `PageHeader`. A component that names no layout takes whatever the application's Inertia entry gives a page it has no case for, which on the starter kit is the signed-in application shell — HTTP 200, the host's sidebar, and the panel's own navigation nowhere.
 
 ## The generator
 
@@ -443,6 +443,8 @@ See [Page discovery](discovery.md).
 - **`filters` is sent even when the component ignores it.** `panel/Page` declares no `filters` prop; only `panel/Dashboard` renders the bar.
 - **Header actions on a standalone page must be links.** Nothing on the generic renderer handles a callback action's `run` event.
 - **`panel()` throws outside a panel request.** A page instantiated in a unit test needs `app(PanelManager::class)->setCurrentPanel(panel('admin'))` first, which is what the framework's own tests do.
+- **A generated Vue component declares no layout.** The published components under `resources/js/pages/panel` all declare one — a test asserts it — but the `--component` stub does not, so add `defineOptions({ layout: PanelLayout })` to anything the generator writes.
+- **`make:panel-page` exits non-zero when every file it would write already exists.** `report()` returns failure when nothing was created and something was skipped, which is what makes `--force` visible in CI rather than a silent no-op.
 
 ## See also
 

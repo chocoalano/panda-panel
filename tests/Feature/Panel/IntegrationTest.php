@@ -29,6 +29,7 @@ beforeEach(function (): void {
     app(PanelManager::class)->setCurrentPanel(panel('admin'));
 
     Config::set('panda-panel.integrations.allowed_hosts', ['api.example.test']);
+    Config::set('panda-panel.integrations.block_private_networks', false);
 });
 
 /**
@@ -99,6 +100,7 @@ it('refuses every URL when the allowlist is empty', function (): void {
 
 it('refuses the cloud metadata endpoint even when it is allowlisted', function (): void {
     Config::set('panda-panel.integrations.allowed_hosts', ['*']);
+    Config::set('panda-panel.integrations.block_private_networks', true);
 
     // The one address this feature must never reach: unauthenticated IAM
     // credentials on every major cloud.
@@ -108,6 +110,7 @@ it('refuses the cloud metadata endpoint even when it is allowlisted', function (
 
 it('refuses loopback and the private ranges', function (): void {
     Config::set('panda-panel.integrations.allowed_hosts', ['*']);
+    Config::set('panda-panel.integrations.block_private_networks', true);
 
     foreach ([
         'http://127.0.0.1:6379',
@@ -115,9 +118,18 @@ it('refuses loopback and the private ranges', function (): void {
         'http://192.168.1.1/admin',
         'http://172.16.0.9/',
         'http://[::1]:8080/',
+        'http://[::ffff:127.0.0.1]:8080/',
     ] as $url) {
         expect(OutboundUrl::isAllowed($url))->toBeFalse();
     }
+});
+
+it('refuses an unresolved host when private network blocking is enabled', function (): void {
+    Config::set('panda-panel.integrations.allowed_hosts', ['unresolved.invalid']);
+    Config::set('panda-panel.integrations.block_private_networks', true);
+
+    expect(OutboundUrl::rejection('https://unresolved.invalid/hooks'))
+        ->toContain('could not be resolved to a public address');
 });
 
 it('refuses a scheme that is not http', function (): void {

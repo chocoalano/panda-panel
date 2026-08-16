@@ -15,6 +15,7 @@ use PandaPanel\Actions\Support\Modal;
 use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\FormSchema;
 use PandaPanel\Support\DatabaseTransaction;
+use PandaPanel\Support\SafeUrl;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
@@ -230,7 +231,11 @@ class Action
 
     public function isAuthorizedForEach(Model $record): bool
     {
-        return $this->authorizeEachUsing === null || ($this->authorizeEachUsing)($record);
+        if ($this->authorizeEachUsing !== null) {
+            return ($this->authorizeEachUsing)($record);
+        }
+
+        return $this->isAuthorizedFor($record);
     }
 
     /**
@@ -682,15 +687,22 @@ class Action
             return null;
         }
 
+        $type = $this->type();
+        $url = $record !== null && $this->urlUsing !== null
+            ? SafeUrl::sanitize(($this->urlUsing)($record))
+            : null;
+
+        if ($type === ActionType::Link && $url === null) {
+            return null;
+        }
+
         return [
             'name' => $this->name,
             'label' => $this->getLabel(),
             'icon' => $this->icon,
             'variant' => $this->variant->value,
-            'type' => $this->type()->value,
-            'url' => $record !== null && $this->urlUsing !== null
-                ? ($this->urlUsing)($record)
-                : null,
+            'type' => $type->value,
+            'url' => $url,
             'formUrl' => $this->formUrlUsing === null ? null : ($this->formUrlUsing)($record),
             // A form the action declares itself is fetched from the panel's
             // action-form endpoint, which the client already holds. Only a

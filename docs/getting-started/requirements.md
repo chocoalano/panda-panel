@@ -52,7 +52,7 @@ from the package by default:
 | Migration | What it creates | Guard |
 | --- | --- | --- |
 | `create_notifications_table` | Laravel's own `notifications` table, read on every panel request by the notification centre. | Skipped when the table already exists. `down()` drops it only when it can establish this package created it. |
-| `add_email_two_factor_to_users_table` | `two_factor_email_confirmed_at` on `users`. | Skipped when the column, or the table, is absent or already present. |
+| `add_email_two_factor_to_users_table` | `two_factor_email_confirmed_at` on `users`. | Skipped when the `users` table is absent, or the column is already present. Placed after Fortify's `two_factor_confirmed_at` when that column exists, and appended when it does not. |
 | `create_panel_integrations_table` | `panel_integrations`. | Skipped when the table already exists. |
 | `add_history_and_signing_to_panel_integrations` | `panel_integration_deliveries`, and a `secret` column. | Each half is skipped when already applied. |
 

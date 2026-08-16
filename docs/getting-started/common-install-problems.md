@@ -7,7 +7,7 @@ error about a module specifier, a screen that renders at HTTP 200 inside somebod
 ## Start here
 
 ```bash
-php artisan panel:install --no-panel --no-user --no-interaction   # re-runs every check, changes nothing
+php artisan panel:install --no-panel --no-user --no-interaction   # re-runs every check; publishes only what is absent
 php artisan route:list --name=panel.                             # did the routes register at all
 php artisan panel:clear                                          # is a stale manifest hiding something
 tail -f storage/logs/laravel.log                                 # the panel logs several of these
@@ -339,9 +339,10 @@ php artisan panel:icons --check  # fail instead of writing, for CI
 npm run build
 ```
 
-The command scans `app/` for every shape an icon name is declared in, checks each against the
-icons Lucide actually ships, and fails by name on one that does not exist. In development the
-frontend also warns once per unknown name.
+The command scans `app/` *and the framework's own source* for every shape an icon name is declared
+in — the second is not optional, since half the icons a panel renders belong to actions the
+framework ships — checks each against the icons Lucide actually ships, and fails by name on one
+that does not exist. In development the frontend also warns once per unknown name.
 
 ---
 

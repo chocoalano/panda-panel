@@ -3,6 +3,7 @@ import { Link, router } from '@inertiajs/vue3';
 import { Loader2, Search } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
+import { safeUrl } from '@/lib/utils';
 import {
     Dialog,
     DialogContent,
@@ -49,6 +50,10 @@ function isActive(url: string): boolean {
     return flat.value[active.value]?.url === url;
 }
 
+function resultUrl(url: string): string {
+    return safeUrl(url) ?? '#';
+}
+
 /**
  * Arrows wrap, which is what a short list wants: up from the first result
  * reaches the last rather than doing nothing.
@@ -80,11 +85,12 @@ function onListKeydown(event: KeyboardEvent): void {
 
     if (event.key === 'Enter') {
         const result = flat.value[active.value];
+        const url = safeUrl(result?.url);
 
-        if (result) {
+        if (url) {
             event.preventDefault();
             open.value = false;
-            router.visit(result.url);
+            router.visit(url);
         }
     }
 }
@@ -290,9 +296,11 @@ router.on('start', () => {
                     <Link
                         v-for="result in group.results"
                         :key="result.url"
-                        :href="result.url"
-                        :data-active="isActive(result.url) ? 'true' : undefined"
-                        :aria-selected="isActive(result.url)"
+                        :href="resultUrl(result.url)"
+                        :data-active="
+                            isActive(resultUrl(result.url)) ? 'true' : undefined
+                        "
+                        :aria-selected="isActive(resultUrl(result.url))"
                         class="flex flex-col gap-0.5 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[active=true]:bg-accent data-[active=true]:text-accent-foreground"
                     >
                         <span class="font-medium">{{ result.title }}</span>

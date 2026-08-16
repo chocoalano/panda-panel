@@ -75,7 +75,8 @@ twice. In a non-interactive run the answer is no.
 $this->call('make:panel', ['name' => $panel, '--force' => (bool) $this->option('force')]);
 ```
 
-Skipped entirely under `--no-panel`, in which case steps 3 and 5 have no panel to work with.
+Skipped entirely under `--no-panel`, in which case steps 3 and 6 have no panel to work with —
+nothing is registered, and `panel:user` is called without a `--panel` to check against.
 
 ### 3. Register it in config
 
@@ -133,13 +134,14 @@ application already had, and a redirect nobody was told about is a bug report. S
 
 ### 5. Check the frontend
 
-Five checks, in this order. Each failure is added to the outstanding list rather than printed
+Six checks, in this order. Each failure is added to the outstanding list rather than printed
 where it happens.
 
 | Check | Method | Outstanding message |
 | --- | --- | --- |
 | Inertia | `FrontendRequirements::missingInertia()` | Names the missing root view or middleware, and says every panel screen will 500 without it. |
 | Vite | `FrontendRequirements::hasVite()` | "the published components are Vue and have to be built by something." |
+| The dependency list is readable | `FrontendRequirements::hasNpmManifest()` | Names the path this package's own `package.json` was expected at, and says the npm dependencies could not be checked at all — a packaging fault rather than something wrong with your application. |
 | npm dependencies | `FrontendRequirements::missingNpmPackages()` | The literal `npm install …` line for the packages you do not declare, followed by `npm run build`. |
 | Layout override | `FrontendRequirements::layoutOverrides()` | The file, the line number, the offending code, and the replacement. |
 | Host modules | `FrontendRequirements::missingHostModules()` | The list of `@/…` specifiers, with `wayfinder:generate` named for the generated ones. |

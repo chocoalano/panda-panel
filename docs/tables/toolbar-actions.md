@@ -182,7 +182,7 @@ $table->headerActions([
 
 `CreateAction::modal()` is a table action: it opens the resource's own form in a dialog and writes through `tableAction()`, so a dialog and the create page cannot validate or persist differently. `ExportAction::make()` exports the list as it is currently filtered; `ExportAction::bulk()` is the selection and belongs in [`bulkActions()`](bulk-actions.md). See [Export action](../import-export/export-action.md) and [Import action](../import-export/import-action.md).
 
-`CreateAction::make()` is a **link** action, and a link belongs on a row rather than in one of these bars. `Action::toArray()` only produces a `url` when it is given a record, so a link action serialized for a header, toolbar, or empty state carries `url: null` and renders as a button that posts — which the endpoint refuses, since a link action has no handler. Use `CreateAction::modal()` in these bars; the list page already renders a plain "New {label}" link of its own when the resource declares a create page and `canCreate()` allows it.
+`CreateAction::make()` is a **link** action, and a link belongs on a row rather than in one of these bars. A link action serialized without a safe URL is dropped from the payload rather than rendered as a button that posts. Use `CreateAction::modal()` in these bars; the list page already renders a plain "New {label}" link of its own when the resource declares a create page and `canCreate()` allows it.
 
 ## The empty state
 
@@ -266,7 +266,7 @@ An action with a form goes to `POST {panel path}/actions/submit` with `scope: "t
 ## Notes
 
 - **`tableAction()` is what makes it runnable.** An action carrying only `action()` is a record handler; posting it as a table action answers 400.
-- **A link action does not work in these bars.** `url()` is resolved from a record, and there is no record here, so the serialized `url` is `null` and the button falls through to posting. Link to a page from a [record action](record-actions.md) or from the page's own header.
+- **A link action does not work in these bars.** `url()` is resolved from a record, and there is no record here, so the action is absent from the serialized set. Link to a page from a [record action](record-actions.md) or from the page's own header.
 - **A table action cannot see the selection.** That is a [bulk action](bulk-actions.md), and it is authorized per record before anything is touched.
 - **`getTableAction()` returns the first match across the three sets.** Two actions sharing a name across sets are indistinguishable to the endpoint, and the per-set uniqueness check will not catch it.
 - **An inert action throws at declaration.** `PanelSchemaException::inertAction()` names it and lists what to add, rather than letting a button render that does nothing when pressed.

@@ -155,9 +155,9 @@ final class FormSchema
         return $this->components;
     }
 
-    public function field(string $name): ?Field
+    public function field(string $name, ?Model $record = null): ?Field
     {
-        foreach ($this->fields() as $field) {
+        foreach ($this->fields($record) as $field) {
             if ($field->getName() === $name) {
                 return $field;
             }

@@ -2,7 +2,7 @@
 
 A widget decides for itself whether the current user may see it, by overriding one static method. You reach for it whenever a widget reports something not everybody on the panel should read — revenue on a dashboard shared with support staff, a queue depth only operators need, anything scoped to a role.
 
-The check runs **before** the widget is constructed and therefore before `data()`, so an unauthorized widget never executes its queries. That ordering is the point: a widget that were merely hidden would still cost a query and could still leak counts through timing.
+The check runs **before** the widget is constructed and therefore before `data()`, so an unauthorized widget never executes its queries. That ordering is the point: a widget that was merely hidden would still cost a query and could still leak counts through timing.
 
 ## A minimal working example
 

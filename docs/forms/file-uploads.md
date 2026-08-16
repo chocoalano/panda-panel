@@ -85,7 +85,9 @@ $field->accepts('avatars/../elsewhere/two.png');    // false — climbing out
 
 ```php
 $field->mutate('avatars/never-uploaded.png', null);       // null
-$field->mutate(['avatars/one.png', 'avatars/fake.png'], null);
+
+FileUpload::make('gallery')->disk('local')->directory('avatars')->multiple()
+    ->mutate(['avatars/one.png', 'avatars/fake.png'], null);
 // ['avatars/one.png']
 ```
 

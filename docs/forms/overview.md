@@ -251,7 +251,7 @@ Counts are responsive, and a declared count is the count on a wide screen:
 
 A span is clamped against *that* table, separately at each breakpoint — so `columnSpan(3)` inside `columns(4)` is two columns at `md` and three at `lg`. Counts above four are clamped to four by `PandaPanel\Support\ColumnCount::clamp()`, because `resources/js/panel/lib/grid.ts` has literal Tailwind classes for one through four and an interpolated `grid-cols-${n}` compiles to nothing.
 
-Spans are on fields and infolist entries only. Calling one on the schema or on a layout is the `__call()` error above; a layout already takes the whole row wherever it appears.
+Spans are on fields and infolist entries only. Calling one on the schema is the `__call()` error above; on a layout it is PHP's ordinary "Call to undefined method", because only `FormSchema` translates the mistake. Either way a layout already takes the whole row wherever it appears.
 
 The containers themselves are covered in [Layouts](layouts.md): `Section`, `Grid`, `Tabs`/`Tab`, `Wizard`/`Step`, `Callout`, `EmptyState`, `Relationship`, `CustomComponent`.
 

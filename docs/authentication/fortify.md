@@ -87,7 +87,7 @@ the other:
 | Method | Signature | Default | Notes |
 | --- | --- | --- | --- |
 | `middleware` | `middleware(array $middleware): self` | `['web']` | Replaces the base stack. |
-| `authMiddleware` | `authMiddleware(array $middleware): self` | `[]` | Replaces the auth stack. `auth()` merges into it. |
+| `authMiddleware` | `authMiddleware(array $middleware): self` | `['auth']` | Replaces the auth stack. Pass `[]` only for a deliberately public panel. `auth()` merges into it. |
 | `getBaseMiddleware` | `getBaseMiddleware(): array` | — | The base stack alone. What the login page runs. |
 | `getAuthMiddleware` | `getAuthMiddleware(): array` | — | The auth stack alone. |
 | `getMiddleware` | `getMiddleware(): array` | — | Both, deduplicated, in that order. |
@@ -103,6 +103,9 @@ $panel->getBaseMiddleware();   // ['web', EnsureOnCorporateNetwork::class]
 $panel->getAuthMiddleware();   // ['auth', 'verified']
 $panel->getMiddleware();       // ['web', EnsureOnCorporateNetwork::class, 'auth', 'verified']
 ```
+
+The default auth stack already protects panel routes from guests. `auth(verified: false)` keeps
+that default in place, while `auth()` adds Laravel's `verified` middleware.
 
 `PandaPanel\Routing\PanelRouteRegistrar` then builds the panel's route group
 from `getMiddleware()` and appends four framework entries in a fixed order:
@@ -294,9 +297,10 @@ Both are documented in full under
 
 ## Gotchas
 
-- **`login()` without `auth()` is a login page nobody needs.** The pages are
-  registered from `hasLogin()` alone, so a panel anyone can open still gets a
-  `/login` URL. It is harmless and confusing; pair the two.
+- **`login()` on a public panel is a login page nobody needs.** The pages are
+  registered from `hasLogin()` alone, so a panel that deliberately cleared its
+  auth stack with `authMiddleware([])` can still get a `/login` URL. It is
+  harmless and confusing; pair login pages with authenticated panels.
 - **The panel's reset-password page is not what the reset email links to.**
   Laravel's `ResetPassword` notification builds its URL from the application's
   `password.reset` route. Pointing it at a panel is a call to

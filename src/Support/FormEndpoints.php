@@ -31,13 +31,14 @@ final class FormEndpoints
      *
      * @param  class-string<PanelResource>  $resource
      */
-    public static function forResource(string $resource, string $page): string
+    public static function forResource(string $resource, string $page, ?Model $record = null): string
     {
         $panel = self::panel();
 
         return route($panel->routeName('options'), [
             'resource' => $resource::slugIn($panel),
             'page' => $page,
+            ...($record === null ? [] : ['record' => (string) $record->getKey()]),
         ], absolute: false);
     }
 

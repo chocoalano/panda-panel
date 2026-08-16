@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
+import { safeUrl } from '@/lib/utils';
 import type { ActionDefinition } from '@/panel/types/action';
 import type { RelationEndpoints } from '@/panel/types/relation';
 
@@ -75,8 +76,10 @@ export function useRelationActions(
     }
 
     function start(request: PendingRelationAction): void {
-        if (request.action.type === 'link' && request.action.url !== null) {
-            router.visit(request.action.url);
+        const url = safeUrl(request.action.url);
+
+        if (request.action.type === 'link' && url !== null) {
+            router.visit(url);
 
             return;
         }

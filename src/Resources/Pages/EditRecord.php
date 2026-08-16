@@ -48,7 +48,7 @@ abstract class EditRecord extends ResourcePage
             'resource' => $this->resourceMetadata(),
             'form' => $form,
             'submitUrl' => $resource::url('update', $model),
-            'optionsUrl' => FormEndpoints::forResource($resource, static::$page),
+            'optionsUrl' => FormEndpoints::forResource($resource, static::$page, $model),
             'uploadUrl' => FormEndpoints::upload($resource, static::$page, $model),
             'formStateUrl' => FormEndpoints::formState($resource, static::$page, $model),
             'validateStepUrl' => $this->schema()->wizard() === null

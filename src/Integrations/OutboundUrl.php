@@ -93,12 +93,10 @@ final class OutboundUrl
             );
         }
 
-        if (self::resolvesPrivately($host)) {
-            return sprintf(
-                '%s resolves to a private or link-local address, which an integration may '
-                    .'not reach.',
-                $host,
-            );
+        $addressRejection = self::addressRejection($host);
+
+        if ($addressRejection !== null) {
+            return $addressRejection;
         }
 
         return null;
@@ -145,19 +143,32 @@ final class OutboundUrl
      * address and one loopback address is the classic way past a check that
      * only looks at one of them.
      */
-    private static function resolvesPrivately(string $host): bool
+    private static function addressRejection(string $host): ?string
     {
         if (Config::get('panda-panel.integrations.block_private_networks', true) !== true) {
-            return false;
+            return null;
         }
 
-        foreach (self::addressesFor($host) as $address) {
+        $addresses = self::addressesFor($host);
+
+        if ($addresses === []) {
+            return sprintf(
+                '%s could not be resolved to a public address from this server.',
+                $host,
+            );
+        }
+
+        foreach ($addresses as $address) {
             if (self::isBlocked($address)) {
-                return true;
+                return sprintf(
+                    '%s resolves to a private or link-local address, which an integration may '
+                        .'not reach.',
+                    $host,
+                );
             }
         }
 
-        return false;
+        return null;
     }
 
     /**
@@ -180,39 +191,35 @@ final class OutboundUrl
 
         $records = @dns_get_record($host, DNS_A | DNS_AAAA);
 
-        if ($records === false) {
-            return [];
-        }
-
         $addresses = [];
 
-        foreach ($records as $record) {
-            foreach (['ip', 'ipv6'] as $key) {
-                if (is_string($record[$key] ?? null)) {
-                    $addresses[] = $record[$key];
+        if ($records !== false) {
+            foreach ($records as $record) {
+                foreach (['ip', 'ipv6'] as $key) {
+                    if (is_string($record[$key] ?? null)) {
+                        $addresses[] = $record[$key];
+                    }
                 }
             }
         }
 
-        // A name that does not resolve is *allowed*, and that is a deliberate
-        // choice rather than an oversight.
-        //
-        // The instinct is to refuse it — an address we cannot see is an
-        // address we cannot vouch for. But a name that does not resolve is
-        // also a name no request can reach, so refusing buys nothing, while it
-        // does break every legitimate arrangement where resolution happens
-        // somewhere this process cannot see it: a hostname in a container's
-        // `/etc/hosts`, a split-horizon resolver, a service mesh.
-        //
-        // What this check is really for is the resolvable case — a name that
-        // points *into* the private range — and for literal addresses, which
-        // need no resolver at all and are handled above. `169.254.169.254` is
-        // a literal, and stays blocked.
-        return $addresses;
+        $ipv4 = @gethostbynamel($host);
+
+        if ($ipv4 !== false) {
+            $addresses = [...$addresses, ...$ipv4];
+        }
+
+        return array_values(array_unique($addresses));
     }
 
     private static function isBlocked(string $address): bool
     {
+        $mappedIpv4 = self::mappedIpv4($address);
+
+        if ($mappedIpv4 !== null) {
+            return self::isBlocked($mappedIpv4);
+        }
+
         foreach (self::BLOCKED_RANGES as $range) {
             if (self::inRange($address, $range)) {
                 return true;
@@ -220,6 +227,23 @@ final class OutboundUrl
         }
 
         return false;
+    }
+
+    private static function mappedIpv4(string $address): ?string
+    {
+        $binary = inet_pton($address);
+
+        if ($binary === false || strlen($binary) !== 16) {
+            return null;
+        }
+
+        if (substr($binary, 0, 12) !== str_repeat("\0", 10)."\xff\xff") {
+            return null;
+        }
+
+        $ipv4 = inet_ntop(substr($binary, 12));
+
+        return $ipv4 === false ? null : $ipv4;
     }
 
     private static function inRange(string $address, string $range): bool

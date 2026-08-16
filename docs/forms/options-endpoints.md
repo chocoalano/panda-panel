@@ -85,7 +85,7 @@ $field->resolveOptions(Post::class);              // first 20, ordered by name
 $field->resolveOptions(Post::class, 'ada');       // those matching, still bounded
 ```
 
-The query is `where({title}, 'like', '%term%')` with `\`, `%`, and `_` escaped, ordered by the title attribute, limited to `optionLimit()`, and plucked as `title => key`. Calling it for a relation without a model class throws `InvalidArgumentException`; for a static option list the model class is not needed and the search term is ignored.
+The query is `where({title}, 'like', '%term%')` with `\`, `%`, and `_` escaped, ordered by the title attribute, limited to `optionLimit()`, and plucked as `key => title` — the key becomes the option's `value` and the title its `label`. Calling it for a relation without a model class throws `InvalidArgumentException`; for a static option list the model class is not needed and the search term is ignored.
 
 ### `existsIn()`
 
@@ -112,10 +112,10 @@ Route name `panel.{panel_id}.options`, one per panel, handled by `PandaPanel\Htt
 | `resource` | The resource slug in this panel. 422 if missing, 404 if unknown |
 | `field` | The field name. 422 if missing, 404 if the schema has no such field |
 | `search` | Trimmed and cut to 255 characters. Absent means no filter |
-| `page` | `edit`, or `create` for anything else — which schema to build |
+| `page` | `create` or `edit`. Anything else is 422 |
 | `relation` | Present for a relation form: the relation manager's key |
 | `operation` | The relation operation. 404 if unrecognised |
-| `record` | The owner's key, for a relation form |
+| `record` | The edited resource record for `page=edit`, or the owner's key for a relation form |
 | `related` | The related record, for the operations that need one |
 
 The context — resource, page, relation, operation, owner — is built by the server in `PandaPanel\Support\FormEndpoints` and travels in the URL. The browser appends only `field` and `search`. That split is what stops a keystroke changing which form is being asked about.
@@ -123,8 +123,8 @@ The context — resource, page, relation, operation, owner — is built by the s
 ```php
 use PandaPanel\Support\FormEndpoints;
 
-FormEndpoints::forResource(PostResource::class, 'edit');
-// /admin/options?resource=posts&page=edit
+FormEndpoints::forResource(PostResource::class, 'edit', $post);
+// /admin/options?resource=posts&page=edit&record=1
 
 FormEndpoints::forRelation(PostResource::class, CommentsRelationManager::class, $post, 'attach');
 // /admin/options?resource=posts&record=1&relation=comments&operation=attach
@@ -138,7 +138,9 @@ FormEndpoints::forRelation(PostResource::class, CommentsRelationManager::class, 
 | Unknown resource, unknown relation, unknown operation | 404 |
 | A field the schema does not declare | 404 |
 | A field that is not a `Select` | 400 |
-| A resource form the user may not read (`canViewAny()`) | 403 |
+| A resource create form the user may not create (`canCreate()`) | 403 |
+| A resource edit form with no `record` | 422 |
+| A resource edit form the user may not edit (`canEdit($record)`) | 403 |
 | A relation the user may not read (`RelationManager::canViewAny($owner)`) | 403 |
 | An operation the user may not perform | 403 |
 | An owner record the user may not view (`canView()`) | 403 |

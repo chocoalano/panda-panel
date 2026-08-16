@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PandaPanel\Search;
 
+use PandaPanel\Support\SafeUrl;
+
 /**
  * One hit, already reduced to what the palette draws.
  *
@@ -29,7 +31,7 @@ final readonly class GlobalSearchResult
     {
         return [
             'title' => $this->title,
-            'url' => $this->url,
+            'url' => SafeUrl::sanitize($this->url) ?? '#',
             'details' => $this->details,
         ];
     }

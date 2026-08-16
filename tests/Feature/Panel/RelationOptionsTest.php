@@ -114,6 +114,7 @@ it('refuses options for a relation the user may not read', function (): void {
 it('404s on a field the schema does not declare', function (): void {
     $this->getJson(optionsUrl([
         'resource' => 'projects',
+        'page' => 'create',
         'field' => 'password',
     ]))->assertNotFound();
 });
@@ -121,6 +122,7 @@ it('404s on a field the schema does not declare', function (): void {
 it('refuses a field that is not a select', function (): void {
     $this->getJson(optionsUrl([
         'resource' => 'projects',
+        'page' => 'create',
         'field' => 'name',
     ]))->assertStatus(400);
 });
@@ -166,7 +168,8 @@ it('sends the options endpoint with a resource form', function (): void {
 
     expect($response->viewData('page')['props']['optionsUrl'])
         ->toContain('/relation-host/options')
-        ->toContain('page=edit');
+        ->toContain('page=edit')
+        ->toContain('record='.$this->project->getKey());
 });
 
 /*

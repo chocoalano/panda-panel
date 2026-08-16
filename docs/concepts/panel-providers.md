@@ -40,9 +40,9 @@ final class AdminPanelProvider extends PanelProvider
 ],
 ```
 
-`php artisan make:panel Admin` writes exactly this file plus the three
-directories, and prints the config line to add. It does not edit the config
-file for you.
+`php artisan make:panel Admin` writes this provider — with `->name('Admin')` and
+a default `->icon('layout-grid')` — plus the three directories, and prints the
+config line to add. It does not edit the config file for you.
 
 ```bash
 php artisan make:panel Admin
@@ -117,8 +117,9 @@ Two consequences worth stating:
   would have shown the error; `php artisan panel:cache` reports the same list
   somewhere the mistake is visible.
 
-Registration order is what `firstAccessibleTo()` walks, so it decides where a
-user lands when a request does not name a panel.
+`firstAccessibleTo()` walks `PanelRegistry::all()`, which is sorted by panel id
+rather than by config order, so it is the id — not the position in this list —
+that decides where a user lands when a request does not name a panel.
 
 ## Registering a panel from your own code
 
@@ -168,7 +169,7 @@ $manager = app(PanelManager::class);
 | `has` | `has(string $id): bool` | |
 | `get` | `get(string $id): Panel` | Throws `PanelRegistrationException::unknownPanel()`. |
 | `resolveFromRequest` | `resolveFromRequest(Request $request): ?Panel` | Longest path prefix first; honours `domain()`. |
-| `firstAccessibleTo` | `firstAccessibleTo(?Authenticatable $user): ?Panel` | Registration order. |
+| `firstAccessibleTo` | `firstAccessibleTo(?Authenticatable $user): ?Panel` | Id order, the same order `all()` returns. |
 | `currentPanel` | `currentPanel(): ?Panel` | Delegates to `PanelContext`. |
 | `hasCurrentPanel` | `hasCurrentPanel(): bool` | |
 | `setCurrentPanel` | `setCurrentPanel(?Panel $panel): void` | Called by `ResolvePanel`. |

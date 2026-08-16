@@ -137,6 +137,47 @@ it('refuses an upload from a reader who may not create', function (): void {
     expect(Storage::disk('public')->allFiles())->toBe([]);
 });
 
+it('refuses resource field options from a reader who may not create', function (): void {
+    ProjectPolicy::$creatable = false;
+    ProjectPolicy::$listable = true;
+
+    $this->getJson(formHostUrl('options', [
+        'resource' => 'form-fixtures',
+        'page' => 'create',
+        'field' => 'kind',
+    ]))->assertForbidden();
+});
+
+it('asks the record policy for resource field options on an edit form', function (): void {
+    $project = Project::query()->create(['name' => 'Apollo']);
+
+    ProjectPolicy::$creatable = false;
+
+    $this->getJson(formHostUrl('options', [
+        'resource' => 'form-fixtures',
+        'page' => 'edit',
+        'record' => (string) $project->getKey(),
+        'field' => 'kind',
+    ]))->assertOk();
+
+    ProjectPolicy::$updatable = false;
+
+    $this->getJson(formHostUrl('options', [
+        'resource' => 'form-fixtures',
+        'page' => 'edit',
+        'record' => (string) $project->getKey(),
+        'field' => 'kind',
+    ]))->assertForbidden();
+});
+
+it('refuses edit-form field options that name no record', function (): void {
+    $this->getJson(formHostUrl('options', [
+        'resource' => 'form-fixtures',
+        'page' => 'edit',
+        'field' => 'kind',
+    ]))->assertStatus(422);
+});
+
 it('asks the record\'s own policy for an upload on an edit form', function (): void {
     Storage::fake('public');
 

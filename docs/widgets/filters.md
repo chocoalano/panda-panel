@@ -222,7 +222,7 @@ The controls apply on change rather than behind an Apply button, with `preserveS
 
 ## Defaults, clearing, and the session
 
-`WidgetFilters::resolve()` follows three rules, and they are worth knowing because they are what makes a cleared filter stay cleared.
+`WidgetFilters` resolves each schema's values by three rules, and they are worth knowing because they are what makes a cleared filter stay cleared.
 
 | The request | What the widget gets |
 | --- | --- |

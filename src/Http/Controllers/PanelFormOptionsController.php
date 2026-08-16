@@ -65,11 +65,6 @@ final class PanelFormOptionsController
     /**
      * Options for a field on the resource's own form.
      *
-     * `canViewAny()` is the gate: the form this field belongs to is the
-     * resource's, so being able to work with the resource is what makes its
-     * options readable. The related records are a lookup list, not the thing
-     * being authorized.
-     *
      * @param  class-string<PanelResource>  $resource
      * @return list<array{value: string, label: string}>
      */
@@ -79,17 +74,29 @@ final class PanelFormOptionsController
         string $field,
         ?string $search,
     ): array {
-        abort_unless($resource::canViewAny(), 403);
-
         $page = $request->query('page');
+
+        abort_unless(in_array($page, ['create', 'edit'], true), 422, 'Invalid page.');
+
+        $page = (string) $page;
+
+        $record = null;
+
+        if ($page === 'create') {
+            abort_unless($resource::canCreate(), 403);
+        } else {
+            $record = $this->resolveRecord($request, $resource);
+
+            abort_unless($resource::canEdit($record), 403);
+        }
 
         $schema = $resource::form(
             FormSchema::make()
                 ->model($resource::getModel())
-                ->forPage($page === 'edit' ? 'edit' : 'create'),
+                ->forPage($page),
         );
 
-        return $this->optionsFor($schema, $field, $resource::getModel(), $search);
+        return $this->optionsFor($schema, $field, $resource::getModel(), $search, $record);
     }
 
     /**
@@ -152,8 +159,9 @@ final class PanelFormOptionsController
         string $field,
         string $modelClass,
         ?string $search,
+        ?Model $record = null,
     ): array {
-        $component = $schema->field($field);
+        $component = $schema->field($field, $record);
 
         // A field the schema does not declare does not exist, however the
         // request spells it — the same rule that governs sorting and
@@ -162,6 +170,22 @@ final class PanelFormOptionsController
         abort_unless($component instanceof Select, 400, 'That field has no options.');
 
         return $component->resolveOptions($modelClass, $search);
+    }
+
+    /**
+     * @param  class-string<PanelResource>  $resource
+     */
+    private function resolveRecord(Request $request, string $resource): Model
+    {
+        $key = $request->query('record');
+
+        abort_unless(is_string($key), 422, 'Invalid record key.');
+
+        $record = $resource::findRecord($key);
+
+        abort_if($record === null, 404);
+
+        return $record;
     }
 
     /**

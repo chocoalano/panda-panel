@@ -3,9 +3,9 @@
 Fortify owns the second factor at the login POST — TOTP, recovery codes,
 passkeys — and the panel does not duplicate any of it. What the panel adds is
 two things Fortify has no opinion about: a way to *demand* that a user has a
-second factor before they may use a panel at all, and a second factor of its
-own for somebody who will not install an authenticator app. You reach for this
-page to turn either on.
+second factor before they may use a panel at all, and a second factor of its own
+for somebody who will not install an authenticator app. You reach for this page
+to turn either on.
 
 ## A minimal working example
 
@@ -36,9 +36,12 @@ final class AdminPanelProvider extends PanelProvider
 A signed-in user with no second factor now lands on the panel's security page
 instead of wherever they were going, carrying a `warning` flash:
 
-```bash
-curl -I https://example.test/admin
-# 302 → /admin/settings/security
+```php
+it('holds a user without a second factor at the security page', function (): void {
+    $this->actingAs(User::factory()->create())
+        ->get('/admin')
+        ->assertRedirect(route('panel.admin.pages.settings-security', absolute: false));
+});
 ```
 
 Once they have set one up — an authenticator app, a passkey, or the panel's own
@@ -56,9 +59,9 @@ yes:
 | Passkey | `method_exists($user, 'passkeys') && $user->passkeys()->exists()` | `Laravel\Fortify\PasskeyAuthenticatable` |
 
 Every check is `method_exists()` rather than an `instanceof`. Fortify ships
-`TwoFactorAuthenticatable` as a trait, not an interface, so the question can
-only be asked of the object; a user model without the trait simply has
-two-factor off rather than throwing.
+`TwoFactorAuthenticatable` as a trait, not an interface, so the question can only
+be asked of the object; a user model without the trait simply has two-factor off
+rather than throwing.
 
 A passkey counts deliberately. A panel that demanded an authenticator app from
 somebody already using a hardware key would be demanding a downgrade.
@@ -84,11 +87,23 @@ The boolean parameter exists so the decision can be an expression:
 $panel->requireTwoFactor(app()->isProduction());
 ```
 
+The demand needs somewhere to send people, which is the panel's settings pages:
+
+```php
+public function settings(bool $settings = true): self
+public function hasSettings(): bool
+```
+
+```php
+$panel->settings();          // ProfileSettings, SecuritySettings, AppearanceSettings — the default
+$panel->settings(false);     // no security page; do not combine this with requireTwoFactor()
+```
+
 ## The middleware
 
 `PandaPanel\Http\Middleware\RequireTwoFactor` is registered in every panel's
-route group by `PanelRouteRegistrar`, with the panel id as a parameter. There is
-nothing to add:
+route group by `PandaPanel\Routing\PanelRouteRegistrar`, with the panel id as a
+parameter. There is nothing to add:
 
 ```php
 'middleware' => [
@@ -104,25 +119,28 @@ public function handle(Request $request, Closure $next, ?string $panelId = null)
 ```
 
 The id is passed explicitly so the panel is never inferred from path matching.
-Omitting it falls back to `PanelManager::currentPanel()`, which is what makes
-the class usable on a route of your own:
+Omitting it falls back to `PanelManager::currentPanel()`, which is what makes the
+class usable on a route of your own:
 
 ```php
+use Illuminate\Support\Facades\Route;
 use PandaPanel\Http\Middleware\RequireTwoFactor;
 
 Route::get('/reports/payroll', PayrollController::class)
     ->middleware(['auth', RequireTwoFactor::class.':admin']);
 ```
 
-It runs after `ResolvePanel`, so the panel is resolved and the user is known by
-the time it asks anything. It passes the request through untouched when:
+It runs after `ResolvePanel`, so the panel is bound and the user is known by the
+time it asks anything. It passes the request through untouched when:
 
 - the panel is unknown, or `requiresTwoFactor()` is false;
 - nobody is signed in — a guest is the guest redirect's problem, not this one's;
 - the user already has one of the three factors;
-- the panel has no security page route to send them to;
 - the request is already for the security page, or for **any** of the panel's
   standalone pages (`panel.{id}.pages.*`).
+
+If the panel demands a second factor but has no security page route, the middleware aborts with
+403. That is a configuration error, and failing closed is safer than turning the demand off.
 
 Otherwise:
 
@@ -146,7 +164,7 @@ The props it renders with, all built in `props()`:
 | --- | --- | --- |
 | `canManageTwoFactor` | `bool` | `Laravel\Fortify\Features::canManageTwoFactorAuthentication()` |
 | `canManagePasskeys` | `bool` | `Features::canManagePasskeys()` |
-| `passkeys` | `array` | the user's passkeys, or `[]` when the model is not a `PasskeyUser` |
+| `passkeys` | `array` | the user's passkeys, or `[]` when the model is not a `Laravel\Fortify\Contracts\PasskeyUser` |
 | `passwordRules` | `string` | `PandaPanel\Support\PasswordRules::attribute()` |
 | `emailCodeEnabled` | `bool` | `EmailCodeFactor::isEnabledFor($user)` |
 | `emailCodeUrls` | `array{enable: string, disable: string}` | the panel's own two-factor routes |
@@ -172,8 +190,8 @@ A one-time code sent to the account's address. Weaker than TOTP and much
 stronger than nothing, which is the choice it actually competes with.
 
 It is **not** part of the login POST. Fortify owns signing in, and reaching into
-that pipeline to add a channel would mean owning a fork of it. This works the
-way password confirmation does: the session carries a mark once a code has been
+that pipeline to add a channel would mean owning a fork of it. This works the way
+password confirmation does: the session carries a mark once a code has been
 answered, and middleware holds every page until it is there. A new session on a
 new device is challenged even though the password was right, and the mark dies
 with the session — a second factor that survived signing out would not be one.
@@ -192,8 +210,8 @@ use PandaPanel\Core\PanelManager;
 
 $panel = app(PanelManager::class)->get('admin');
 
-route($panel->routeName('auth.two-factor.enable'));    // /admin/two-factor/enable
-route($panel->routeName('auth.two-factor.disable'));   // /admin/two-factor/disable
+route($panel->routeName('auth.two-factor.enable'), absolute: false);    // '/admin/two-factor/enable'
+route($panel->routeName('auth.two-factor.disable'), absolute: false);   // '/admin/two-factor/disable'
 ```
 
 `enable()` writes the timestamp and marks the current session as already having
@@ -206,8 +224,8 @@ $user->forceFill(['two_factor_email_confirmed_at' => now()])->save();
 $request->session()->put(PanelTwoFactorController::SESSION_KEY, now()->timestamp);
 ```
 
-`disable()` nulls the column, forgets any outstanding code, and drops the
-session mark.
+`disable()` nulls the column, forgets any outstanding code, and drops the session
+mark. Both redirect `back()` with a `success` flash.
 
 ### Answering the challenge
 
@@ -227,14 +245,14 @@ code first when none is outstanding, so opening the page is enough. Its props:
 | `retryAfter` | `int` | seconds until another code may be sent, `0` when one may be now |
 
 `send()` issues another and throws a `ValidationException` on `code` when the
-account has asked for too many. It says so plainly rather than pretending one
-was sent — a user waiting for an email that is not coming will ask for five
-more. It aborts 500 when the user model has no `notify()`.
+account has asked for too many. It says so plainly rather than pretending one was
+sent — a user waiting for an email that is not coming will ask for five more. It
+aborts 500 when the user model has no `notify()`.
 
 `verify()` validates `['code' => ['required', 'string', 'digits:6']]`, then
-regenerates the session before marking it (a fixed id is the one thing that
-would let somebody else inherit the mark) and redirects to
-`redirect()->intended(...)`, falling back to the panel dashboard.
+regenerates the session before marking it (a fixed id is the one thing that would
+let somebody else inherit the mark) and redirects to `redirect()->intended(...)`,
+falling back to the panel dashboard.
 
 ```php
 use PandaPanel\Http\Controllers\PanelTwoFactorController;
@@ -251,15 +269,15 @@ PanelTwoFactorController::SESSION_KEY;   // 'panel.mfa.email.confirmed_at'
 public function handle(Request $request, Closure $next, ?string $panelId = null): Response
 ```
 
-It passes the request through when there is no panel or no user, when the
-account never turned the factor on, when the session already carries the mark,
-when the panel has no challenge route, or when the request is already for one of
-the panel's `auth.two-factor.*` routes. Otherwise it stores
-`url.intended` and redirects to the challenge — so answering it returns the user
-where they were going.
+It passes the request through when there is no panel or no user, when the account
+never turned the factor on, when the session already carries the mark, when the
+panel has no challenge route, or when the request is already for one of the
+panel's `auth.two-factor.*` routes. Otherwise it stores `url.intended` and
+redirects to the challenge — so answering it returns the user where they were
+going.
 
 Note the difference between the two middlewares. `RequireTwoFactor` checks
-*enrolment*, once, and is a panel-level policy. `RequireEmailCode` checks *this
+*enrolment*, and is a panel-level policy. `RequireEmailCode` checks *this
 session*, on every request, and applies to any account that opted in — even on a
 panel that never called `requireTwoFactor()`.
 
@@ -286,7 +304,8 @@ A non-`Model` argument is also false.
 ### The challenge itself
 
 `PandaPanel\Auth\EmailCodeChallenge` is resolvable from the container and is
-where the code lives. Every method takes an `Illuminate\Contracts\Auth\Authenticatable`.
+where the code lives. Every method takes an
+`Illuminate\Contracts\Auth\Authenticatable`.
 
 | Method | Signature | Returns |
 | --- | --- | --- |
@@ -330,9 +349,11 @@ preference:
 
 The code lives in the cache rather than a table: a row that outlives a cache
 flush is a row somebody has to remember to prune, and an expiry the storage
-enforces cannot be forgotten. It is hashed because a cache a support engineer
-can read is a cache that can be read, and a code in it is a password for one
-login.
+enforces cannot be forgotten. It is hashed because a cache a support engineer can
+read is a cache that can be read, and a code in it is a password for one login.
+
+A successful `verify()` also clears the guess limiter, so five wrong tries
+followed by the right one leaves the account with a clean slate.
 
 ### The email
 
@@ -364,7 +385,14 @@ php artisan migrate
 
 A timestamp rather than a boolean, for the same reason `email_verified_at` is
 one: "when did they turn this on" is worth being able to answer, and "is it on"
-is `!== null`.
+is `!== null`. Cast it on the model if you want a date back:
+
+```php
+protected function casts(): array
+{
+    return ['two_factor_email_confirmed_at' => 'datetime'];
+}
+```
 
 ## Route reference
 
@@ -379,15 +407,17 @@ somebody already signed in.
 | `panel.{id}.auth.two-factor.enable` | POST | `{panel}/two-factor/enable` | `enable` | `RequirePassword` |
 | `panel.{id}.auth.two-factor.disable` | POST | `{panel}/two-factor/disable` | `disable` | `RequirePassword` |
 
+```bash
+php artisan route:list --name=panel.admin.auth.two-factor
+```
+
 ## Testing
 
 The challenge is ordinary HTTP, so it tests as ordinary HTTP:
 
 ```php
-use PandaPanel\Auth\EmailCodeChallenge;
-use PandaPanel\Http\Controllers\PanelTwoFactorController;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\RateLimiter;
+use PandaPanel\Http\Controllers\PanelTwoFactorController;
 
 it('holds a session that has not answered a code', function (): void {
     Notification::fake();
@@ -425,12 +455,14 @@ Rate limits are per user and persist between tests in the same process. Clear
 them in an `afterEach` when a test issues codes:
 
 ```php
+use Illuminate\Support\Facades\RateLimiter;
+
 RateLimiter::clear('panel.mfa.email.send.'.$user->getKey());
 RateLimiter::clear('panel.mfa.email.attempt.'.$user->getKey());
 ```
 
-For a panel that demands a factor, Fortify's own flag is the quickest way to
-give a user one:
+For a panel that demands a factor, Fortify's own flag is the quickest way to give
+a user one:
 
 ```php
 $user->forceFill([
@@ -444,37 +476,36 @@ The full suites are `tests/Feature/Panel/EmailCodeTest.php` and
 
 ## Gotchas
 
-- **`requireTwoFactor()` checks enrolment, not this session.** Whether the
-  factor was actually used to sign in is Fortify's business at the login POST.
-  The panel-level check asks only whether the account has one. The emailed code
-  is the exception: `RequireEmailCode` is a per-session check.
-- **Every standalone page is exempt, not only the security page.** The
-  exemption is `$request->routeIs($panel->routeName('pages.*'))`, so a custom
-  page you registered on the panel stays reachable for a user without a second
-  factor. Signing out is a legitimate answer to being asked for one, and the
-  account pages sit beside the sign-out. Put anything sensitive in a resource,
-  or add your own check to the page.
-- **`settings(false)` disarms the demand.** Without a security page route there
-  is nowhere to send anybody, so `RequireTwoFactor` lets the request through
-  rather than locking every user out of a panel nobody can enter. A panel that
-  demands a second factor needs somewhere to set one up.
-- **Enabling emailed codes is not enrolment for the current session.**
-  `enable()` marks the session immediately, so the person who just turned it on
-  is not challenged. The next session is.
+- **`requireTwoFactor()` checks enrolment, not this session.** Whether the factor
+  was actually used to sign in is Fortify's business at the login POST. The
+  panel-level check asks only whether the account has one. The emailed code is
+  the exception: `RequireEmailCode` is a per-session check.
+- **Every standalone page is exempt, not only the security page.** The exemption
+  is `$request->routeIs($panel->routeName('pages.*'))`, so a custom page you
+  registered on the panel stays reachable for a user without a second factor.
+  Signing out is a legitimate answer to being asked for one, and the account
+  pages sit beside the sign-out. Put anything sensitive in a resource, or add
+  your own check to the page.
+- **`settings(false)` and `requireTwoFactor()` conflict.** Without a security
+  page route there is nowhere to send anybody, so `RequireTwoFactor` aborts with
+  403. A panel that demands a second factor needs somewhere to set one up.
+- **Enabling emailed codes is not enrolment for the current session.** `enable()`
+  marks the session immediately, so the person who just turned it on is not
+  challenged. The next session is.
 - **The challenge page sends a code as a side effect of a GET.** That is what
   makes "we emailed you" true when the page first opens. A refresh does not send
   a second one — `pending()` is checked first — but the send limit still applies
   once the outstanding code expires.
-- **`send()` aborts 500 on a user model without `notify()`.** The message is
-  "The user model is not notifiable." Add Laravel's own `Notifiable` trait; see
+- **`send()` aborts 500 on a user model without `notify()`.** The message is "The
+  user model is not notifiable." Add Laravel's own `Notifiable` trait; see
   [User Model Requirements](user-model.md).
 - **The obscured address is derived, not stored.** `sentTo` shows the first two
-  characters of the local part. A one-character local part still gets at least
-  one asterisk.
-- **No configuration knobs.** The ten-minute lifetime and the two rate limits
-  are private constants in `EmailCodeChallenge`. Deliberate: they are properties
-  of a credential, and an installation that could raise them is an installation
-  that will.
+  characters of the local part. A one-character local part still gets at least one
+  asterisk.
+- **No configuration knobs.** The ten-minute lifetime and the two rate limits are
+  private constants in `EmailCodeChallenge`. Deliberate: they are properties of a
+  credential, and an installation that could raise them is an installation that
+  will.
 
 ## See also
 
@@ -484,7 +515,7 @@ The full suites are `tests/Feature/Panel/EmailCodeTest.php` and
 - [Fortify Integration](fortify.md)
 - [Login](login.md)
 - [User Model Requirements](user-model.md)
-- [`PanelUser` Contract](panel-user-contract.md)
+- [The `PanelUser` contract](panel-user-contract.md)
 - [Settings Pages](../panels/settings-pages.md)
 - [Panel Middleware](../panels/middleware.md)
 - [Authorization](../concepts/authorization.md)

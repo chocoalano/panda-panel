@@ -123,7 +123,7 @@ Toggle::make('use_custom_pricing')->live();
 
 ## Gotchas
 
-**`required()` on a checkbox rejects an unchecked box.** `Field::validationRules()` puts `required` first, and `false` fails `required`. A box that must be ticked — terms and conditions — wants Laravel's `accepted` rule instead:
+**`required()` on a checkbox does not insist on a tick.** `Field::validationRules()` puts `required` first, and Laravel's `required` passes for `false` — the value is present, and being present is all it asks. All the flag changes is the asterisk beside the label. A box that must be ticked — terms and conditions — wants Laravel's `accepted` rule instead:
 
 ```php
 use PandaPanel\Forms\Components\Checkbox;
@@ -135,7 +135,7 @@ Checkbox::make('accepts_terms')->rules(['accepted']);   // ['nullable', 'boolean
 
 **`Toggle` is a subclass, not a flag.** `Toggle::make()` returns a `Toggle`; `instanceof Checkbox` is true for it. If a page hook branches on field class, remember that.
 
-**`Checkbox` is not `final`.** It is the one field class in the package designed to be extended, which is how `Toggle` exists. Override `type()` to reach a different control, and remember that the frontend union is closed — a new `FieldType` case needs a Vue renderer too.
+**`Checkbox` is not `final`.** It and `TextInput` are the only field classes in the package that are not, which is how `Toggle` exists. Override `type()` to reach a different control, and remember that the frontend union is closed — a new `FieldType` case needs a Vue renderer too.
 
 **A disabled checkbox still dehydrates.** Disabling is a browser state. Use `dehydrated(false)` for a box whose value must never reach a column.
 

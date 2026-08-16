@@ -46,11 +46,10 @@ final class RequireTwoFactor
 
         $security = $panel->routeName('pages.'.SecuritySettings::slug());
 
-        // Nowhere to send them means letting them through: a panel that
-        // demands a second factor but has no page to set one up on would
-        // otherwise be a panel nobody can enter.
+        // Nowhere to send them means the panel is misconfigured. Letting them
+        // through would silently turn a required second factor into a notice.
         if (! Route::has($security)) {
-            return $next($request);
+            abort(403, 'Two-factor authentication is required, but the security page is not registered.');
         }
 
         if ($request->routeIs($security) || $request->routeIs($panel->routeName('pages.*'))) {

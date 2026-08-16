@@ -133,10 +133,12 @@ final class GlobalSearch
      */
     private function constrain(Builder $query, array $attributes, string $term): Builder
     {
-        return $query->where(static function (Builder $query) use ($attributes, $term): void {
+        $like = '%'.$this->escapeLike($term).'%';
+
+        return $query->where(static function (Builder $query) use ($attributes, $like): void {
             foreach ($attributes as $attribute) {
                 if (! str_contains($attribute, '.')) {
-                    $query->orWhere($attribute, 'like', "%{$term}%");
+                    $query->orWhere($attribute, 'like', $like);
 
                     continue;
                 }
@@ -145,9 +147,18 @@ final class GlobalSearch
 
                 $query->orWhereHas(
                     $relation,
-                    static fn (Builder $related): Builder => $related->where($column, 'like', "%{$term}%"),
+                    static fn (Builder $related): Builder => $related->where($column, 'like', $like),
                 );
             }
         });
+    }
+
+    /**
+     * Escapes SQL LIKE wildcards so a search term containing `%` or `_`
+     * searches for those characters instead of widening the query.
+     */
+    private function escapeLike(string $term): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term);
     }
 }

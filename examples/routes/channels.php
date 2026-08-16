@@ -12,4 +12,7 @@ use Illuminate\Support\Facades\Broadcast;
  * Laravel's default channel name, unchanged, so a notification broadcast by
  * anything else in the application arrives on the same one.
  */
-Broadcast::channel('App.Models.User.{id}', static fn ($user, int|string $id): bool => (int) $user->id === (int) $id);
+Broadcast::channel(
+    'App.Models.User.{id}',
+    static fn ($user, int|string $id): bool => hash_equals((string) $user->getAuthIdentifier(), (string) $id),
+);

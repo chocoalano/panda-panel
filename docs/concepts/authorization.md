@@ -134,9 +134,9 @@ abort_unless($panel->isAccessibleTo($request->user()), 403);
 needs to sign in again. Guests are redirected earlier, by `auth`.
 
 `PanelManager::firstAccessibleTo(?Authenticatable $user): ?Panel` walks the
-registration order using the same predicate, and is what `RedirectPanelHome`
-and the panel switcher use — so a panel a user would be refused never appears
-as somewhere to go.
+panels in id order using the same predicate, and that predicate is also what
+`RedirectPanelHome` and the panel switcher use — so a panel a user would be
+refused never appears as somewhere to go.
 
 ## Resource abilities
 

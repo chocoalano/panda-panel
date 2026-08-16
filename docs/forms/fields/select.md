@@ -193,12 +193,13 @@ A searchable select needs somewhere to ask. The URL is built on the server by `P
 
 ```
 GET {panel}/options?resource={slug}&page=create&field=author&search=ada
+GET {panel}/options?resource={slug}&page=edit&record=42&field=author&search=ada
 ```
 
 The route is named `panel.{panelId}.options` and handled by `PandaPanel\Http\Controllers\PanelFormOptionsController`. It:
 
 - resolves the resource by slug and aborts 404 if the panel does not have it,
-- checks `canViewAny()` on the resource form, or `canViewAny($owner)` plus the operation's own ability on a relation form,
+- checks `canCreate()` for a create form, `canEdit($record)` for an edit form, or `canViewAny($owner)` plus the operation's own ability on a relation form,
 - looks the field up in the schema and aborts 404 when it is not declared, 400 when it is not a `Select`,
 - truncates the search term to 255 characters.
 

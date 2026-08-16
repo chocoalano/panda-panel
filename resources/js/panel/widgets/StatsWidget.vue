@@ -4,6 +4,7 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight } from '@lucide/vue';
 import { computed } from 'vue';
 
 import { Card } from '@/components/ui/card';
+import { safeUrl } from '@/lib/utils';
 import { resolveIcon } from '@/panel/icons/registry';
 
 import type {
@@ -95,6 +96,7 @@ const TREND_CLASSES: Record<
 const resolvedStats = computed(() =>
     props.stats.map((stat) => ({
         ...stat,
+        url: safeUrl(stat.url),
         resolvedIcon: stat.icon ? resolveIcon(stat.icon) : undefined,
     })),
 );

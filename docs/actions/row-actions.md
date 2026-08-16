@@ -98,6 +98,10 @@ Action::make('invoice')
     ->url(static fn (Model $record): string => route('invoices.show', $record));
 ```
 
+The serialized URL is kept only when it is relative or uses `http`, `https`, `mailto`, or `tel`.
+Unsafe schemes make the link action disappear from the row payload, and the Vue button checks again
+before rendering an anchor.
+
 `form()` is the external-form variant: it returns a URL the dialog fetches its schema from, and is what a relation action uses because that one names an owner and an operation the panel's action-form endpoint knows nothing about. For a form of the action's own, use `schema()` — see below.
 
 ## Every method a row action uses

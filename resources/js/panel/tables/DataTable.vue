@@ -9,6 +9,7 @@ import { useDebounceFn } from '@vueuse/core';
 import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { safeUrl } from '@/lib/utils';
 import {
     Table,
     TableBody,
@@ -139,6 +140,10 @@ const definitionsByName = computed(
             props.table.columns.map((column) => [column.name, column]),
         ),
 );
+
+function cellUrl(row: TableRowData, column: ColumnDefinition): string | null {
+    return safeUrl(row.cellMeta[column.name]?.url);
+}
 
 /**
  * A table that draws its own empty state. Loaded on demand: most tables use
@@ -704,12 +709,10 @@ const { hook } = usePanelStyling();
                             produced on the server; nothing is resolved here.
                         -->
                             <component
-                                :is="
-                                    row.cellMeta[column.name]?.url ? 'a' : 'div'
-                                "
-                                :href="row.cellMeta[column.name]?.url"
+                                :is="cellUrl(row, column) ? 'a' : 'div'"
+                                :href="cellUrl(row, column) ?? undefined"
                                 :class="
-                                    row.cellMeta[column.name]?.url
+                                    cellUrl(row, column)
                                         ? 'underline-offset-4 hover:underline'
                                         : undefined
                                 "

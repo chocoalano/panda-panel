@@ -165,8 +165,8 @@ security settings page until they have a second factor — an authenticator app
 (`hasEnabledTwoFactorAuthentication()`), the panel's emailed-code factor, or a
 passkey. Exempt: the security page itself, and every other route named
 `panel.{id}.pages.*`, because signing out is a legitimate answer to being
-asked for a second factor. A panel with no security page registered lets the
-request through rather than becoming a panel nobody can enter.
+asked for a second factor. A panel with no security page registered aborts with
+403 rather than silently dropping the requirement.
 
 ### RequireEmailCode
 
@@ -280,8 +280,9 @@ component declares its own layout:
 defineOptions({ layout: PanelLayout });
 ```
 
-`PanelLayout` reads `panel` and `navigation` from the shared props and picks
-`SidebarPanelLayout` or `HeaderPanelLayout` from `panel.sidebar.variant`.
+`PanelLayout` reads `panel` from the shared props and picks
+`SidebarPanelLayout` or `HeaderPanelLayout` from `panel.sidebar.variant`; the
+shell it picks is what reads `navigation`, through `useNavigation()`.
 Panel auth pages declare `PanelBlankLayout` instead — a guest has no
 navigation, no notifications, and no user menu.
 

@@ -1,6 +1,7 @@
 import { echo } from '@laravel/echo-vue';
 import { onBeforeUnmount, onMounted } from 'vue';
 import { toast } from 'vue-sonner';
+import { safeUrl } from '@/lib/utils';
 import { usePanel } from '@/panel/composables/usePanel';
 import type { FlashToast } from '@/types/ui';
 
@@ -125,19 +126,20 @@ export function usePanelBroadcasting(): void {
                     window.dispatchEvent(new CustomEvent('panel:notification'));
                 }
 
+                const url = safeUrl(notification.url);
+
                 toast[notification.type](notification.message, {
                     // A link rather than a navigation: the toast may arrive
                     // while the user is in the middle of something else, and
                     // moving them somewhere they did not ask to go would be
                     // worse than the file waiting.
                     action:
-                        notification.url === null
+                        url === null
                             ? undefined
                             : {
                                   label: notification.urlLabel ?? 'Open',
                                   onClick: () => {
-                                      window.location.href =
-                                          notification.url as string;
+                                      window.location.href = url;
                                   },
                               },
                 });

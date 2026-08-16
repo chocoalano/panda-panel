@@ -95,6 +95,13 @@ it('answers nothing when there is no match', function (): void {
     expect($this->getJson('/admin/search?q=nobody-here')->json('groups'))->toBe([]);
 });
 
+it('treats SQL wildcard characters as literal search text', function (): void {
+    User::factory()->create(['name' => 'Searchable Person']);
+
+    expect($this->getJson('/admin/search?q=%%')->json('groups'))->toBe([])
+        ->and($this->getJson('/admin/search?q=__')->json('groups'))->toBe([]);
+});
+
 /*
  * Limits and order
  */

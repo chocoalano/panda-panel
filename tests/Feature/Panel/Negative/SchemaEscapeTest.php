@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use PandaPanel\Actions\Action;
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
 use PandaPanel\Exceptions\PanelAuthorizationException;
+use PandaPanel\Notifications\NotificationAction;
 use PandaPanel\Routing\PanelRouteRegistrar;
+use PandaPanel\Tables\Columns\TextColumn;
+use PandaPanel\Widgets\Support\Stat;
 use Tests\Fixtures\Panel\UnpolicedFixtureResource;
 use Tests\Fixtures\Panel\UnpolicedModel;
 
@@ -183,6 +187,23 @@ it('applies the column rules to a cell write', function (): void {
     ])->assertStatus(422);
 
     expect($target->fresh()->name)->toBe($target->name);
+});
+
+it('drops unsafe urls from browser-facing schema payloads', function (): void {
+    $target = User::factory()->create();
+
+    expect(Action::make('open')
+        ->url(static fn (): string => 'javascript:alert(1)')
+        ->toArray($target))->toBeNull()
+        ->and(TextColumn::make('name')
+            ->url(static fn (): string => 'data:text/html,<script>alert(1)</script>')
+            ->toCellMeta($target))->toBeNull()
+        ->and(NotificationAction::make('open')
+            ->url('&#x6a;avascript:alert(1)')
+            ->toArray()['url'])->toBeNull()
+        ->and(Stat::make('Users', 1)
+            ->url('vbscript:msgbox(1)')
+            ->toArray()['url'])->toBeNull();
 });
 
 /*

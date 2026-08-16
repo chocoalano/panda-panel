@@ -132,7 +132,7 @@ Note what happened to the script: the tag is gone and its text is not. `strip_ta
 Two passes, and the second is the half that matters:
 
 1. `strip_tags()` against the allowlist. This removes disallowed elements but keeps every attribute on the ones that remain, so it is not enough by itself.
-2. Regular expressions that remove `on*` handlers, and any `href` or `src` pointing at a `javascript:`, `data:` or `vbscript:` scheme.
+2. Attribute cleanup that removes `on*` handlers, decodes URL entities, and keeps `href` or `src` only when they are relative URLs or use `http`, `https`, `mailto`, or `tel`. Encoded or whitespace-padded `javascript:`, `data:` and similar schemes are stripped with the attribute.
 
 ### `mutate(mixed $value, ?Model $record): mixed`
 
@@ -188,7 +188,7 @@ Only ever do this with a value this field wrote. HTML from anywhere else has not
 
 - **`maxLength` counts the HTML, not the words.** `<p><strong>Hi</strong></p>` is 26 characters, not 2. Size the limit against the column and the markup, not against the visible text.
 - **The toolbar and the allowlist are two lists, and they can disagree.** Adding `underline` to the toolbar works because `u` is already allowed; adding a button whose tag you removed from `allowedTags()` produces formatting that the user applies and the server silently strips. Change both together.
-- **Attributes on allowed tags survive.** `strip_tags()` filters elements, not attributes, and the second pass only removes `on*` handlers and dangerous `href`/`src` schemes. A `style`, `class`, `id` or `data-*` attribute pasted into the editor is stored. That is not executable, but it is not neutral either — it can restyle the page that renders it.
+- **Attributes on allowed tags mostly survive.** `strip_tags()` filters elements, not attributes, and the second pass removes `on*` handlers plus unsafe `href`/`src` URLs. A `style`, `class`, `id` or `data-*` attribute pasted into the editor is stored. That is not executable, but it is not neutral either — it can restyle the page that renders it.
 - **`link` prompts for a URL with `window.prompt`.** A blank or cancelled answer leaves the selection alone rather than wrapping it in a link to nowhere. There is no link editor, and the button adds nothing but `href` — no `target`, no `rel`.
 - **There is no image button, and `img` is not in the default allowlist.** Store images with [`FileUpload`](file-upload.md), which goes through the panel's own endpoint under a declared disk and directory. Adding `img` to `allowedTags()` lets stored HTML reference any URL, which is a decision worth taking deliberately.
 - **`required()` checks the string, not the meaning.** Markup a user did not intend as content — a stray `<p></p>` — is a non-empty string and satisfies `required`. The `<br>` case is handled; nothing else is.

@@ -217,7 +217,7 @@ Action::make('purge')->tableAction(static function (): void {
 | `execute` | `execute(Model $record, array $data = []): void` | `before`, handler, `after` in one transaction |
 | `executeBulk` | `executeBulk(Collection $records, array $data = []): void` | authorizes every record first |
 | `executeWithoutRecord` | `executeWithoutRecord(array $data = []): void` | the table handler, in one transaction |
-| `databaseTransaction` | `databaseTransaction(bool $enabled = true): static` | `null` inherits the panel |
+| `databaseTransaction` | `databaseTransaction(bool $databaseTransaction = true): static` | `null` inherits the panel |
 | `hasDatabaseTransaction` | `hasDatabaseTransaction(): ?bool` | — |
 | `affectedCount` | `affectedCount(): int` | 1 for a record run, the selection size for a bulk one |
 

@@ -86,7 +86,7 @@ app(PanelDiscoverer::class)->pages($panel);
 
 Results are `sort()`ed by class name, so two machines with different filesystem orderings produce the same list. Duplicates across paths collapse.
 
-Extending `Page` is the ordinary way to satisfy the contract, but it is not required — `PageContract` declares four static methods, and a class implementing them directly is discovered just the same:
+Extending `Page` is the ordinary way to satisfy the contract, but it is not required — `PageContract` declares five static methods, and a class implementing them directly is discovered the same way:
 
 ```php
 namespace PandaPanel\Contracts;

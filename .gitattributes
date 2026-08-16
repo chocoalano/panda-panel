@@ -11,6 +11,14 @@
 # Kept out of the distributed package. `src`, `config`, `database`, `stubs`
 # and `resources` are what an application installs; everything else is how
 # this repository is developed.
+#
+# `package.json` is deliberately NOT in this list, however much it looks like
+# a development file. `FrontendRequirements::npmPackages()` reads it at
+# runtime, from inside `vendor/`, to tell an application which npm packages
+# the published components import. Export-ignoring it did not make
+# `panel:install` complain — it made the check return an empty list, so the
+# installer reported no missing dependencies because it could not look. The
+# one command whose job is to say what is missing said nothing was.
 /.github            export-ignore
 /.ai                export-ignore
 /.claude            export-ignore
@@ -27,7 +35,6 @@
 /phpstan.neon       export-ignore
 /phpunit.xml        export-ignore
 /pint.json          export-ignore
-/package.json       export-ignore
 /package-lock.json  export-ignore
 /tsconfig.json      export-ignore
 /vite.config.ts     export-ignore

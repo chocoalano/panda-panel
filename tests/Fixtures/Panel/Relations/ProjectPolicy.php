@@ -19,6 +19,8 @@ final class ProjectPolicy
     /** Lets a test refuse the write without refusing the read. */
     public static bool $creatable = true;
 
+    public static bool $updatable = true;
+
     public static bool $listable = true;
 
     public static bool $attachable = true;
@@ -44,7 +46,7 @@ final class ProjectPolicy
 
     public function update(User $user, Project $project): bool
     {
-        return true;
+        return self::$updatable;
     }
 
     public function delete(User $user, Project $project): bool
@@ -75,6 +77,7 @@ final class ProjectPolicy
     public static function reset(): void
     {
         self::$creatable = true;
+        self::$updatable = true;
         self::$listable = true;
         self::$attachable = true;
         self::$detachable = true;

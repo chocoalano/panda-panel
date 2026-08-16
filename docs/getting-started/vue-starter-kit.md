@@ -44,7 +44,8 @@ The full specifier list, and what happens when one is missing, is in
 
 ## Generate the Wayfinder modules
 
-Six of the nineteen are generated from your own routes:
+Nine of the nineteen are generated from your own routes and controllers — six under `@/routes`
+and three under `@/actions`:
 
 ```bash
 php artisan wayfinder:generate
@@ -204,7 +205,7 @@ The order that works:
 2. A `vite.config.ts` with the Vue and Tailwind 4 plugins.
 3. `npm install` the packages `panel:install` lists.
 4. Install and run Wayfinder for `@/routes/*` and `@/actions/*`.
-5. Write the ten components, the composable and the two type modules, or copy them from a starter
+5. Write the seven components, the composable and the two type modules, or copy them from a starter
    kit application.
 6. `php artisan panel:install` again — it re-checks everything and should now report nothing.
 
