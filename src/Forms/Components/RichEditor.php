@@ -123,7 +123,7 @@ final class RichEditor extends Field
         $stripped = preg_replace_callback(
             '/\s+(href|src)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i',
             static function (array $matches): string {
-                $raw = $matches[2] ?? '';
+                $raw = $matches[2];
                 $value = trim($raw, "\"'");
 
                 return SafeUrl::isAllowed($value) ? $matches[0] : '';

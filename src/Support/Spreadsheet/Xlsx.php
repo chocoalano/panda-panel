@@ -234,7 +234,7 @@ final class Xlsx
             return null;
         }
 
-        $size = (int) ($stat['size'] ?? 0);
+        $size = $stat['size'];
 
         if ($size > $maxBytes) {
             throw new SpreadsheetException('That spreadsheet is too large to read safely.');
