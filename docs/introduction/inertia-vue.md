@@ -296,15 +296,15 @@ gets the tags, not what produced them.
 
 ## What the components expect from your application
 
-The published components import eighteen modules the package does not ship, and both kinds are the
-application's on purpose:
+The published components import [nineteen modules](../frontend/host-modules.md) the package does
+not ship, and both kinds are the application's on purpose:
 
 - **Generated** — `@/routes/*` and `@/actions/*` come from Wayfinder, written from your own route
   table. Vendoring a copy would be shipping a snapshot of somebody else's routes.
 - **Starter-kit components** — `@/components/UserMenuContent.vue`, `@/composables/useTwoFactorAuth`
-  and six more. These are where a project keeps its own account links and its own two-factor flow.
+  and eight more. These are where a project keeps its own account links and its own two-factor flow.
 
-`panel:install` checks for all eighteen and names the ones that are missing. A Laravel Vue starter
+`panel:install` checks for all nineteen and names the ones that are missing. A Laravel Vue starter
 kit application has them all; anything else needs them written first, and
 [`frontend/host/`](../frontend/host-modules.md) documents a working stand-in for each.
 

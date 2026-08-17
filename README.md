@@ -13,11 +13,25 @@ published on install, in your repository, in your build, and editable.
 - PHP 8.2+ (8.2 through Laravel 12, which is the newest Laravel that runs on it)
 - Laravel 12 or 13
 - Inertia 3 with Vue 3, and Tailwind 4
-- Laravel Fortify 1.37+
-- A Laravel Vue starter kit, or the eighteen frontend modules one provides
+- Laravel Fortify 1.37.2+
+- A Laravel Vue starter kit, or the nineteen frontend modules one provides
 
 The full matrix — including what is deliberately *not* supported, and why —
-is in [docs/compatibility.md](docs/compatibility.md).
+is in [docs/getting-started/compatibility.md](docs/getting-started/compatibility.md).
+
+## Documentation
+
+[**docs/index.md**](docs/index.md) is the entry point, and
+[docs/sidebar.md](docs/sidebar.md) is the full table of contents in learning order. The
+fast paths from here:
+
+| You want to | Start at |
+| --- | --- |
+| Install it and see a panel | [Installation](docs/getting-started/installation.md) → [Opening your first panel](docs/getting-started/first-panel.md) |
+| Understand how it works | [Architecture](docs/introduction/architecture.md), [Request lifecycle](docs/concepts/request-lifecycle.md) |
+| Build a CRUD screen | [Creating resources](docs/resources/creating-resources.md), [Forms](docs/forms/overview.md), [Tables](docs/tables/overview.md) |
+| Ship it | [Production checklist](docs/deployment/production-checklist.md) |
+| Fix something | [Troubleshooting](docs/troubleshooting/panel-routes-404.md) |
 
 ## Installation
 
@@ -258,8 +272,9 @@ $panel->tenantUrlUsing(fn (Team $team) => "https://{$team->slug}.example.com/app
 Without that the switcher does not render — identification is your application's, so reversing it
 into a URL is too, and a switcher whose entries went nowhere would be worse than none.
 
-[docs/panel-tenancy.md](docs/panel-tenancy.md) is the guide for putting this together with
-[`stancl/tenancy`](https://tenancyforlaravel.com).
+[docs/tenancy/stancl-tenancy.md](docs/tenancy/stancl-tenancy.md) is the guide for putting this
+together with [`stancl/tenancy`](https://tenancyforlaravel.com); [docs/tenancy/](docs/tenancy/concepts.md)
+is the rest of it.
 
 ## Plugins
 
@@ -298,7 +313,7 @@ names this framework rather than the plugin that asked for it. `panel:plugins` l
 ## Testing
 
 The package ships helpers that go through the real schemas, queries and actions — the same ones
-its own 1,000-test suite uses. They are autoloaded, so a test needs no import and no base class:
+its own 1,200-test suite uses. They are autoloaded, so a test needs no import and no base class:
 
 ```php
 panelTable(UserResource::class)->assertCanSeeRecord($user)->assertCount(2);
@@ -311,8 +326,9 @@ implementation of the answer: a helper that computed its own idea of what a tabl
 while the table was broken. The classes behind them are `PandaPanel\Testing\*`, public for a test
 that would rather hold one than chain from a free function.
 
-[docs/testing.md](docs/testing.md) is the full reference — every helper, and what is actually worth
-asserting about a panel.
+[docs/testing/helpers.md](docs/testing/helpers.md) is the full reference — every helper, and
+[docs/testing/setup.md](docs/testing/setup.md) is what a panel test needs before the first
+assertion.
 
 ## Local development
 
@@ -327,7 +343,7 @@ composer ci          # all three, as CI runs them
 The suite runs against Testbench with [examples/](examples/) as the application: its user model,
 its panels, its policies, its routes.
 
-The other half of this package is 337 Vue and TypeScript files, which no PHP job can say anything
+The other half of this package is 345 Vue and TypeScript files, which no PHP job can say anything
 about:
 
 ```bash
@@ -339,12 +355,17 @@ npm run build        # the real thing: does all of it compile together
 npm run ci           # all four, as CI runs them
 ```
 
-None of it ships — `package.json`, the Vite config, the tsconfig and the lint configs are all
-`export-ignore`d, so `composer require` pulls none of them. `package-lock.json` is committed and
-CI runs `npm ci` against it, because this repository's toolchain has to be reproducible; an
-application never sees that lockfile and installs from the version *ranges* instead.
+Almost none of it ships — the Vite config, the tsconfig, the lint configs and
+`package-lock.json` are all `export-ignore`d, so `composer require` pulls none of them.
+**`package.json` is the deliberate exception**: `FrontendRequirements::npmPackages()` reads it at
+runtime from inside `vendor/` to tell an application which npm packages the published components
+import, so export-ignoring it made `panel:install` report nothing missing because it could not
+look. `package-lock.json` stays out and CI runs `npm ci` against it here, because this
+repository's toolchain has to be reproducible; an application never sees that lockfile and
+installs from the version *ranges* instead.
 
-The build needs eighteen modules the package does not ship. Minimal stand-ins live in
+The build needs nineteen modules the package does not ship — listed one by one in
+[docs/frontend/host-modules.md](docs/frontend/host-modules.md). Minimal stand-ins live in
 [frontend/host/](frontend/host/README.md), used only here — see that README for why each one is
 the application's rather than ours.
 

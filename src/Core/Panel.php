@@ -1143,7 +1143,7 @@ final class Panel implements PanelContract
      *
      * What it deliberately does not do is decide what a tenant *is*. It does
      * not switch a connection, partition a cache, or read a subdomain —
-     * `stancl/tenancy` does all three and `docs/panel-tenancy.md` is the
+     * `stancl/tenancy` does all three and `docs/tenancy/stancl-tenancy.md` is the
      * guide for putting the two together. The `$resolver` is where the two
      * meet, and it is required rather than defaulted because every plausible
      * default is right for one arrangement and a silent data leak in another:

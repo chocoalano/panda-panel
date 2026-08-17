@@ -25,7 +25,7 @@ use Tests\Fixtures\Panel\Tenancy\WorkspaceResource;
 | The framework's part of multi-tenancy, and only that part: which tenant this
 | request is for, whether this user may be in it, and what a scoped resource
 | may see. It does not create databases, switch connections or read subdomains
-| — `stancl/tenancy` does all three, and `docs/panel-tenancy.md` is the guide
+| — `stancl/tenancy` does all three, and `docs/tenancy/stancl-tenancy.md` is the guide
 | for putting the two together.
 |
 | The fixtures are single-database on purpose. With a connection per tenant

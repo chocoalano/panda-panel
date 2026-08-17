@@ -188,7 +188,7 @@ Which is a step on the [Release checklist](release-checklist.md) rather than som
 The published tags are the other half of the record, and they are what composer resolves against:
 
 ```bash
-git tag                                  # v0.1.0, v0.1.1, v0.1.2
+git tag                                  # v0.1.0, v0.1.1, v0.1.2, v0.1.4 — v0.1.3 was never tagged
 git log --oneline v0.1.1..v0.1.2         # what a tag actually contained
 composer show chocoalano/panel --all     # every version Packagist knows about
 ```

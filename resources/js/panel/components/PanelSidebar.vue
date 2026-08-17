@@ -13,8 +13,8 @@ import {
 } from '@/components/ui/sidebar';
 import PanelNavigation from '@/panel/components/PanelNavigation.vue';
 import PanelRenderHook from '@/panel/components/PanelRenderHook.vue';
-import { usePanelBranding } from '@/panel/composables/usePanelBranding';
 import { usePanel } from '@/panel/composables/usePanel';
+import { usePanelBranding } from '@/panel/composables/usePanelBranding';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { PanelSidebarAppearance } from '@/panel/types/panel';
@@ -82,8 +82,8 @@ const appearance = computed<PanelSidebarAppearance>(() => {
                                     class="size-5 object-contain"
                                 />
                                 <component
-                                    v-else-if="brandIcon"
                                     :is="brandIcon"
+                                    v-else-if="brandIcon"
                                     class="size-4"
                                 />
                             </div>

@@ -25,8 +25,10 @@ itself reads when a plugin declares a constraint.
 The format follows Keep a Changelog, and this project adheres to Semantic Versioning.
 ```
 
-The published tags so far are `v0.1.0`, `v0.1.1` and `v0.1.2`, so the package is in its `0.x`
-series. Semantic versioning treats `0.x` as the one range where the usual promise does not hold:
+The published tags so far are `v0.1.0`, `v0.1.1`, `v0.1.2` and `v0.1.4`, so the package is in its
+`0.x` series. (`v0.1.3` was never tagged — a gap in the sequence means a version that does not
+exist, not one you failed to find.) `git tag` in a checkout is the authoritative list; the one
+here is a snapshot. Semantic versioning treats `0.x` as the one range where the usual promise does not hold:
 **a `0.x` minor release is allowed to break things.** Composer knows that and adjusts the caret
 accordingly.
 
@@ -144,7 +146,7 @@ version string is a string somebody forgets to change, and a package reporting `
 ```php
 use Composer\InstalledVersions;
 
-InstalledVersions::getPrettyVersion('chocoalano/panel');   // '0.1.2'
+InstalledVersions::getPrettyVersion('chocoalano/panel');   // e.g. '0.1.4' — whatever is installed
 InstalledVersions::isInstalled('chocoalano/panel');        // true
 ```
 

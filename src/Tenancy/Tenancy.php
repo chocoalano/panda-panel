@@ -25,7 +25,7 @@ use PandaPanel\Support\PanelContext;
  * It is **not** a multi-tenancy implementation. It does not create databases,
  * switch connections, partition a cache, or decide what a subdomain means.
  * Those are `stancl/tenancy`'s job and it is very good at them —
- * `docs/panel-tenancy.md` is the guide for putting the two together.
+ * `docs/tenancy/stancl-tenancy.md` is the guide for putting the two together.
  *
  * What this *is* is the missing half: a stable, tested answer to "which
  * tenant is this request for", so that the panel can scope to it without

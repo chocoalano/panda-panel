@@ -223,9 +223,9 @@ editable. `panel:assets` is what keeps them current afterwards.
 
 ## Requirements in one line
 
-PHP 8.2+ (8.2 through Laravel 12), Laravel 12 or 13, `inertiajs/inertia-laravel` 3.x, Fortify 1.37+,
-Vue 3.5+, Vite 7, Tailwind 4.1+, and a Laravel Vue starter kit — or the eighteen frontend modules
-one provides. The full matrix, including what is deliberately unsupported, is in
+PHP 8.2+ (8.2 through Laravel 12), Laravel 12 or 13, `inertiajs/inertia-laravel` 3.x,
+Fortify 1.37.2+, Vue 3.5+, Vite 7, Tailwind 4.1+, and a Laravel Vue starter kit — or the
+[nineteen frontend modules](../frontend/host-modules.md) one provides. The full matrix, including what is deliberately unsupported, is in
 [Compatibility Matrix](../getting-started/compatibility.md).
 
 ## Notes

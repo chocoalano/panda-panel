@@ -264,7 +264,7 @@ There is one file that looks like it belongs on that list and is deliberately ke
 - [Coding standards](coding-standards.md) — the ESLint, Prettier and TypeScript settings, rule by rule
 - [Releases](releases.md) — the export list, and the file that has to reach the dist
 - [Running the tests](testing.md) — including the tests that assert on frontend files
-- [Host modules](../frontend/host-modules.md) — the eighteen, from an application's side
+- [Host modules](../frontend/host-modules.md) — the nineteen, from an application's side
 - [Frontend assets](../concepts/frontend-assets.md) and [assets](../frontend/assets.md)
 - [Component registries](../concepts/component-registries.md)
 - [Icons](../frontend/icons.md) and [`panel:icons`](../cli/panel-icons.md)

@@ -1,11 +1,11 @@
 # Architecture Decisions
 
-This package has one architecture decision record — `docs/target_framework/adr/001-panel-framework.md` — and it is the reason most of the framework looks the way it does. Read it before proposing a change to the boundary between PHP and Vue, to discovery, to caching, or to how panels are isolated from each other; those are settled questions with written reasons, and a pull request that reopens one without addressing the reason is a pull request that will be sent back.
+This package has one architecture decision record — [`adr/001-panel-framework.md`](adr/001-panel-framework.md) — and it is the reason most of the framework looks the way it does. Read it before proposing a change to the boundary between PHP and Vue, to discovery, to caching, or to how panels are isolated from each other; those are settled questions with written reasons, and a pull request that reopens one without addressing the reason is a pull request that will be sent back.
 
 ## A minimal working example
 
 ```bash
-cat docs/target_framework/adr/001-panel-framework.md
+cat docs/contributing/adr/001-panel-framework.md
 ```
 
 The header is the whole format:
@@ -127,7 +127,7 @@ Several of these have since been built — relation managers, clusters, global s
 Add a file beside the first:
 
 ```bash
-$EDITOR docs/target_framework/adr/002-your-decision.md
+$EDITOR docs/contributing/adr/002-your-decision.md
 ```
 
 Number it sequentially, name the file after the decision, and open with the same three fields:
@@ -155,8 +155,8 @@ Link the new record from the pull request that implements it, and add a `Changed
 
 ## Notes
 
-- **The ADR lives under `docs/target_framework/`, which is `export-ignore`d.** So does the rest of `docs/`. It is a repository document, not something an installed package carries.
-- **`docs/target_framework/panel-framework.md` is the master document, not an ADR.** It describes what the framework does; the ADR describes why it is that shape. When the two disagree about a command name or a level number, the source files win — the master document has drifted in places, and the configuration in the repository root is the authority.
+- **The ADR lives under `docs/contributing/adr/`, which is `export-ignore`d.** So does the rest of `docs/`. It is a repository document, not something an installed package carries.
+- **The reference documentation is the master, not the ADR.** [`docs/index.md`](../index.md) indexes it, and it describes what the framework *does*; the ADR describes *why it is that shape*. When the two disagree about a command name or a level number, the source files win — the configuration in the repository root is the authority. (The old single-file master, `docs/target_framework/panel-framework.md`, was removed once it had drifted past the sectioned documentation that replaced it; `git log` still has it.)
 - **A known gap is not a bug report.** The two ADR 001 names are deliberate and documented; closing one is a normal change, and neither needs an ADR to close.
 - **`Supersedes: nothing` is a real value.** Write it rather than omitting the field, so a reader can tell the field was considered.
 - **Nothing enforces this mechanically.** There is no test that fails when an ADR is missing. It is a review question, which is why the table above is written as a table.

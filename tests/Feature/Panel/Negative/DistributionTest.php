@@ -49,25 +49,53 @@ it('names every command the documentation tells somebody to run', function (): v
     // `npm run types:check`, `npm run lint:check` — in the master document and
     // in this repository's own agent skill. A verification loop somebody
     // cannot run is a verification loop nobody runs.
+    //
+    // This once scanned one master document. That file was removed when the
+    // sectioned documentation replaced it, and a `continue` over a missing
+    // path meant the guarantee would have quietly narrowed to the skill file
+    // alone — a green test covering almost nothing. It scans every page under
+    // `docs/` instead, which is both what the old file became and more than it
+    // ever was.
     $composer = json_decode(File::get(base_path('composer.json')), true);
     $npm = json_decode(File::get(base_path('package.json')), true);
 
     $scripts = [
         ...array_keys($composer['scripts'] ?? []),
         ...array_keys($npm['scripts'] ?? []),
+        // An *application's* script, not this repository's. The guides tell a
+        // reader to rebuild after adding a component, and `npm run dev` is
+        // what a Laravel Vue starter kit gives them. This package is a
+        // library: it has `build` for its own toolchain and no dev server to
+        // run, so the name is right on the page and absent from the manifest.
+        'dev',
     ];
+
+    $paths = [
+        ...array_map(
+            static fn (SplFileInfo $file): string => $file->getPathname(),
+            File::allFiles(base_path('docs')),
+        ),
+        base_path('.claude/skills/panel-development/SKILL.md'),
+    ];
+
+    $paths = array_values(array_filter(
+        $paths,
+        static fn (string $path): bool => str_ends_with($path, '.md'),
+    ));
+
+    expect($paths)->not->toBeEmpty();
 
     $documented = [];
 
-    foreach (['docs/target_framework/panel-framework.md', '.claude/skills/panel-development/SKILL.md'] as $path) {
-        if (! File::exists(base_path($path))) {
+    foreach ($paths as $path) {
+        if (! File::exists($path)) {
             continue;
         }
 
         // Only inside ```bash fences. Prose that *names* a command in order
         // to say it does not exist is not somebody being told to run it, and
         // scanning the whole file makes this test fail on its own explanation.
-        preg_match_all('/```bash\n(.*?)```/s', File::get(base_path($path)), $blocks);
+        preg_match_all('/```bash\n(.*?)```/s', File::get($path), $blocks);
 
         foreach ($blocks[1] as $block) {
             preg_match_all('/(?:composer run|npm run) ([a-z:-]+)/', $block, $matches);

@@ -61,7 +61,7 @@ Wire `--check` into CI beside the other static checks:
 ```bash
 php artisan panel:icons --check
 composer run analyse
-npm run types:check
+npm run typecheck
 ```
 
 ## What the command reads
