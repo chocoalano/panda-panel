@@ -385,7 +385,9 @@ function deactivate(): void {
 </script>
 
 <template>
-    <Card class="overflow-hidden rounded-lg border-border/60 bg-card py-0 shadow-xs">
+    <Card
+        class="overflow-hidden rounded-lg border-border/60 bg-card py-0 shadow-xs"
+    >
         <CardContent class="p-5">
             <!-- Legend -->
             <div

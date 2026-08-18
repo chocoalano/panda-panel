@@ -259,3 +259,91 @@ it('never lets a span outgrow the columns at its breakpoint', function (): void 
         expect($tables['effective'][$columns])->toBe(['md' => $actualMd, 'lg' => $actualLg]);
     }
 });
+
+/*
+ * The card face, whose slots are declared in PHP and drawn in Vue
+ */
+
+it('draws every card slot the schema can declare', function (): void {
+    // The slots `CardLayout::toArray()` returns, read from the array literal
+    // it builds rather than restated here.
+    preg_match(
+        '/return \[\n(.*?)\n        \];/s',
+        File::get(base_path('src/Tables/CardLayout.php')),
+        $php,
+    );
+
+    preg_match_all("/'([a-z]+)' =>/", $php[1] ?? '', $slots);
+
+    // What the renderer resolves. `columns` is a count rather than a slot, so
+    // it is not in the interface and not compared.
+    preg_match(
+        '/export interface ResolvedCardFace \{(.*?)\n\}/s',
+        File::get(base_path('resources/js/panel/tables/cardFace.ts')),
+        $ts,
+    );
+
+    preg_match_all('/^\s{4}([a-zA-Z]+)[?]?:/m', $ts[1] ?? '', $resolved);
+
+    $declared = $slots[1];
+    $drawn = array_values(array_diff($resolved[1], ['gridClasses']));
+
+    sort($declared);
+    sort($drawn);
+
+    // A slot added on one side only is a card face that names a column and
+    // then has nowhere to put it — or a renderer reading a key the server
+    // never sends. Neither fails anywhere else: the PHP still serializes and
+    // the Vue still compiles.
+    expect($declared)->toBe($drawn)
+        ->and($declared)->not->toBe([]);
+});
+
+it('builds the card grid from the shared class map', function (): void {
+    $source = File::get(base_path('resources/js/panel/tables/cardFace.ts'));
+
+    // Comments stripped first. The file explains *why* an interpolated class
+    // is forbidden, which means it contains one — scanning the prose as well
+    // makes the test fail on its own explanation, exactly as the command
+    // assertion in `Negative/DistributionTest` documents.
+    $code = preg_replace(['#/\*.*?\*/#s', '#//[^\n]*#'], '', $source) ?? '';
+
+    // An interpolated class is invisible to the Tailwind compiler, so it
+    // would not exist in the bundle and the run of cards would silently
+    // collapse to one column — the failure `ColumnCount` and `grid.ts` were
+    // paired to prevent, in the one new place that could reintroduce it.
+    expect($code)->toContain('gridClass(')
+        ->and($code)->not->toMatch('/grid-cols-\$\{/');
+});
+
+/*
+ * The compile check compiles what ships, and only that
+ */
+
+it('keeps the unit tests out of the package build', function (): void {
+    // `frontend/entry.ts` globs the tree so the build covers every shipped
+    // file. A `*.test.ts` caught by that glob imports `vitest`, which drags
+    // the runner and `magic-string` in with it — half a megabyte of test
+    // harness inside a bundle whose only job is to prove the shipped files
+    // compile, and a compile check that no longer checks only what it claims.
+    $entry = File::get(base_path('frontend/entry.ts'));
+
+    expect($entry)->toContain("'!**/*.test.ts'");
+});
+
+it('names its frontend unit tests where the runner looks for them', function (): void {
+    // `vitest.config.ts` includes exactly this pattern, so a test file written
+    // anywhere else is one nobody runs — green, and never executed.
+    $config = File::get(base_path('vitest.config.ts'));
+
+    preg_match("/include: \['([^']+)'\]/", $config, $pattern);
+
+    expect($pattern)->not->toBeEmpty('vitest.config.ts no longer declares an include pattern.')
+        ->and($pattern[1])->toBe('resources/js/**/*.test.ts');
+
+    $tests = collect(File::allFiles(base_path('resources/js')))
+        ->filter(static fn (SplFileInfo $file): bool => str_ends_with($file->getFilename(), '.test.ts'));
+
+    // There is at least one, or the runner is wired to nothing.
+    expect($tests)->not->toBeEmpty();
+});

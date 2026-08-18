@@ -145,7 +145,9 @@ function sparkline(values: number[]): string {
             :class="[
                 'group block min-w-0 rounded-lg border border-l-4 border-border bg-card p-4 shadow-xs transition-colors hover:bg-accent/20',
                 COLOR_CLASSES[stat.color].accent,
-                stat.url ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none' : '',
+                stat.url
+                    ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+                    : '',
             ]"
         >
             <div class="flex h-full min-w-0 flex-col">
@@ -176,7 +178,9 @@ function sparkline(values: number[]): string {
                 </div>
 
                 <!-- Metric -->
-                <div class="mt-4 flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
+                <div
+                    class="mt-4 flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2"
+                >
                     <p
                         class="min-w-0 break-words text-2xl leading-none font-semibold text-foreground tabular-nums"
                     >

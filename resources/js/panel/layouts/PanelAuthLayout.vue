@@ -40,7 +40,7 @@ const icon = computed(() => resolveIcon(iconName.value));
                         alt=""
                         class="size-5 object-contain"
                     />
-                    <component v-else-if="icon" :is="icon" class="size-5" />
+                    <component :is="icon" v-else-if="icon" class="size-5" />
                 </span>
                 <span>{{ panel.brandName }}</span>
             </Link>

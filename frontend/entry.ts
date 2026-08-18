@@ -16,7 +16,14 @@
  */
 const modules = {
     ...import.meta.glob('../resources/js/**/*.vue', { eager: true }),
-    ...import.meta.glob('../resources/js/**/*.ts', { eager: true }),
+    // Test files are excluded, and not for tidiness. They import `vitest`,
+    // which drags its runner and `magic-string` into a bundle whose entire
+    // purpose is to prove the *shipped* files compile — half a megabyte of
+    // test harness, and a compile check that no longer checks only what it
+    // claims to. `npm run test` is where those files are compiled.
+    ...import.meta.glob(['../resources/js/**/*.ts', '!**/*.test.ts'], {
+        eager: true,
+    }),
 };
 
 // Referenced so nothing here is tree-shaken away before it has been compiled.

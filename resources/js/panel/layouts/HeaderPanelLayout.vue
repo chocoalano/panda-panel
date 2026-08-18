@@ -91,8 +91,8 @@ const topLevelItems = computed(() =>
                         class="size-5 object-contain"
                     />
                     <component
-                        v-else-if="brandIcon"
                         :is="brandIcon"
+                        v-else-if="brandIcon"
                         class="size-5"
                     />
                     <span>{{ panel?.brandName }}</span>
