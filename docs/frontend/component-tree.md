@@ -132,6 +132,7 @@ defineOptions({ layout: PanelLayout });
 | `PageHeader.vue` | heading, subheading, and an `actions` slot |
 | `EmptyState.vue`, `LoadingState.vue` | the neutral states |
 | `DashboardGuide.vue` | what a dashboard shows before anything is on it |
+| `PanelDatePicker.vue` | one date, picked from a popover calendar. Mounted by `DateField` and by both bounds of a date filter, so a date is chosen the same way everywhere |
 
 `PanelRenderHook` is the only one of these you are likely to place yourself, and it takes one prop:
 

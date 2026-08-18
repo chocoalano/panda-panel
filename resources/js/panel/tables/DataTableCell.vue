@@ -35,6 +35,16 @@ const props = defineProps<{
     value: CellValue;
     /** The key of the row this cell belongs to, for a write. */
     recordKey?: string | number;
+    /**
+     * Overrides the column's own `wrap` for one placement.
+     *
+     * A column declares whether its text wraps *in a table*, where a row of
+     * wrapping cells is a row of different heights. A card's description slot
+     * is the opposite case — it is a paragraph, and truncating it to one line
+     * throws away the thing it was put there to say. The container knows
+     * which it is; the column cannot.
+     */
+    wrap?: boolean;
 }>();
 
 const emit = defineEmits<{ edit: [column: string, value: CellEditValue] }>();
@@ -82,7 +92,7 @@ const customComponent = computed(() => {
 
 <template>
     <template v-if="column.type === 'text'">
-        <span v-if="text" :class="column.wrap ? '' : 'truncate'">
+        <span v-if="text" :class="(wrap ?? column.wrap) ? '' : 'truncate'">
             {{ text }}
         </span>
         <span v-else class="text-muted-foreground">{{ placeholder }}</span>

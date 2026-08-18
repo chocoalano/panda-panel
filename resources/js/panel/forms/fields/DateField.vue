@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Input } from '@/components/ui/input';
+import PanelDatePicker from '@/panel/components/PanelDatePicker.vue';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import type { DateFieldDefinition } from '@/panel/types/form';
 
@@ -21,21 +21,17 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
         :helper-text="field.helperText"
         :error="error"
     >
-        <Input
+        <PanelDatePicker
             :id="field.name"
-            type="date"
-            :model-value="typeof modelValue === 'string' ? modelValue : ''"
+            class="w-full max-w-60"
+            :model-value="typeof modelValue === 'string' ? modelValue : null"
             :disabled="field.disabled"
-            :min="field.minDate ?? undefined"
-            :max="field.maxDate ?? undefined"
-            :aria-invalid="error ? true : undefined"
-            @update:model-value="
-                (value) =>
-                    emit(
-                        'update:modelValue',
-                        String(value) === '' ? null : String(value),
-                    )
-            "
+            :min="field.minDate"
+            :max="field.maxDate"
+            :invalid="error !== undefined"
+            :aria-label="field.label"
+            :clearable="!field.required"
+            @update:model-value="(value) => emit('update:modelValue', value)"
         />
     </FieldWrapper>
 </template>

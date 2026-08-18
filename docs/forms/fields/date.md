@@ -1,6 +1,8 @@
 # Date and Time
 
-Three fields, not one with flags: `PandaPanel\Forms\Components\DatePicker`, `PandaPanel\Forms\Components\DateTimePicker`, and `PandaPanel\Forms\Components\TimePicker`. They format their value differently, validate differently, and render a different native control, so a flag on one class would have made every one of those a branch. Reach for the one whose value shape matches the column.
+Three fields, not one with flags: `PandaPanel\Forms\Components\DatePicker`, `PandaPanel\Forms\Components\DateTimePicker`, and `PandaPanel\Forms\Components\TimePicker`. They format their value differently, validate differently, and render a different control, so a flag on one class would have made every one of those a branch. Reach for the one whose value shape matches the column.
+
+`DatePicker` renders the panel's own calendar — a shadcn-vue date picker built from `@/components/ui/popover` and `@/components/ui/calendar`. The other two are still native inputs; see [What the control is](#what-the-control-is).
 
 ## The minimal example
 
@@ -33,9 +35,50 @@ protected function casts(): array
 
 | Field | `FieldType` | Control | Value format | Type rules |
 | --- | --- | --- | --- | --- |
-| `DatePicker` | `Date` (`'date'`) | `<input type="date">` | `Y-m-d` | `date` |
+| `DatePicker` | `Date` (`'date'`) | `PanelDatePicker.vue` — popover calendar | `Y-m-d` | `date` |
 | `DateTimePicker` | `DateTime` (`'datetime'`) | `<input type="datetime-local">` | `Y-m-d H:i` on submit | `date` |
 | `TimePicker` | `Time` (`'time'`) | `<input type="time">` | `H:i` or `H:i:s` | `date_format:H:i[:s]` |
+
+## What the control is
+
+`DatePicker` used to render `<input type="date">`. It now mounts
+`resources/js/panel/components/PanelDatePicker.vue` — a
+[shadcn-vue date picker](https://www.shadcn-vue.com/docs/components/date-picker):
+a `Button` trigger inside a `Popover`, holding the `Calendar` component this
+package already publishes.
+
+The reason is that a native date input is the *browser's* control, not the
+panel's. Chrome, Firefox and Safari each draw a different one, none of them
+themeable, none of them matching the rest of a panel, and their clear
+affordances differ too — Firefox has none. A field the panel cannot style is a
+field that will not match whatever branding the panel was given.
+
+**What did not change is the value.** The picker emits an ISO `Y-m-d` string,
+or `null` when cleared, which is exactly what `<input type="date">` emitted.
+`minDate()`, `maxDate()`, `required()` and `disabled()` all still mean what
+they meant, and no PHP moved. An application that never touches Vue sees only a
+different-looking control.
+
+```text
+resources/js/panel/components/PanelDatePicker.vue   the control
+resources/js/components/ui/calendar/                the calendar it opens
+resources/js/components/ui/popover/                 the popover it opens in
+```
+
+All three are published by `vendor:publish --tag=panda-panel-assets`, so an
+application owns them and can restyle them. `@internationalized/date` — which
+`Calendar` already needed — parses and formats; `panel:install` names it if it
+is missing.
+
+The same component renders both bounds of a [date range filter](../../tables/filters.md#datefilter),
+so a date is picked the same way in a form and in a table toolbar.
+
+### Still native
+
+`DateTimePicker` and `TimePicker` remain `<input type="datetime-local">` and
+`<input type="time">`. shadcn-vue's date picker covers a date; a time and a
+date-time need a different control, and swapping them on the same reasoning is
+a separate change rather than an implied one.
 
 ## `DatePicker`
 
@@ -67,7 +110,7 @@ FormSchema::make()
 // ['starts_on' => ['nullable', 'date', 'after_or_equal:2020-01-01', 'before_or_equal:2030-12-31']]
 ```
 
-The string is passed through untouched, so anything `after_or_equal` accepts works — including relative strings such as `today`, which the browser will not understand as a `min` attribute but Laravel will honour. Passing `null` clears a previously set bound.
+The string is passed through untouched, so anything `after_or_equal` accepts works — including relative strings such as `today`, which Laravel will honour. The calendar only greys out a day when the bound is a real `Y-m-d` date it can parse: `'today'` is a rule the server enforces, not one the control can draw. Passing `null` clears a previously set bound.
 
 ### Hydration
 
@@ -182,11 +225,11 @@ interface TimeFieldDefinition extends BaseFieldDefinition {
 }
 ```
 
-All three controls emit `null` for an empty input rather than `''`, so an optional date field clears cleanly to a nullable column.
+All three controls emit `null` for an empty input rather than `''`, so an optional date field clears cleanly to a nullable column. `DatePicker` carries its own clear button — a small `×` on the trigger — because a popover has no equivalent of the native input's clear affordance. It is hidden on a `required()` field, where there is no empty state to return to.
 
 ## Recipes
 
-**A range whose end must not precede its start.** `minDate()` is a rule string, so it can name another field — but it is also the control's `min` attribute, where a field name is meaningless. Set the bound as a rule instead:
+**A range whose end must not precede its start.** `minDate()` is a rule string, so it can name another field — but it is also the bound the calendar greys days out with, where a field name is meaningless. Set the bound as a rule instead:
 
 ```php
 use PandaPanel\Forms\Components\DatePicker;
