@@ -10,10 +10,12 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 use PandaPanel\Actions\Action;
 use PandaPanel\Exceptions\PanelSchemaException;
+use PandaPanel\Support\EagerLoadPaths;
 use PandaPanel\Tables\Columns\Column;
 use PandaPanel\Tables\Enums\ColumnPin;
 use PandaPanel\Tables\Enums\RecordActionsPosition;
 use PandaPanel\Tables\Enums\SortDirection;
+use PandaPanel\Tables\Enums\TableLayout;
 use PandaPanel\Tables\Filters\Filter;
 
 /**
@@ -123,6 +125,33 @@ final class TableSchema
      */
     private bool $columnManagerInModal = false;
 
+    /** The card face, when the table declared one. */
+    private ?CardLayout $cardLayout = null;
+
+    private TableLayout $defaultLayout = TableLayout::Table;
+
+    /**
+     * The resolved card face, and whether it has been resolved.
+     *
+     * Two properties because `null` is a real answer — a table with no card
+     * layout — and would otherwise be indistinguishable from "not asked yet".
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $cardFace = null;
+
+    private bool $cardFaceResolved = false;
+
+    /**
+     * Which columns a row carries, keyed by the arrangement that produced it.
+     *
+     * `toRow()` runs once per record and the answer depends only on the
+     * arrangement, which does not change within a page.
+     *
+     * @var array<string, list<Column>>
+     */
+    private array $serializedColumns = [];
+
     private string $emptyStateHeading = 'No records found';
 
     private ?string $emptyStateDescription = null;
@@ -180,6 +209,24 @@ final class TableSchema
             array_map(static fn (Column $column): string => $column->getName(), $this->columns),
             PanelSchemaException::duplicateColumns(...),
         );
+
+        return $this->forgetResolved();
+    }
+
+    /**
+     * Drops what was memoized from the columns and the card layout.
+     *
+     * The builder is fluent, so `columns()` and `cards()` can be called after
+     * something has already asked for a row — a resource that configures the
+     * schema in two steps, a test that reuses one. Memoizing without this
+     * would answer the second call with the first call's schema, which is the
+     * quiet kind of wrong.
+     */
+    private function forgetResolved(): self
+    {
+        $this->cardFace = null;
+        $this->cardFaceResolved = false;
+        $this->serializedColumns = [];
 
         return $this;
     }
@@ -625,6 +672,77 @@ final class TableSchema
         return $this->reorderColumn !== null;
     }
 
+    /**
+     * Lets the table also be drawn as a grid of cards.
+     *
+     * The whole opt-in, and it takes no required argument: called bare, the
+     * face is inferred from the columns the table already declares. Every
+     * table that does not call this keeps `layouts: ['table']`, which is what
+     * makes the layout toggle render nothing at all where it was not asked
+     * for.
+     */
+    public function cards(?CardLayout $layout = null): self
+    {
+        $this->cardLayout = $layout ?? CardLayout::make();
+
+        return $this->forgetResolved();
+    }
+
+    /**
+     * Which layout the table opens in, before the user has chosen.
+     */
+    public function defaultLayout(TableLayout $layout): self
+    {
+        $this->defaultLayout = $layout;
+
+        return $this->forgetResolved();
+    }
+
+    public function getDefaultLayout(): TableLayout
+    {
+        return $this->defaultLayout;
+    }
+
+    /**
+     * The card face, or null for a table that has none.
+     *
+     * `defaultLayout(Grid)` on its own counts as declaring one. A table that
+     * says it opens as cards has said it has cards, and the inferred face is
+     * exactly what `cards()` would have produced — the alternative is a line
+     * of configuration that silently does nothing.
+     */
+    private function resolvedCardLayout(): ?CardLayout
+    {
+        if ($this->cardLayout !== null) {
+            return $this->cardLayout;
+        }
+
+        return $this->defaultLayout === TableLayout::Grid ? CardLayout::make() : null;
+    }
+
+    /**
+     * The layouts this table can be drawn in, always with `Table` first.
+     *
+     * A reorderable table offers only the table. An order the user arranges
+     * by dragging is a linear one, and dragging a card into place in a grid
+     * that wraps is a different interaction needing a different affordance —
+     * offering a layout that cannot do the thing reordering was turned on for
+     * is worse than not offering it.
+     *
+     * Sent to the frontend as the answer rather than as the rule, so nothing
+     * on that side has to re-derive it.
+     *
+     * @return list<TableLayout>
+     */
+    public function availableLayouts(): array
+    {
+        if ($this->isReorderable() || $this->resolvedCardLayout() === null) {
+            return [TableLayout::Table];
+        }
+
+        return [TableLayout::Table, TableLayout::Grid];
+    }
+
     public function selectable(bool $selectable = true): self
     {
         $this->selectable = $selectable;
@@ -909,6 +1027,23 @@ final class TableSchema
         foreach ($this->columns as $column) {
             $column->applyQuery($query);
         }
+
+        // A column named `author.name` reads its value through `data_get()`,
+        // which loads the relation once per record unless something loaded it
+        // first. `$with` was that something, and it had to be remembered.
+        // Deriving it from the names the columns already carry means the
+        // common case stops being a thing to remember — and adding an eager
+        // load can only reduce queries, because the relation was going to be
+        // read either way.
+        //
+        // `$with` still matters for everything with no name to read: a
+        // relation reached from a `formatUsing()` closure, from
+        // `recordTitle()`, or from a policy.
+        $paths = EagerLoadPaths::from($query->getModel(), $this->columnNames());
+
+        if ($paths !== []) {
+            $query->with($paths);
+        }
     }
 
     /**
@@ -1056,11 +1191,15 @@ final class TableSchema
      * @param  list<Model>  $records  the records on this page
      * @return array<string, list<array<string, mixed>>>
      */
-    public function summaries(Builder $query, array $records): array
+    public function summaries(Builder $query, array $records, ?array $visible = null): array
     {
         $summaries = [];
 
-        foreach ($this->columns as $column) {
+        // A figure under a column nobody is looking at is an aggregate query
+        // whose result is discarded — more expensive than the hidden cell that
+        // was already being skipped, and the frontend only draws figures under
+        // the columns it renders anyway.
+        foreach ($this->serializedColumns($visible) as $column) {
             if (! $column->hasSummaries()) {
                 continue;
             }
@@ -1157,7 +1296,7 @@ final class TableSchema
      * @param  list<Model>  $records  the records on this page
      * @return array<string, array<string, list<array<string, mixed>>>>
      */
-    public function groupSummaries(Builder $query, array $records, Group $group): array
+    public function groupSummaries(Builder $query, array $records, Group $group, ?array $visible = null): array
     {
         if (! $this->hasSummaries()) {
             return [];
@@ -1174,7 +1313,7 @@ final class TableSchema
         foreach ($bands as $key => $bandRecords) {
             $bandQuery = $query->clone()->where($group->getColumn(), '=', $key);
 
-            $summaries[$key] = $this->summaries($bandQuery, $bandRecords);
+            $summaries[$key] = $this->summaries($bandQuery, $bandRecords, $visible);
         }
 
         return $summaries;
@@ -1189,11 +1328,83 @@ final class TableSchema
      *
      * @return array{key: int|string, group: array{key: string, title: string, description: string|null}|null, cells: array<string, mixed>, cellMeta: array<string, array<string, mixed>>, actions: list<array<string, mixed>>}
      */
-    public function toRow(Model $record, ?Group $group = null): array
+    /**
+     * The columns a row actually has to carry.
+     *
+     * Hiding a column used to reduce nothing: every column was read from the
+     * record, formatted, passed through `urlUsing()` and `tooltip()`, and
+     * serialized — and then the frontend drew a subset. On a wide table that
+     * is most of the work and most of the payload spent on cells nobody sees,
+     * and for a dotted column it was a relation loaded to be discarded.
+     *
+     * `null` means "no visibility state", which is every caller that has none
+     * to give and every existing call: the whole set, exactly as before.
+     *
+     * Two columns are kept whatever the arrangement says, because a
+     * [card layout](../../docs/tables/card-layout.md) draws its image and its
+     * heading regardless of visibility — a card whose title was hidden by the
+     * column manager would otherwise lose its heading rather than a row.
+     *
+     * @param  list<string>|null  $visible
+     * @return list<Column>
+     */
+    private function serializedColumns(?array $visible): array
     {
+        if ($visible === null) {
+            return $this->columns;
+        }
+
+        // Memoized on the arrangement, because `toRow()` is called once per
+        // record and the answer is the same for all of them. Resolving a card
+        // face means validating every slot and walking the inference rules,
+        // and doing that twenty-five times to get twenty-five identical
+        // answers is the cost this method exists to remove.
+        $key = implode("\0", $visible);
+
+        if (array_key_exists($key, $this->serializedColumns)) {
+            return $this->serializedColumns[$key];
+        }
+
+        $cards = $this->cardFace();
+
+        $keep = array_flip(array_values(array_filter([
+            ...$visible,
+            $cards['image'] ?? null,
+            $cards['title'] ?? null,
+        ], static fn (?string $name): bool => $name !== null)));
+
+        return $this->serializedColumns[$key] = array_values(array_filter(
+            $this->columns,
+            static fn (Column $column): bool => array_key_exists($column->getName(), $keep),
+        ));
+    }
+
+    /**
+     * The card face, resolved once for this schema.
+     *
+     * `toArray()` on the layout is not cheap — it validates every declared
+     * slot against the columns and then runs the inference rules — and both
+     * the row serializer and `TableSchema::toArray()` want the same answer.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function cardFace(): ?array
+    {
+        if ($this->cardFaceResolved) {
+            return $this->cardFace;
+        }
+
+        $this->cardFaceResolved = true;
+
+        return $this->cardFace = $this->resolvedCardLayout()?->toArray($this->columns);
+    }
+
+    public function toRow(Model $record, ?Group $group = null, ?array $visible = null): array
+    {
+        $columns = $this->serializedColumns($visible);
         $cells = [];
 
-        foreach ($this->columns as $column) {
+        foreach ($columns as $column) {
             $cells[$column->getName()] = $column->toCell($record);
         }
 
@@ -1209,7 +1420,7 @@ final class TableSchema
 
         $meta = [];
 
-        foreach ($this->columns as $column) {
+        foreach ($columns as $column) {
             $cellMeta = $column->toCellMeta($record);
 
             if ($cellMeta !== null) {
@@ -1326,6 +1537,14 @@ final class TableSchema
                 'direction' => $this->defaultSortDirection->value,
                 'label' => $this->defaultSortOptionLabel,
             ],
+            'layouts' => array_map(
+                static fn (TableLayout $layout): string => $layout->value,
+                $this->availableLayouts(),
+            ),
+            // Column *names*, never definitions. The definitions are already
+            // in `columns`; sending them twice would be two places for the
+            // same column to disagree with itself.
+            'cards' => $this->cardFace(),
             'bulkActions' => $this->serializeActions($this->bulkActions),
             'recordActions' => [
                 'position' => $this->recordActionsPosition->value,

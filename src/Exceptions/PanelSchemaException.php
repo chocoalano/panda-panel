@@ -104,6 +104,23 @@ final class PanelSchemaException extends InvalidArgumentException
     }
 
     /**
+     * @param  list<string>  $available
+     */
+    public static function unknownCardColumn(string $slot, string $column, array $available): self
+    {
+        return new self(sprintf(
+            "A card layout's %s slot names [%s], which is not a column of this table%s. A card "
+                .'face arranges the columns the table already declares, so a name that is not one '
+                .'of them would draw an empty slot and nothing would say why.',
+            $slot,
+            $column,
+            $available === []
+                ? ' — it declares no columns at all'
+                : '. It has: '.implode(', ', $available),
+        ));
+    }
+
+    /**
      * @param  list<string>  $names
      */
     public static function duplicateFilters(array $names): self

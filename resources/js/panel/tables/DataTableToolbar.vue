@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import ActionButton from '@/panel/actions/ActionButton.vue';
 import { resolveIcon } from '@/panel/icons/registry';
 import DataTableFilters from '@/panel/tables/DataTableFilters.vue';
+import DataTableSortMenu from '@/panel/tables/DataTableSortMenu.vue';
 import type { ActionDefinition } from '@/panel/types/action';
 import type {
     FilterValue,
@@ -25,6 +26,7 @@ const emit = defineEmits<{
     filter: [name: string, value: FilterValue | null];
     filters: [values: Record<string, FilterValue | null>];
     runAction: [action: ActionDefinition];
+    sort: [column: string];
     clear: [];
 }>();
 
@@ -84,6 +86,26 @@ function onFilter(name: string, value: FilterValue | null): void {
 
 function applyFilters(): void {
     emit('filters', pending.value);
+    pending.value = {};
+}
+
+/**
+ * Removing a chip applies at once, on a deferred table too: a chip says what
+ * the server is *already* narrowing by, so staging its removal would leave it
+ * on screen claiming a filter the user has just taken off.
+ *
+ * It carries whatever else is being composed into the same visit rather than
+ * emitting on its own. The server's answer resets `pending`, so a lone emit
+ * threw away filters the user had set but not yet applied.
+ */
+function removeIndicator(name: string): void {
+    if (!behaviour.value.deferred) {
+        emit('filter', name, null);
+
+        return;
+    }
+
+    emit('filters', { ...pending.value, [name]: null });
     pending.value = {};
 }
 
@@ -171,6 +193,22 @@ const hasActiveFilters = computed(
 const defaultSortLabel = computed(() =>
     props.state.sort === null ? (props.table.defaultSort?.label ?? null) : null,
 );
+
+/**
+ * Whether the toolbar draws the sort control.
+ *
+ * A card grid has no column headers, so the menu is the only way to sort one
+ * — but a table with nothing `sortable()` has no menu to draw either, and the
+ * condition has to know that here rather than inside the menu. Guarding only
+ * in the menu made it render nothing while still winning the `v-else`, so a
+ * grid with a declared default sort and no sortable column lost the plain
+ * "Sorted by" statement as well and said nothing at all about its order.
+ */
+const showsSortMenu = computed(
+    () =>
+        props.state.layout === 'grid' &&
+        props.table.columns.some((column) => column.sortable),
+);
 </script>
 
 <template>
@@ -201,7 +239,23 @@ const defaultSortLabel = computed(() =>
                 {{ behaviour.resetLabel }}
             </Button>
 
-            <p v-if="defaultSortLabel" class="text-sm text-muted-foreground">
+            <!--
+                In a card grid there are no column headers to sort from, so the
+                control has to live here. In the row table the headers are the
+                control, and this stays the plain statement it has always been
+                — no screen ever shows two ways to sort the same table.
+            -->
+            <DataTableSortMenu
+                v-if="showsSortMenu"
+                :table="table"
+                :state="state"
+                @sort="(column) => emit('sort', column)"
+            />
+
+            <p
+                v-else-if="defaultSortLabel"
+                class="text-sm text-muted-foreground"
+            >
                 Sorted by {{ defaultSortLabel }}
             </p>
 
@@ -235,7 +289,7 @@ const defaultSortLabel = computed(() =>
                     type="button"
                     class="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     :aria-label="`Remove ${indicator.label}`"
-                    @click="emit('filter', indicator.name, null)"
+                    @click="removeIndicator(indicator.name)"
                 >
                     <X class="size-3" />
                 </button>

@@ -289,6 +289,28 @@ export interface TableEmptyState {
 export type RecordActionsPosition =
     'after_columns' | 'before_columns' | 'after_cells';
 
+/** Which renderer draws the records. */
+export type TableLayout = 'table' | 'grid';
+
+/**
+ * Which of the table's columns fill which slot on a card.
+ *
+ * Column *names*, never definitions — the definitions are already in
+ * `TableDefinition.columns`, and sending them twice would be two places for
+ * the same column to disagree with itself. The server resolves the slots
+ * nobody declared; this is the answer, not the rule.
+ */
+export interface CardFaceDefinition {
+    /** Cards per row. Only ever a count `panel/lib/grid` has a class for. */
+    columns: number;
+    image: string | null;
+    title: string | null;
+    /** Never inferred: guessing which column is a subtitle is guessing. */
+    description: string | null;
+    badges: string[];
+    details: string[];
+}
+
 /**
  * How the filter bar behaves. The server decides, because how expensive a
  * request is, is the server's knowledge.
@@ -369,6 +391,17 @@ export interface TableDefinition {
         /** Names the fallback ordering, for a UI that shows what is applied. */
         label: string | null;
     } | null;
+    /**
+     * The layouts this table can be drawn in, always with `table` first.
+     *
+     * The answer rather than the rule: a reorderable table offers only the
+     * table however its card face is declared, and that is decided on the
+     * server so nothing here has to re-derive it. A single entry is what makes
+     * the layout toggle render nothing at all.
+     */
+    layouts: TableLayout[];
+    /** Null for a table that declared no card face. */
+    cards: CardFaceDefinition | null;
     emptyState: TableEmptyState;
 }
 
@@ -399,6 +432,13 @@ export interface TableState {
     columns: { visible: string[]; order: string[] };
     /** The band the table is arranged by, or null when it is not grouped. */
     group: string | null;
+    /**
+     * The layout being drawn, already validated against `table.layouts`.
+     *
+     * The resolved answer rather than the request, so a rejected `?layout=`
+     * leaves the toggle pointing at what is actually on screen.
+     */
+    layout: TableLayout;
 }
 
 /**

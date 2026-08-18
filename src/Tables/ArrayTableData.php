@@ -10,6 +10,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use PandaPanel\Tables\Columns\Column;
 use PandaPanel\Tables\Enums\SortDirection;
+use PandaPanel\Tables\Enums\TableLayout;
 
 /**
  * A table over records that are not in the database.
@@ -150,7 +151,10 @@ final readonly class ArrayTableData
                 'visible' => $this->schema->defaultVisibleColumnNames(),
                 'order' => $this->schema->columnNames(),
             ],
-            'group' => null,
+            // An array table is a widget's table: no card face, no toggle, no
+            // session. The layout is a constant rather than a decision — but
+            // the key is present, because the frontend type says it is.
+            'layout' => TableLayout::Table->value,
         ];
     }
 

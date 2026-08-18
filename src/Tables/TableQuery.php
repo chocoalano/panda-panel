@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use PandaPanel\Tables\Columns\Column;
 use PandaPanel\Tables\Enums\SortDirection;
+use PandaPanel\Tables\Enums\TableLayout;
 
 /**
  * Applies the URL state to a resource query.
@@ -200,6 +201,7 @@ final readonly class TableQuery
             'columnSearches' => $this->activeColumnSearches(),
             'columns' => $this->columnState(),
             'group' => $this->activeGroup()?->getName(),
+            'layout' => $this->layout()->value,
         ];
     }
 
@@ -600,6 +602,47 @@ final readonly class TableQuery
         }
 
         return $this->schema->getDefaultPerPage();
+    }
+
+    /**
+     * Which of the table's layouts is drawn.
+     *
+     * Whitelisted against what the schema declared, like every other piece of
+     * state: `?layout=kanban` — or `?layout=grid` on a table with no card
+     * face — is ignored rather than reaching a renderer with nothing to draw
+     * with. `persistedParam()` re-validates on read, so a session remembering
+     * `grid` for a table that has since dropped `cards()` is discarded here
+     * exactly as a hand-typed one is.
+     *
+     * Remembered under the column-arrangement flag rather than one of its
+     * own. How a list is drawn and which columns are drawn are one decision —
+     * both are presentation, both belong to the user rather than to the
+     * record — the same reasoning `activeGroup()` uses to ride along with
+     * `persistsSortInSession()`.
+     */
+    private function layout(): TableLayout
+    {
+        $available = $this->schema->availableLayouts();
+
+        $requested = $this->persistedParam(
+            'layout',
+            $this->schema->persistsColumnsInSession(),
+        );
+
+        if ($requested !== null) {
+            $layout = TableLayout::tryFrom($requested);
+
+            if ($layout !== null && in_array($layout, $available, true)) {
+                return $layout;
+            }
+        }
+
+        // Not dead: `availableLayouts()` drops Grid for a reorderable table
+        // even when a card face was declared, so a schema doing both resolves
+        // to Table rather than to a layout it does not offer.
+        $default = $this->schema->getDefaultLayout();
+
+        return in_array($default, $available, true) ? $default : TableLayout::Table;
     }
 
     private function page(): int

@@ -217,6 +217,7 @@ See [Array data tables](array-data.md).
 - **A dotted column name is left alone.** `TextColumn::make('author.name')->sortable()` would order by a column that does not exist locally; use `sortableByRelation()`.
 - **Summaries never leave an `order by` behind.** They clone the query and call `reorder()` before aggregating, so a summary cannot disturb the ordering the table just paginated. See [Summaries](summaries.md).
 - **Ordering by a column with no index is the usual cause of a slow list.** The framework will happily order by anything the schema declares; whether the database can is a question for the database.
+- **In [card layout](card-layout.md) the toolbar carries the sort control.** A grid of cards has no column headers to click, so the toolbar grows a menu of every `sortable()` column. It applies the same rule — a different column sorts ascending, the active column reverses — because it emits the same event into the same handler.
 
 ## See also
 

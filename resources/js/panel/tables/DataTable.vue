@@ -1,15 +1,9 @@
 <script setup lang="ts">
 import { ArrowDown, ArrowUp, ChevronsUpDown, GripVertical } from '@lucide/vue';
-import {
-    rowSelectionFeature,
-    tableFeatures,
-    useTable,
-} from '@tanstack/vue-table';
 import { useDebounceFn } from '@vueuse/core';
-import { computed, defineAsyncComponent, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { safeUrl } from '@/lib/utils';
 import {
     Table,
     TableBody,
@@ -25,12 +19,17 @@ import EmptyState from '@/panel/components/EmptyState.vue';
 import type { CellEditValue } from '@/panel/composables/useActions';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import DataTableCell from '@/panel/tables/DataTableCell.vue';
+import {
+    ALIGNMENT_CLASSES,
+    cellUrl,
+    useEmptyStateComponent,
+} from '@/panel/tables/tableCells';
 import { useFrozenColumns } from '@/panel/tables/useFrozenColumns';
 import type { FrozenColumn } from '@/panel/tables/useFrozenColumns';
-import { resolveEmptyStateComponent } from '@/panel/tables/registryEmptyStates';
+import { useTableGroups } from '@/panel/tables/useTableGroups';
+import { useTableSelection } from '@/panel/tables/useTableSelection';
 import type { ActionDefinition } from '@/panel/types/action';
 import type {
-    ColumnAlignment,
     ColumnDefinition,
     TableDefinition,
     TableRow as TableRowData,
@@ -102,37 +101,18 @@ function onDrop(targetKey: string | number): void {
     emit('reorder', keys);
 }
 
-/**
- * TanStack owns the row model and the selection, and nothing else.
- *
- * Sorting, filtering, and pagination are server-side and URL-driven. Column
- * visibility and order joined them once the server started deciding and
- * remembering both: keeping TanStack's copy as well would be a second,
- * conflicting source of truth for the same question.
- *
- * Defined at module scope, as the library recommends, so the feature set is
- * not rebuilt per component instance.
- */
-const features = tableFeatures({
-    rowSelectionFeature,
-});
-
-const columns = computed(() =>
-    props.table.columns.map((column) => ({
-        id: column.name,
-        header: column.label,
-        accessorFn: (row: TableRowData) => row.cells[column.name],
-    })),
+const {
+    tableInstance,
+    allSelected,
+    toggleAll,
+    toggleRow,
+    isRowSelected,
+    clearSelection,
+} = useTableSelection(
+    () => props.rows,
+    () => props.table.columns,
+    (keys) => emit('selectionChange', keys),
 );
-
-const data = computed(() => props.rows);
-
-const tableInstance = useTable({
-    features,
-    columns,
-    data,
-    getRowId: (row: TableRowData) => String(row.key),
-});
 
 const definitionsByName = computed(
     () =>
@@ -141,74 +121,15 @@ const definitionsByName = computed(
         ),
 );
 
-function cellUrl(row: TableRowData, column: ColumnDefinition): string | null {
-    return safeUrl(row.cellMeta[column.name]?.url);
-}
-
-/**
- * A table that draws its own empty state. Loaded on demand: most tables use
- * the ordinary one, and bundling every custom view would cost them all.
- */
-const emptyStateComponent = computed(() => {
-    const name = props.table.emptyState.component;
-
-    if (name === null) {
-        return null;
-    }
-
-    const loader = resolveEmptyStateComponent(name);
-
-    return loader === null ? null : defineAsyncComponent(loader);
-});
+const emptyStateComponent = useEmptyStateComponent(() => props.table);
 
 const hasSummaries = computed(() => Object.keys(props.summaries).length > 0);
 
-/**
- * Where a group heading has to be inserted: the first row of each band.
- *
- * Derived from the rows as they arrived rather than from a grouped structure,
- * because grouping is presentation — the query still returns a page, and a
- * band can be split across two pages exactly as any run of rows can.
- */
-const groupBreaks = computed(() => {
-    const breaks = new Set<number>();
-
-    let previous: string | null = null;
-
-    props.rows.forEach((row, index) => {
-        if (row.group !== null && row.group.key !== previous) {
-            breaks.add(index);
-            previous = row.group.key;
-        }
-    });
-
-    return breaks;
-});
+const { breaks: groupBreaks, ends: groupEnds } = useTableGroups(
+    () => props.rows,
+);
 
 const actionsPosition = computed(() => props.table.recordActions.position);
-
-/**
- * Where a band ends: the row before the next break, or the last row shown.
- *
- * Figures go under the band they describe rather than above it, so a total
- * reads the way a column of numbers does.
- */
-const groupEnds = computed(() => {
-    const ends = new Map<number, string>();
-
-    props.rows.forEach((row, index) => {
-        const next = props.rows[index + 1];
-
-        if (
-            row.group !== null &&
-            (next === undefined || next.group?.key !== row.group.key)
-        ) {
-            ends.set(index, row.group.key);
-        }
-    });
-
-    return ends;
-});
 
 const columnCount = computed(
     () =>
@@ -373,16 +294,6 @@ function frozenClass(key: string): string[] {
     );
 }
 
-const selectedKeys = computed(() =>
-    tableInstance.getSelectedRowModel().rows.map((row) => row.original.key),
-);
-
-const allSelected = computed(
-    () =>
-        props.rows.length > 0 &&
-        selectedKeys.value.length === props.rows.length,
-);
-
 const hasRowActions = computed(() =>
     props.rows.some((row) => row.actions.length > 0),
 );
@@ -395,36 +306,6 @@ const hasRowActions = computed(() =>
 const hasActionsColumn = computed(
     () => hasRowActions.value && actionsPosition.value !== 'after_cells',
 );
-
-/**
- * Logical alignment maps to literal classes. `text-${alignment}` would have to
- * be interpolated, and an interpolated class does not exist in the bundle.
- */
-const ALIGNMENT_CLASSES: Record<ColumnAlignment, string> = {
-    start: 'text-start',
-    center: 'text-center',
-    end: 'text-end',
-    justify: 'text-justify',
-};
-
-function toggleAll(checked: boolean): void {
-    tableInstance.toggleAllRowsSelected(checked);
-    emit('selectionChange', selectedKeys.value);
-}
-
-function toggleRow(key: string | number, checked: boolean): void {
-    tableInstance.getRow(String(key))?.toggleSelected(checked);
-    emit('selectionChange', selectedKeys.value);
-}
-
-function isRowSelected(key: string | number): boolean {
-    return tableInstance.getRow(String(key))?.getIsSelected() ?? false;
-}
-
-function clearSelection(): void {
-    tableInstance.toggleAllRowsSelected(false);
-    emit('selectionChange', []);
-}
 
 defineExpose({ tableInstance, clearSelection, clearColumnSearches });
 
