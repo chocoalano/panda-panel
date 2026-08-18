@@ -45,8 +45,112 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `page` is an allowlist rather than "edit, or else create". An unrecognised value used to become
   the create form, which is the one branch that needs no record.
 
+### Added
+
+- **A table can be drawn as a grid of cards.** `TableSchema::cards()` declares a card face and the
+  toolbar grows a layout toggle; `?layout=grid` is whitelisted against the layouts the table offers,
+  echoed in `state()['layout']`, and remembered by `persistColumnsInSession()`. It is a second
+  renderer over one schema rather than a second page — the query, the filters, the search, the tabs
+  and the pagination are the identical ones the row table uses, which is why almost none of them
+  needed changing.
+
+  A card face arranges the columns the table **already declares** — five slots holding column
+  *names*, not a parallel set of card components. A `BadgeColumn` on a card renders through the same
+  cell renderer it uses in a row, from the same definition, so a column changed once changes
+  everywhere it is drawn. `cards()` takes no required argument: called bare, the face is inferred —
+  the first image column is the picture, the first non-editable column is the heading, badge/boolean/
+  icon columns become chips, and the next four become value rows. A description is deliberately never
+  inferred, because there is no rule for "which column is the subtitle" that is right more often than
+  it is wrong.
+
+  Two things the grid does not do, both decided rather than missed. **A reorderable table offers no
+  grid at all**: an order arranged by dragging is linear, and dragging a card into place in a grid
+  that wraps is a different interaction needing a different affordance — this is enforced on the
+  server, so the toggle simply does not render. And **frozen columns, column widths and per-column
+  search are inert**, because each of them means "a column of a table" and there is no header here
+  to apply them to. Summaries do survive, as strips rather than footer rows — table figures under
+  the grid and a band's own closing the run of cards it heads. A total that vanished because
+  somebody changed how the list is drawn would be a real loss on a ledger.
+
+  Sorting needed new work. The row table's only sort control is its column headers, so grid layout
+  puts a menu of every `sortable()` column in the toolbar. It emits the same event into the same
+  handler, so a different column sorts ascending and the active column reverses, with no second copy
+  of the rule that decides it.
+
+### Changed
+
+- **A relation a column names is eager loaded without being asked.** `TextColumn::make('author.name')`
+  reads its value through `data_get()`, which loads the relation once per record — the N+1 whose only
+  defence was remembering `$with`. Measured on twenty rows with one dotted column: **22 queries before,
+  3 after.** The same derivation runs for exports, from the columns actually being written, which is
+  the one N+1 with no page size to bound it: an export walks the whole result set, and an exporter may
+  write columns the table never shows, so a `$with` sized for the list never covered them.
+
+  Derivation is best effort and never fatal. Each segment of a dotted name is verified against the
+  model before it is claimed, and anything unverifiable is dropped rather than guessed at — a JSON
+  column addressed as `meta.total` is not a relation and must not become `with('meta')`. Adding an
+  eager load can only reduce queries, but getting one wrong must not be able to break a page that
+  works.
+
+  `$with` is unchanged and still needed for every relation with no name to read it from: one reached
+  by a `formatUsing()` closure, by `recordTitle()`, or by a policy. See
+  [Query performance](docs/resources/performance.md), a new page covering what is derived, what is
+  not, why every read is `select *`, and how `Model::preventLazyLoading()` turns a missed eager load
+  from a slow page into an exception.
+- **A hidden column costs nothing.** `toRow()` serializes the columns the current arrangement shows,
+  so a column turned off in the column manager is no longer read from the record, passed through its
+  closures, or sent to the frontend. Hiding a column previously reduced only what Vue drew — the value
+  was still read, `formatUsing()` and `urlUsing()` still ran, and for a dotted column a relation was
+  loaded to be discarded. Two exceptions, both deliberate: a card layout keeps its image and title
+  columns whatever the arrangement says, because a card draws them regardless; and a caller with no
+  arrangement to read still gets every column.
+- **A bulk action is one transaction.** `Action::executeBulk()` now wraps the whole selection on the
+  same three-level rule as every other write. It used to be neither one transaction nor none: a
+  `bulkAction()` closure ran unwrapped, and the per-record fallback opened one transaction per record
+  — so a failure on the seventh of ten left six committed and six rows changed by an operation the
+  user was told had failed. Every built-in bulk action already opened its own `DB::transaction()` to
+  avoid exactly that, which is the clearest sign it was the wrong default; theirs is now a savepoint
+  inside it, with the same outcome. An action that genuinely wants partial application says
+  `->databaseTransaction(false)`, the same switch every other write has.
+
+- **A date is now picked from a calendar, not from the browser's own control.**
+  `DatePicker` and both bounds of a `DateFilter` mount
+  `resources/js/panel/components/PanelDatePicker.vue` — a
+  [shadcn-vue date picker](https://www.shadcn-vue.com/docs/components/date-picker) built from the
+  `Popover` and `Calendar` components this package already publishes. `<input type="date">` is the
+  *browser's* widget: Chrome, Firefox and Safari each draw a different one, none of them themeable,
+  and their clear affordances differ — Firefox has none at all. A field a panel cannot style is a
+  field that will not match the branding the panel was given.
+
+  Nothing behind it moved. The control emits an ISO `Y-m-d` string or `null`, exactly as the native
+  input did, so `minDate()`, `maxDate()`, `required()`, `disabled()` and every validation rule mean
+  what they meant, and no PHP changed. The two calendars of a range now bound each other, which is a
+  convenience rather than the rule — `DateFilter::sanitize()` still swaps a reversed range arriving
+  from a hand-edited URL, because a control cannot be what enforces that. The picker carries its own
+  clear button, since a popover has no equivalent of the native input's; it is hidden on a
+  `required()` field, where there is no empty state to return to.
+
+  `DateTimePicker` and `TimePicker` are deliberately still native. shadcn-vue's date picker covers a
+  date; a time and a date-time need a different control, and changing them on the same reasoning is
+  a separate decision rather than an implied one.
+
 ### Fixed
 
+- **Four filter chips named their filter and then said nothing useful.** Indicators are built on the
+  server precisely because only a filter knows what its value means — the rule the code states is
+  that `1` is "Verified", not "1" — and four of the seven filters never used that knowledge.
+  `Filter::describe()`, the inherited one, casts a scalar and returns `''` for anything else, so
+  `SelectFilter` printed the option *key* (`Status: published`), `BooleanFilter` printed the boolean
+  (`Verified: 1`, the exact thing the rule forbids), `TrashedFilter` printed `Deleted records: only`,
+  and `DateFilter` — whose value is an array — printed `Created At: ` with nothing after the colon
+  at all. A chip that cannot say what it is doing is a chip that reads as broken. Each of the four
+  now describes its value the way its own control spelled it, and `TrashedFilter`'s option labels
+  moved to one constant so the dropdown and the chip cannot disagree about what `only` is called.
+- **Closing a filter chip on a deferred table no longer discards what you were composing.** The
+  chip's `×` applied immediately — correctly, since a chip shows what the server is *already*
+  narrowing by — but it emitted on its own, and the server's answer resets the pending map. Filters
+  set but not yet applied vanished without a word. The removal now travels in the same visit as
+  whatever is staged.
 - **A schema that cannot mean what it says is now refused, loudly.** Six declaration mistakes were
   silent, and all six produced wrong behaviour rather than no behaviour. `PanelSchemaException`
   covers them, and every message names the offending name and the fix:

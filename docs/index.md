@@ -90,6 +90,7 @@ The CRUD unit: a model, its pages, its queries and its abilities.
 - [List, Create, View and Edit Pages](resources/crud-pages.md)
 - [Resource Pages](resources/resource-pages.md)
 - [Resource Queries](resources/queries.md)
+- [Query Performance](resources/performance.md)
 - [Labels and Navigation](resources/labels-navigation.md)
 - [URLs And Route Names](resources/urls-routes.md)
 - [Soft Deletes](resources/soft-deletes.md)
@@ -157,6 +158,7 @@ Columns, filters, search, sorting, grouping and everything in the toolbar.
 - [Pagination](tables/pagination.md)
 - [Persisted Table State](tables/persisted-state.md)
 - [Column Manager](tables/column-manager.md)
+- [Card Layout](tables/card-layout.md)
 - [Frozen And Pinned Columns](tables/pinned-columns.md)
 - [Editable Columns](tables/editable-columns.md)
 - [Record Actions](tables/record-actions.md)
@@ -519,6 +521,6 @@ Working on the package itself.
 
 ---
 
-346 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
+348 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
 a navigation bar. [`framework-docs.md`](framework-docs.md) is the internal blueprint this structure
 was built from — it is a planning document, not a reference.
