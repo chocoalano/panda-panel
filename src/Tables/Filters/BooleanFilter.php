@@ -65,6 +65,19 @@ final class BooleanFilter extends Filter
     }
 
     /**
+     * The chip says the label the control offered, not the boolean behind it.
+     *
+     * `sanitize()` returns a real `bool`, and the inherited `describe()` casts
+     * a scalar — so the chip read `Verified: 1`, which is the exact thing
+     * building indicators on the server exists to prevent. The labels are
+     * already declared for the dropdown; this is the same pair.
+     */
+    protected function describe(mixed $value): string
+    {
+        return $value === true ? $this->trueLabel : $this->falseLabel;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function extraArray(): array

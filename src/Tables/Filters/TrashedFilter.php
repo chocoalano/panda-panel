@@ -71,17 +71,46 @@ final class TrashedFilter extends Filter
     }
 
     /**
+     * The three states, and what each is called on screen.
+     *
+     * One map rather than a list built in `extraArray()` and a second reading
+     * of it elsewhere: the dropdown and the chip have to agree about what
+     * `only` is called, and they can only be relied on to agree if there is
+     * one place that says so.
+     *
+     * @var array<string, string>
+     */
+    private const LABELS = [
+        self::WITHOUT => 'Hidden',
+        self::WITH => 'Included',
+        self::ONLY => 'Only deleted',
+    ];
+
+    /**
+     * The chip says the state's name, not its key: `only` is "Only deleted".
+     */
+    protected function describe(mixed $value): string
+    {
+        $key = is_string($value) ? $value : '';
+
+        return self::LABELS[$key] ?? $key;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function extraArray(): array
     {
         return [
-            'options' => [
-                ['value' => self::WITHOUT, 'label' => 'Hidden'],
-                ['value' => self::WITH, 'label' => 'Included'],
-                ['value' => self::ONLY, 'label' => 'Only deleted'],
-            ],
-            'placeholder' => 'Hidden',
+            'options' => array_map(
+                static fn (string $value, string $label): array => [
+                    'value' => $value,
+                    'label' => $label,
+                ],
+                array_keys(self::LABELS),
+                array_values(self::LABELS),
+            ),
+            'placeholder' => self::LABELS[self::WITHOUT],
         ];
     }
 }
