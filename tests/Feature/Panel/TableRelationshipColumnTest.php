@@ -229,3 +229,60 @@ it('does not widen an existing constraint when searching a relation', function (
 
     expect($records->total())->toBe(0);
 });
+
+/*
+ * Derived eager loading
+ */
+
+it('eager loads a relation a dotted column names, without being told to', function (): void {
+    foreach (range(1, 8) as $index) {
+        $project = Project::query()->create(['name' => 'Filler '.$index]);
+        $project->tasks()->create(['name' => 'Task '.$index]);
+    }
+
+    $schema = TableSchema::make()->columns([
+        TextColumn::make('name'),
+        TextColumn::make('tasks.name'),
+    ]);
+
+    $queries = 0;
+
+    DB::listen(function (QueryExecuted $query) use (&$queries): void {
+        if (str_contains($query->sql, 'fixture_tasks')) {
+            $queries++;
+        }
+    });
+
+    $records = paginateWith($schema);
+
+    foreach ($records->items() as $record) {
+        $schema->toRow($record);
+    }
+
+    // One query for the whole page rather than one per record. `data_get()`
+    // on an unloaded relation loads it, so this used to be the N+1 that only
+    // a remembered `$with` prevented.
+    expect($queries)->toBe(1);
+});
+
+it('leaves a dotted name that is not a relation alone', function (): void {
+    // `with('settings')` on a model that has no such relation raises. A
+    // derived optimisation must never be able to break a page that works, so
+    // anything unverifiable is dropped rather than guessed at.
+    $schema = TableSchema::make()->columns([
+        TextColumn::make('name'),
+        TextColumn::make('settings.theme'),
+    ]);
+
+    expect(fn (): LengthAwarePaginator => paginateWith($schema))->not->toThrow(Throwable::class);
+});
+
+it('does not eager load for a column naming no relation at all', function (): void {
+    $schema = TableSchema::make()->columns([TextColumn::make('name')]);
+
+    $records = paginateWith($schema);
+
+    // Nothing to load, so nothing is asked for: a plain table pays nothing
+    // for the derivation.
+    expect($records->items()[0]->getRelations())->toBe([]);
+});

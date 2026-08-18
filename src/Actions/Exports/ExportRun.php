@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use PandaPanel\Actions\Enums\SpreadsheetFormat;
 use PandaPanel\Exceptions\PanelSchemaException;
+use PandaPanel\Support\EagerLoadPaths;
 use PandaPanel\Support\Spreadsheet\Csv;
 use PandaPanel\Support\Spreadsheet\Xlsx;
 
@@ -112,7 +113,27 @@ final class ExportRun
             $columns,
         );
 
-        foreach ($exporter::query($query)->lazy($exporter::chunkSize()) as $record) {
+        $source = $exporter::query($query);
+
+        // The widest N+1 in the package, and the only one with no page size to
+        // bound it. An export walks the whole result set, and an exporter is
+        // free to export columns the table never shows — so `$with`, which was
+        // sized for the list, does not cover them. A hundred thousand records
+        // and one dotted column was a hundred thousand queries, chunked but
+        // not fewer.
+        //
+        // Derived from the columns actually being written, so an unselected
+        // column costs nothing.
+        $paths = EagerLoadPaths::from(
+            $source->getModel(),
+            array_map(static fn (ExportColumn $column): string => $column->getName(), $columns),
+        );
+
+        if ($paths !== []) {
+            $source->with($paths);
+        }
+
+        foreach ($source->lazy($exporter::chunkSize()) as $record) {
             $records++;
 
             yield array_map(

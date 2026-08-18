@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Panels\Admin\Resources\Users\UserResource;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use PandaPanel\Actions\Action;
 use PandaPanel\Core\Panel;
@@ -205,4 +206,81 @@ it('tells the frontend whether to warn about unsaved changes', function (): void
     expect(app(PanelManager::class)->get('admin')->toSharedArray()['unsavedChangesAlerts'])->toBeTrue()
         ->and(Panel::make('quiet')->unsavedChangesAlerts(false)->toSharedArray()['unsavedChangesAlerts'])
         ->toBeFalse();
+});
+
+/*
+ * Bulk atomicity
+ */
+
+it('rolls a bulk action back as one, whichever handler it has', function (Closure $configure, string $name): void {
+    $users = User::factory()->count(3)->create();
+
+    $action = $configure(Action::make('rename')->authorize(static fn (): bool => true));
+
+    try {
+        $action->executeBulk($users);
+    } catch (RuntimeException) {
+        // The handler fails halfway on purpose.
+    }
+
+    // Nothing committed. A `bulkAction()` closure used to run unwrapped, and
+    // the per-record fallback used to open one transaction per record — so a
+    // failure on the third of three left two rows changed by an operation the
+    // user was told had failed.
+    expect(User::query()->where('name', $name)->count())->toBe(0);
+})->with([
+    'a bulk handler' => [
+        fn (Action $action): Action => $action->bulkAction(static function (Collection $records): void {
+            foreach ($records as $index => $record) {
+                $record->forceFill(['name' => 'Renamed'])->save();
+
+                if ($index === 1) {
+                    throw new RuntimeException('halfway');
+                }
+            }
+        }),
+        'Renamed',
+    ],
+    'the per-record fallback' => [
+        function (Action $action): Action {
+            $seen = 0;
+
+            return $action->action(static function (Model $record) use (&$seen): void {
+                $seen++;
+                $record->forceFill(['name' => 'Touched'])->save();
+
+                if ($seen === 2) {
+                    throw new RuntimeException('halfway');
+                }
+            });
+        },
+        'Touched',
+    ],
+]);
+
+it('lets a bulk action opt out of being atomic', function (): void {
+    $users = User::factory()->count(3)->create();
+
+    $action = Action::make('rename')
+        ->authorize(static fn (): bool => true)
+        ->databaseTransaction(false)
+        ->bulkAction(static function (Collection $records): void {
+            foreach ($records as $index => $record) {
+                $record->forceFill(['name' => 'Loose'])->save();
+
+                if ($index === 1) {
+                    throw new RuntimeException('halfway');
+                }
+            }
+        });
+
+    try {
+        $action->executeBulk($users);
+    } catch (RuntimeException) {
+        // Expected.
+    }
+
+    // The escape hatch is the same one every other write has, and it is the
+    // only way back to the old behaviour.
+    expect(User::query()->where('name', 'Loose')->count())->toBe(2);
 });

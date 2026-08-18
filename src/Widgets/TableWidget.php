@@ -69,11 +69,12 @@ abstract class TableWidget extends Widget
         $query = new TableQuery($schema, request(), static::stateNamespace());
 
         $records = $query->paginate($this->query());
+        $visible = $query->state()['columns']['visible'];
 
         return [
             'columns' => $schema->toArray()['columns'],
             'rows' => array_values(array_map(
-                static fn (Model $record): array => $schema->toRow($record),
+                static fn (Model $record): array => $schema->toRow($record, null, $visible),
                 $records->items(),
             )),
             'emptyMessage' => static::$emptyMessage,

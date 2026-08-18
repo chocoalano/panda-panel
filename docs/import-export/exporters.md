@@ -301,6 +301,7 @@ Two details it enforces regardless of what you pass:
 - **The file is assembled on local disk first.** `ExportRun` writes to `tempnam(sys_get_temp_dir(), 'panel-export-')`, then streams it onto the disk and unlinks the temporary file. Both writers need a real path — a CSV streams to a handle and an XLSX is a zip `ZipArchive` opens by name.
 - **The exporter is not a table.** `ExportColumn` is deliberately not a table column: a table column knows how to sort, search and render HTML, and reusing it would put a badge's colour in a spreadsheet.
 - **Nothing prunes old files.** See [Storage and cleanup](storage-cleanup.md).
+- **A relation an export column names is eager loaded**, derived from the columns actually being written, so an unselected column costs nothing. This is the one N+1 with no page size to bound it: an export walks the whole result set, and an exporter may write columns the table never shows — so `$with`, which was sized for the list, does not cover them. A relation read by a `formatUsing()` closure still needs `Exporter::query()` or `$with`. See [Query performance](../resources/performance.md).
 
 ## See also
 

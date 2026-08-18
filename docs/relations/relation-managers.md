@@ -120,7 +120,7 @@ final class BlogPostsRelationManager extends RelationManager
 }
 ```
 
-`$with` exists for the same reason `Resource::$with` does: a column that serializes a related value would otherwise lazy load once per row. `$softDeletes` is declared rather than detected — a related model that uses `SoftDeletes` for something else should not silently grow a filter this manager never meant to offer. See [Soft deleted relations](soft-deletes.md).
+`$with` exists for the same reason `Resource::$with` does, and covers the same remainder: a relation a column *names* is eager loaded for you, and `$with` is for the ones read by a closure, by `recordTitle()`, or by a policy. See [Query performance](../resources/performance.md). `$softDeletes` is declared rather than detected — a related model that uses `SoftDeletes` for something else should not silently grow a filter this manager never meant to offer. See [Soft deleted relations](soft-deletes.md).
 
 ## The two schemas
 

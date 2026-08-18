@@ -55,9 +55,11 @@ Three things in order: the starting builder (the model's, or the parent record's
 protected static array $with = ['author', 'tags'];
 ```
 
-Applied on every query the resource builds, so serializing a column can never trigger a lazy load per row. This is not an optimisation to add later: with `Model::shouldBeStrict()` on outside production, a column reading an unloaded relation fails loudly, and without strict mode it quietly costs a query per record.
+Applied on every query the resource builds.
 
-The list page's serialization is expected to run a fixed number of queries whatever the page size — the package's own test asserts that five rows and thirty-five rows produce the same query count.
+**A relation a column names is already eager loaded** — `TextColumn::make('author.name')` loads `author` without being told to. `$with` is for the relations no name points at: one read by a `formatUsing()` or `urlUsing()` closure, by `recordTitle()`, or by a policy. Those are invisible to any derivation, and they are where a forgotten eager load still costs a query per record.
+
+The list page's serialization is expected to run a fixed number of queries whatever the page size — the package's own test asserts that five rows and thirty-five rows produce the same query count. [Query performance](performance.md) is the whole picture: what is derived, what is not, why every read is `select *`, and how to make a missed eager load fail loudly with `Model::preventLazyLoading()`.
 
 For a relation needed by one column only on one panel, prefer `$with`; for something conditional, add it in the override:
 
@@ -177,6 +179,7 @@ Searching starts from the same query as everything else, so a resource scope nar
 
 ## See also
 
+- [Query performance](performance.md)
 - [Creating resources](creating-resources.md)
 - [Model binding](model-binding.md)
 - [Per-panel configuration](per-panel-configuration.md)

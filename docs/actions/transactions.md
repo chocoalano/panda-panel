@@ -183,9 +183,9 @@ Action::make('approve')
 
 `executeWithoutRecord()` — the table scope — wraps the handler the same way, on the same three-level rule.
 
-## What is not
+## A bulk action is one transaction
 
-`Action::executeBulk()` does **not** open a transaction of its own:
+`Action::executeBulk()` opens **one** transaction for the whole selection, on the same three-level rule as everything else:
 
 ```php
 public function executeBulk(Collection $records, array $data = []): void
@@ -198,51 +198,47 @@ public function executeBulk(Collection $records, array $data = []): void
 
     $this->affected = $records->count();
 
-    if ($this->handleBulkUsing !== null) {
-        ($this->handleBulkUsing)($records, $data);
+    DatabaseTransaction::run($this->databaseTransaction, function () use ($records, $data): void {
+        if ($this->handleBulkUsing !== null) {
+            ($this->handleBulkUsing)($records, $data);
 
-        return;
-    }
+            return;
+        }
 
-    foreach ($records as $record) {
-        $this->execute($record, $data);
-    }
+        foreach ($records as $record) {
+            $this->execute($record, $data);
+        }
+    });
 }
 ```
 
-Two consequences worth being precise about:
+So a `bulkAction()` closure that fails halfway leaves nothing behind, and a bulk action falling back to `action()` rolls the whole batch back rather than the record it was on. The inner per-record transaction becomes a savepoint, which is Laravel's behaviour and changes nothing about the outcome.
 
-- **A `bulkAction()` closure runs unwrapped.** If it must be atomic over the whole selection, open `DB::transaction()` inside it. Every built-in bulk action does exactly that.
-- **A bulk action falling back to `action()` gets one transaction per record**, not one for the batch. Ten records is ten transactions, and a failure on the seventh leaves six committed.
+**This changed.** It used to be neither: a `bulkAction()` closure ran unwrapped, and the fallback opened one transaction per record — ten records were ten transactions, and a failure on the seventh left six committed. That surprised, and the surprise was expensive: a bulk operation the user was told had failed had changed six rows. Every built-in bulk action already opened its own `DB::transaction()` to avoid it, which is the clearest possible sign that it was the wrong default.
+
+An action that genuinely wants partial application says so, with the same switch every other write has:
 
 ```php
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
-use PandaPanel\Actions\Action;
-
-Action::make('approve')
-    ->label('Approve selected')
-    ->authorizeEachUsing(static fn (Model $record): bool => auth()->user()?->can('approve', $record) === true)
-    ->bulkAction(static function (Collection $records): void {
-        DB::transaction(static function () use ($records): void {
-            $records->each->approve();
-        });
-    });
+Action::make('notify')
+    ->databaseTransaction(false)
+    ->bulkAction(static fn (Collection $records) => $records->each->notify());
 ```
 
-Authorization is the part that is always all-or-nothing regardless: `executeBulk()` walks the whole selection through `isAuthorizedForEach()` before the first write, so a selection containing one forbidden record throws 403 and changes nothing. "All or nothing" has to be decided before the first write, not discovered halfway through.
+That is the right shape for work where each record is independent and a failure on one should not undo the others — sending a message, calling an API, anything that was not going to roll back anyway.
+
+**Authorization stays outside the transaction.** `executeBulk()` walks the whole selection through `isAuthorizedForEach()` before the first write, so a selection containing one forbidden record throws 403 and changes nothing. "All or nothing" has to be decided before the first write, not discovered halfway through — and there is nothing to roll back when nothing has been written.
 
 ## What the built-ins do
 
 | Action | Transaction |
 | --- | --- |
 | `DeleteAction`, `RestoreAction`, `ForceDeleteAction`, `ReplicateAction`, and any `action()` handler | one per record, on the three-level rule |
+| Any `bulkAction()` handler, and the per-record fallback | one for the whole selection, on the three-level rule |
 | `DeleteBulkAction`, `RestoreBulkAction`, `ForceDeleteBulkAction` | an explicit `DB::transaction()` over the whole selection, whatever the panel says |
 | `Actions\Relations\RestoreBulkAction`, `Actions\Relations\ForceDeleteBulkAction`, `Actions\Relations\DetachBulkAction` | the same, over the related records |
 | `CreateAction::modal()`, `ImportAction`, `ExportAction` | `tableAction()` handlers, on the three-level rule |
 
-The bulk deletes are unconditional on purpose. Each of them authorizes every record before writing any, and "all or nothing" is the guarantee they advertise, not a default they inherit from a panel that could turn it off.
+The bulk deletes are unconditional on purpose. Each of them authorizes every record before writing any, and "all or nothing" is the guarantee they advertise, not a default they inherit from a panel that could turn it off. Now that `executeBulk()` wraps as well, their own `DB::transaction()` is a savepoint inside it — the same outcome, and kept because the guarantee is theirs to make rather than one they borrow.
 
 ## Other panel writes
 

@@ -44,6 +44,27 @@ const props = defineProps<{
     searchable: boolean;
 }>();
 
+/**
+ * The columns this widget actually draws.
+ *
+ * `columns` is every column the schema declares, including any the widget
+ * marked `visible(false)`. The rows only carry the visible ones, so drawing
+ * from the full list put a header over a column of placeholders — a hidden
+ * column read as an empty one rather than as absent.
+ *
+ * A payload written before the widget was paginated has no state, and then
+ * every column is what there is.
+ */
+const visibleColumns = computed(() => {
+    const visible = props.state?.columns.visible;
+
+    if (visible === undefined) {
+        return props.columns;
+    }
+
+    return props.columns.filter((column) => visible.includes(column.name));
+});
+
 const search = ref(props.state?.search ?? '');
 
 watch(
@@ -149,7 +170,10 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead v-for="column in columns" :key="column.name">
+                        <TableHead
+                            v-for="column in visibleColumns"
+                            :key="column.name"
+                        >
                             <button
                                 v-if="column.sortable && namespace"
                                 type="button"
@@ -176,14 +200,17 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                 <TableBody>
                     <TableRow v-if="rows.length === 0">
                         <TableCell
-                            :colspan="columns.length"
+                            :colspan="visibleColumns.length"
                             class="py-8 text-center text-sm text-muted-foreground"
                         >
                             {{ emptyMessage }}
                         </TableCell>
                     </TableRow>
                     <TableRow v-for="row in rows" :key="row.key">
-                        <TableCell v-for="column in columns" :key="column.name">
+                        <TableCell
+                            v-for="column in visibleColumns"
+                            :key="column.name"
+                        >
                             <DataTableCell
                                 :column="column"
                                 :value="row.cells[column.name] ?? null"
