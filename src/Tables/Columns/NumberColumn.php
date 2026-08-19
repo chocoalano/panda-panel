@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PandaPanel\Tables\Columns;
 
 use Illuminate\Database\Eloquent\Model;
+use PandaPanel\Support\Format;
 use PandaPanel\Tables\Enums\Alignment;
 use PandaPanel\Tables\Enums\ColumnType;
 
@@ -64,7 +65,7 @@ final class NumberColumn extends Column
             'display' => sprintf(
                 '%s%s%s',
                 $this->prefix ?? '',
-                number_format((float) $numeric, $this->decimals),
+                Format::number((float) $numeric, $this->decimals),
                 $this->suffix ?? '',
             ),
             'raw' => $numeric,

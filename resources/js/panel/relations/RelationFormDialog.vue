@@ -10,6 +10,9 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import FormRenderer from '@/panel/forms/FormRenderer.vue';
 import type { FormDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * The dialog behind a `form` action.
@@ -137,9 +140,11 @@ function onOpenChange(open: boolean): void {
     <Dialog :open="formUrl !== null" @update:open="onOpenChange">
         <DialogContent class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
-                <DialogTitle>{{ payload?.title ?? 'Loading' }}</DialogTitle>
+                <DialogTitle>{{
+                    payload?.title ?? t('forms.loading')
+                }}</DialogTitle>
                 <DialogDescription v-if="failed">
-                    This form could not be loaded.
+                    {{ t('forms.load_failed') }}
                 </DialogDescription>
             </DialogHeader>
 

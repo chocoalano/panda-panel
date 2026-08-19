@@ -18,6 +18,9 @@ import {
 } from '@/components/ui/popover';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { ColumnDefinition, TableDefinition } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * Which columns are shown, and in what order.
@@ -196,7 +199,7 @@ const hasChanges = computed(
                     :disabled="!hasChanges"
                     @click="commit"
                 >
-                    Apply
+                    {{ t('tables.apply') }}
                 </Button>
             </div>
         </DialogContent>
@@ -276,7 +279,7 @@ const hasChanges = computed(
                     :disabled="!hasChanges"
                     @click="commit"
                 >
-                    Apply
+                    {{ t('tables.apply') }}
                 </Button>
             </div>
         </PopoverContent>

@@ -5,6 +5,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import type { CheckboxListFieldDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: CheckboxListFieldDefinition;
@@ -81,7 +84,11 @@ function toggleAll(): void {
                 :disabled="field.disabled"
                 @click="toggleAll"
             >
-                {{ allSelected ? 'Deselect all' : 'Select all' }}
+                {{
+                    allSelected
+                        ? t('forms.checkbox_deselect_all')
+                        : t('forms.checkbox_select_all')
+                }}
             </Button>
 
             <div

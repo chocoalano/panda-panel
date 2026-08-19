@@ -20,6 +20,9 @@ import type {
     TableRow as Row,
     TableState,
 } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * A dashboard table, built by the table builder.
@@ -157,8 +160,8 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                 <Input
                     v-model="search"
                     class="pl-8"
-                    placeholder="Search"
-                    aria-label="Search this table"
+                    :placeholder="t('widgets.search')"
+                    :aria-label="t('widgets.search_table')"
                     @blur="submitSearch"
                 />
             </div>
@@ -203,7 +206,11 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                             :colspan="visibleColumns.length"
                             class="py-8 text-center text-sm text-muted-foreground"
                         >
-                            {{ emptyMessage }}
+                            {{
+                                emptyMessage === ''
+                                    ? t('widgets.empty')
+                                    : emptyMessage
+                            }}
                         </TableCell>
                     </TableRow>
                     <TableRow v-for="row in rows" :key="row.key">
@@ -236,7 +243,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                     :disabled="page <= 1"
                     @click="go({ page: String(page - 1) })"
                 >
-                    Previous
+                    {{ t('widgets.previous') }}
                 </Button>
                 <Button
                     variant="outline"
@@ -244,7 +251,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                     :disabled="page >= lastPage"
                     @click="go({ page: String(page + 1) })"
                 >
-                    Next
+                    {{ t('widgets.next') }}
                 </Button>
             </div>
         </div>

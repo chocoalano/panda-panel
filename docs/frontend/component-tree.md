@@ -125,6 +125,7 @@ defineOptions({ layout: PanelLayout });
 | `PanelNotifications.vue` | the bell and the notification centre |
 | `PanelSwitcher.vue` | moves between panels; renders nothing when the user may enter only one |
 | `PanelTenantSwitcher.vue` | moves between tenants; needs tenancy, more than one tenant, and a tenant URL |
+| `PanelLocaleSwitcher.vue` | changes the language; renders nothing unless the panel offers more than one |
 | `PanelClusterBar.vue` | a cluster's sub-navigation, as a bar or a column |
 | `PanelSubNavigation.vue` | the links between one record's pages |
 | `PanelRecordLayout.vue` | arranges a record page around that sub-navigation |

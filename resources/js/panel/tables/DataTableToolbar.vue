@@ -15,6 +15,9 @@ import type {
     TableDefinition,
     TableState,
 } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     table: TableDefinition;
@@ -309,7 +312,7 @@ const showsSortMenu = computed(
                 {{ behaviour.applyLabel }}
             </Button>
             <p v-if="hasPending" class="text-xs text-muted-foreground">
-                Not applied yet.
+                {{ t('tables.filters_not_applied') }}
             </p>
         </div>
     </div>

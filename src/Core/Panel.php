@@ -27,6 +27,7 @@ use PandaPanel\Plugins\PluginCompatibility;
 use PandaPanel\Resources\Resource;
 use PandaPanel\Resources\ResourceConfiguration;
 use PandaPanel\Support\CssHooks;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\NavigationGroupName;
 use PandaPanel\Support\PanelTheme;
 use UnitEnum;
@@ -57,19 +58,12 @@ final class Panel implements PanelContract
     ];
 
     /**
-     * What a panel says when a request fails, before any panel customizes
-     * it. A status absent from here keeps Inertia's own error handling.
+     * The statuses a panel speaks about before any panel customizes it. A
+     * status absent from here keeps Inertia's own error handling.
      *
-     * @var array<int, array{title: string, body: string|null}>
+     * @var list<int>
      */
-    private const DEFAULT_ERROR_NOTIFICATIONS = [
-        403 => ['title' => 'Not allowed', 'body' => 'You do not have permission to do that.'],
-        404 => ['title' => 'Not found', 'body' => 'That record no longer exists.'],
-        419 => ['title' => 'Session expired', 'body' => 'Refresh the page and try again.'],
-        429 => ['title' => 'Too many requests', 'body' => 'Wait a moment and try again.'],
-        500 => ['title' => 'Something went wrong', 'body' => 'The request could not be completed.'],
-        503 => ['title' => 'Temporarily unavailable', 'body' => 'The application is down for maintenance.'],
-    ];
+    private const NOTIFIED_STATUSES = [403, 404, 419, 429, 500, 503];
 
     private ?string $id = null;
 
@@ -125,6 +119,13 @@ final class Panel implements PanelContract
     private ?string $icon = null;
 
     private ?string $darkIcon = null;
+
+    /**
+     * The locales this panel offers, or null to follow the config.
+     *
+     * @var array<string, string>|null
+     */
+    private ?array $locales = null;
 
     private bool $darkMode = true;
 
@@ -675,6 +676,23 @@ final class Panel implements PanelContract
     public function darkMode(bool $darkMode = true): self
     {
         $this->darkMode = $darkMode;
+
+        return $this;
+    }
+
+    /**
+     * Which languages this panel may be read in, as `code => name`.
+     *
+     * Narrows `panda-panel.locales` for a panel that serves a different
+     * audience from the rest — a customer portal in two languages beside an
+     * internal admin in one. Unset, the panel offers whatever the config
+     * does; an empty array offers none, and no switcher renders.
+     *
+     * @param  array<string, string>  $locales
+     */
+    public function locales(array $locales): self
+    {
+        $this->locales = $locales;
 
         return $this;
     }
@@ -1382,7 +1400,11 @@ final class Panel implements PanelContract
 
     public function getName(): string
     {
-        return $this->name ?? Str::headline($this->getId());
+        return $this->name ?? Label::resolve(
+            'panels',
+            $this->getId(),
+            fn (): string => Str::headline($this->getId()),
+        );
     }
 
     public function getPath(): string
@@ -1503,7 +1525,29 @@ final class Panel implements PanelContract
      */
     public function getErrorNotifications(): array
     {
-        return array_replace(self::DEFAULT_ERROR_NOTIFICATIONS, $this->errorNotifications);
+        return array_replace($this->defaultErrorNotifications(), $this->errorNotifications);
+    }
+
+    /**
+     * Built per call rather than held in a constant, because the sentences
+     * are translated and a constant is resolved before the translator knows
+     * which locale the request is in. It is read once per panel response,
+     * from `toSharedArray()`.
+     *
+     * @return array<int, array{title: string, body: string|null}>
+     */
+    private function defaultErrorNotifications(): array
+    {
+        $notifications = [];
+
+        foreach (self::NOTIFIED_STATUSES as $status) {
+            $notifications[$status] = [
+                'title' => __("panda-panel::notifications.http.{$status}.title"),
+                'body' => __("panda-panel::notifications.http.{$status}.body"),
+            ];
+        }
+
+        return $notifications;
     }
 
     public function hasBroadcasting(): bool
@@ -1671,6 +1715,45 @@ final class Panel implements PanelContract
     public function hasDarkMode(): bool
     {
         return $this->darkMode;
+    }
+
+    /**
+     * The locales this panel offers, from the panel or from the config.
+     *
+     * @return array<string, string>
+     */
+    public function getLocales(): array
+    {
+        if ($this->locales !== null) {
+            return $this->locales;
+        }
+
+        $configured = config('panda-panel.locales', []);
+
+        // Only well-formed entries. A list rather than a map — `['en', 'id']`
+        // — is the shape somebody writes first, and a switcher whose labels
+        // were `0` and `1` is worse than one that is simply absent.
+        return is_array($configured)
+            ? array_filter(
+                $configured,
+                static fn (mixed $name, mixed $code): bool => is_string($code)
+                    && $code !== ''
+                    && is_string($name)
+                    && $name !== '',
+                ARRAY_FILTER_USE_BOTH,
+            )
+            : [];
+    }
+
+    /**
+     * Whether there is anything to switch between.
+     *
+     * One locale is the same as none: the switcher would offer the language
+     * already being read.
+     */
+    public function hasLocaleSwitcher(): bool
+    {
+        return count($this->getLocales()) > 1;
     }
 
     /**

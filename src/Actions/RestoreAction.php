@@ -26,10 +26,10 @@ final class RestoreAction
     public static function make(string $resource): Action
     {
         return Action::make('restore')
-            ->label('Restore')
+            ->label(__('panda-panel::actions.restore.label'))
             ->icon('rotate-ccw')
             ->variant(ActionVariant::Outline)
-            ->successMessage('Record restored.')
+            ->successMessage(__('panda-panel::actions.restore.success'))
             ->visible(static fn (?Model $record): bool => $record !== null
                 && TrashedRecord::isTrashed($record))
             ->authorize(static fn (?Model $record): bool => $record !== null

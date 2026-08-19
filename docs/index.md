@@ -330,6 +330,12 @@ CSV and XLSX in both directions, queued, with failure reports.
 - [Storage And Cleanup](import-export/storage-cleanup.md)
 - [Import And Export Notifications](import-export/notifications.md)
 
+### Localization
+
+Speaking English or Indonesian, and adding a third.
+
+- [Translations](localization/translations.md)
+
 ## Extending it
 
 ### Frontend customization
@@ -521,6 +527,6 @@ Working on the package itself.
 
 ---
 
-348 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
+349 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
 a navigation bar. [`framework-docs.md`](framework-docs.md) is the internal blueprint this structure
 was built from — it is a planning document, not a reference.

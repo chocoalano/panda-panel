@@ -18,7 +18,7 @@ final class EditAction
     public static function make(string $resource): Action
     {
         return Action::make('edit')
-            ->label('Edit')
+            ->label(__('panda-panel::actions.edit.label'))
             ->icon('pencil')
             ->url(static fn (Model $record): string => $resource::url('edit', $record))
             ->visible(static fn (?Model $record): bool => $record !== null

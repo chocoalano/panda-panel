@@ -172,10 +172,12 @@ export function asTable(payload: unknown): TableWidgetPayload | null {
         rows: payload.rows
             .map(toRow)
             .filter((row): row is TableRow => row !== null),
+        // Empty rather than a sentence: this module has no page and cannot
+        // reach a translation. `TableWidget` fills it from `widgets.empty`.
         emptyMessage:
             typeof payload.emptyMessage === 'string'
                 ? payload.emptyMessage
-                : 'Nothing to show yet.',
+                : '',
         // The table builder's own shapes, so the widget renders through the
         // same controls a resource index does.
         state: isRecord(payload.state)

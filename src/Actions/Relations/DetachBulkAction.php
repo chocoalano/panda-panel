@@ -29,15 +29,15 @@ final class DetachBulkAction
     public static function make(string $manager, Model $owner): Action
     {
         return Action::make('detach')
-            ->label('Detach selected')
+            ->label(__('panda-panel::actions.relations.detach_bulk.label'))
             ->icon('unlink')
             ->variant(ActionVariant::Destructive)
             ->requiresConfirmation(
-                heading: 'Detach the selected records?',
-                description: 'The records themselves are kept; only the links to them are removed.',
-                button: 'Detach',
+                heading: __('panda-panel::actions.relations.detach_bulk.heading'),
+                description: __('panda-panel::actions.relations.detach_bulk.description'),
+                button: __('panda-panel::actions.relations.detach_bulk.button'),
             )
-            ->successMessage('Selected records detached.')
+            ->successMessage(__('panda-panel::actions.relations.detach_bulk.success'))
             ->visible(static fn (): bool => $manager::isManyToMany($owner))
             ->authorize(static fn (?Model $record): bool => $record === null
                 ? $manager::canAttach($owner)
@@ -45,7 +45,7 @@ final class DetachBulkAction
             ->bulkAction(static function (Collection $records) use ($manager, $owner): void {
                 foreach ($records as $record) {
                     if (! $manager::canDetach($owner, $record)) {
-                        throw new HttpException(403, 'You may not detach every selected record.');
+                        throw new HttpException(403, __('panda-panel::actions.relations.detach_bulk.denied'));
                     }
                 }
 

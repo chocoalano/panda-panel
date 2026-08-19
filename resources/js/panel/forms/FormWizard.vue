@@ -11,6 +11,9 @@ import type {
     FormValues,
     WizardDefinition,
 } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * A form shown one step at a time.
@@ -210,7 +213,7 @@ function flatten(errors: unknown): Record<string, string> {
                 :disabled="processing"
                 @click="go(current - 1)"
             >
-                Back
+                {{ t('forms.back') }}
             </Button>
 
             <Button
@@ -220,7 +223,7 @@ function flatten(errors: unknown): Record<string, string> {
                 @click="next()"
             >
                 <Spinner v-if="checking" class="size-4" />
-                Next
+                {{ t('forms.next') }}
             </Button>
 
             <Button

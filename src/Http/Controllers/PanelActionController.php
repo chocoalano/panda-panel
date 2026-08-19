@@ -51,15 +51,15 @@ final class PanelActionController
 
         $action = $schema->getRecordAction((string) $validated['action']);
 
-        abort_if($action === null, 404, 'Unknown action.');
-        abort_unless($action->isExecutable(), 400, 'This action cannot be executed.');
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
+        abort_unless($action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
 
         $key = $validated['record'];
 
         // A key must be a scalar. Passing an array through would turn
         // `find()` into a collection lookup and quietly change the meaning
         // of the request.
-        abort_unless(is_string($key) || is_int($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         // Through the resource's record lookup, not its list query: a
         // restore is an operation on a record the list deliberately hides, so
@@ -98,12 +98,12 @@ final class PanelActionController
         $action = $resource::infolist(InfolistSchema::make())
             ->getAction((string) $validated['action']);
 
-        abort_if($action === null, 404, 'Unknown action.');
-        abort_unless($action->isExecutable(), 400, 'This action cannot be executed.');
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
+        abort_unless($action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
 
         $key = $validated['record'];
 
-        abort_unless(is_string($key) || is_int($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         $model = $resource::findRecord($key);
 
@@ -137,7 +137,7 @@ final class PanelActionController
 
         $column = $this->schemaFor($resource)->getReorderColumn();
 
-        abort_if($column === null, 400, 'This table is not reorderable.');
+        abort_if($column === null, 400, __('panda-panel::errors.not_reorderable'));
 
         $keys = $this->scalarKeys($validated['records']);
 
@@ -162,7 +162,7 @@ final class PanelActionController
             }
         });
 
-        return back()->with('success', 'Order updated.');
+        return back()->with('success', __('panda-panel::tables.reordered'));
     }
 
     /**
@@ -192,18 +192,18 @@ final class PanelActionController
 
         $column = $this->schemaFor($resource)->getColumn((string) $validated['column']);
 
-        abort_if($column === null, 404, 'Unknown column.');
-        abort_unless($column instanceof EditableColumn, 400, 'That column is not editable.');
+        abort_if($column === null, 404, __('panda-panel::errors.unknown_column'));
+        abort_unless($column instanceof EditableColumn, 400, __('panda-panel::errors.column_not_editable'));
 
         $key = $validated['record'];
 
-        abort_unless(is_string($key) || is_int($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         $model = $resource::findRecord($key);
 
         abort_if($model === null, 404);
         abort_unless($resource::canEdit($model), 403);
-        abort_if($column->isDisabledFor($model), 403, 'That cell cannot be edited.');
+        abort_if($column->isDisabledFor($model), 403, __('panda-panel::errors.cell_not_editable'));
 
         $data = validator(
             ['value' => $request->input('value')],
@@ -240,8 +240,8 @@ final class PanelActionController
 
         $action = $this->schemaFor($resource)->getTableAction((string) $validated['action']);
 
-        abort_if($action === null, 404, 'Unknown action.');
-        abort_unless($action->isTableExecutable(), 400, 'This action cannot be executed.');
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
+        abort_unless($action->isTableExecutable(), 400, __('panda-panel::errors.action_not_executable'));
         abort_unless($action->isAuthorizedFor(null), 403);
 
         $action->executeWithoutRecord();
@@ -267,20 +267,20 @@ final class PanelActionController
 
         $action = $schema->getBulkAction((string) $validated['action']);
 
-        abort_if($action === null, 404, 'Unknown bulk action.');
-        abort_unless($action->isBulkExecutable() || $action->isExecutable(), 400, 'This action cannot be executed.');
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_bulk_action'));
+        abort_unless($action->isBulkExecutable() || $action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
         abort_unless($action->isAuthorizedFor(null), 403);
 
         $keys = $this->scalarKeys($validated['records']);
 
-        abort_if($keys === [], 422, 'Invalid record keys.');
+        abort_if($keys === [], 422, __('panda-panel::errors.invalid_record_keys'));
 
         $records = $resource::findRecords($keys);
 
         // Keys outside the resource scope silently disappear here, so the
         // count check is what turns that into a visible failure rather than
         // a partial bulk operation.
-        abort_if($records->count() !== count($keys), 404, 'Some records could not be found.');
+        abort_if($records->count() !== count($keys), 404, __('panda-panel::errors.records_not_found'));
 
         $action->executeBulk($records);
 
@@ -320,7 +320,7 @@ final class PanelActionController
     {
         $resource = $this->manager->resources($panel)->bySlug($slug);
 
-        abort_if($resource === null, 404, 'Unknown resource.');
+        abort_if($resource === null, 404, __('panda-panel::errors.unknown_resource'));
 
         /** @var class-string<PanelResource> $resource */
         return $resource;
@@ -348,7 +348,7 @@ final class PanelActionController
         $key = $request->input('parent');
 
         abort_if($parentResource === null, 404);
-        abort_unless(is_string($key) || is_int($key), 422, 'Invalid parent key.');
+        abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_parent_key'));
 
         $parent = ParentRecord::resolve($parentResource, $key);
 

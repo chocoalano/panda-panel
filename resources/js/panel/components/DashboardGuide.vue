@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { useNavigation } from '@/panel/composables/useNavigation';
 import { usePanel } from '@/panel/composables/usePanel';
 import { resolveIcon } from '@/panel/icons/registry';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * What a dashboard shows before anyone has put anything on it.
@@ -26,7 +29,9 @@ const { copy, copied, isSupported } = useClipboard({ copiedDuring: 2000 });
 
 const panelId = computed(() => panel.value?.id ?? 'admin');
 
-const panelName = computed(() => panel.value?.name ?? 'This panel');
+const panelName = computed(
+    () => panel.value?.name ?? t('dashboard.this_panel'),
+);
 
 /**
  * The generators, with this panel already filled in.
@@ -37,16 +42,14 @@ const panelName = computed(() => panel.value?.name ?? 'This panel');
 const steps = computed(() => [
     {
         key: 'widget',
-        title: 'Add a widget',
-        description:
-            'A figure, a chart, or a small table. Widgets are what a dashboard is made of.',
+        title: t('dashboard.add_widget'),
+        description: t('dashboard.add_widget_description'),
         command: `php artisan make:panel-widget OrderStats --panel=${panelId.value} --type=stats`,
     },
     {
         key: 'resource',
-        title: 'Add a resource',
-        description:
-            'A model with a table, a form, and its four pages. It joins the sidebar on its own.',
+        title: t('dashboard.add_resource'),
+        description: t('dashboard.add_resource_description'),
         command: `php artisan make:panel-resource Product --panel=${panelId.value}`,
     },
 ]);
@@ -70,11 +73,10 @@ const destinations = computed(() =>
     <div class="flex flex-col gap-6 rounded-xl border border-dashed p-6 sm:p-8">
         <div class="flex flex-col gap-1.5">
             <h2 class="text-base font-semibold">
-                {{ panelName }} is ready. Its dashboard is empty.
+                {{ t('dashboard.ready', { panel: panelName }) }}
             </h2>
             <p class="max-w-prose text-sm text-muted-foreground">
-                Nothing is registered to show here yet. Run either of these and
-                it appears on this screen the next time you load it.
+                {{ t('dashboard.empty') }}
             </p>
         </div>
 
@@ -120,7 +122,9 @@ const destinations = computed(() =>
             v-if="destinations.length > 0"
             class="flex flex-wrap items-center gap-2 border-t pt-4"
         >
-            <span class="text-sm text-muted-foreground">Already here:</span>
+            <span class="text-sm text-muted-foreground">
+                {{ t('dashboard.already_here') }}
+            </span>
             <Button
                 v-for="destination in destinations"
                 :key="destination.href"

@@ -67,7 +67,7 @@ final class OutboundUrl
         $parts = parse_url($url);
 
         if ($parts === false || ! isset($parts['scheme'])) {
-            return 'That is not a URL this can send a request to.';
+            return __('panda-panel::errors.outbound_url.not_a_url');
         }
 
         // The scheme is checked before the host, because `file:///etc/passwd`
@@ -76,11 +76,11 @@ final class OutboundUrl
         $scheme = mb_strtolower($parts['scheme']);
 
         if (! in_array($scheme, ['http', 'https'], true)) {
-            return sprintf('Only http and https are supported, not %s.', $scheme);
+            return __('panda-panel::errors.outbound_url.unsupported_scheme', ['scheme' => $scheme]);
         }
 
         if (! isset($parts['host'])) {
-            return 'That is not a URL this can send a request to.';
+            return __('panda-panel::errors.outbound_url.not_a_url');
         }
 
         $host = $parts['host'];

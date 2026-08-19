@@ -7,6 +7,7 @@ namespace PandaPanel\Notifications;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Str;
 use PandaPanel\Notifications\Enums\NotificationColor;
+use PandaPanel\Support\Label;
 
 /**
  * One notification, and the three places it can go.
@@ -184,7 +185,11 @@ final class Notification
     {
         return [
             'name' => $this->name,
-            'title' => $this->title ?? Str::headline($this->name),
+            'title' => $this->title ?? Label::resolve(
+                'notifications',
+                $this->name,
+                fn (): string => Str::headline($this->name),
+            ),
             'body' => $this->body,
             'color' => $this->color->value,
             'icon' => $this->icon ?? $this->color->icon(),

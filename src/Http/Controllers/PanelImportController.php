@@ -37,7 +37,7 @@ final class PanelImportController
         abort_unless(
             is_string($importer) && is_subclass_of($importer, Importer::class),
             404,
-            'Unknown import.',
+            __('panda-panel::errors.unknown_import'),
         );
 
         $disk = Storage::disk($importer::disk());

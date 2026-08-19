@@ -67,7 +67,7 @@ The name is the path below `resources/js/pages/`, which is what Inertia's resolv
 
 ## Shared props
 
-`PandaPanel\Http\Middleware\SharePanelData` puts seven props on every `web` response through `Inertia::share()`, which merges — your own `HandleInertiaRequests` is untouched.
+`PandaPanel\Http\Middleware\SharePanelData` puts ten props on every `web` response through `Inertia::share()`, which merges — your own `HandleInertiaRequests` is untouched.
 
 ```ts
 export interface PanelSharedProps {
@@ -78,6 +78,9 @@ export interface PanelSharedProps {
     search: PanelSearchSettings;
     notifications: PanelNotificationSettings;
     tenancy: PanelTenancy | null;       // null for a panel with no tenancy
+    locale: string;                     // what the server resolved
+    translations: Record<string, unknown>; // lang/{locale}/frontend.php
+    locales: PanelLocales | null;       // null unless the panel offers two
 }
 ```
 

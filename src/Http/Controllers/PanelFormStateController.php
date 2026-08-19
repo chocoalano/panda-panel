@@ -41,7 +41,7 @@ final class PanelFormStateController
         $resourceSlug = $request->query('resource');
         $page = $request->query('page') === 'edit' ? 'edit' : 'create';
 
-        abort_unless(is_string($resourceSlug), 422, 'Invalid resource.');
+        abort_unless(is_string($resourceSlug), 422, __('panda-panel::errors.invalid_resource'));
 
         $resource = $this->resolveResource($panel, $resourceSlug);
         $record = $this->resolveRecord($request, $resource, $page);
@@ -137,7 +137,7 @@ final class PanelFormStateController
 
         $key = $request->query('record');
 
-        abort_unless(is_string($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         $record = $resource::findRecord($key);
 
@@ -153,7 +153,7 @@ final class PanelFormStateController
     {
         $resource = $this->manager->resources($panel)->bySlug($slug);
 
-        abort_if($resource === null, 404, 'Unknown resource.');
+        abort_if($resource === null, 404, __('panda-panel::errors.unknown_resource'));
 
         /** @var class-string<PanelResource> $resource */
         return $resource;

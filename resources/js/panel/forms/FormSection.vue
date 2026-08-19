@@ -7,6 +7,9 @@ import type {
     FormValues,
     SectionDefinition,
 } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     section: SectionDefinition;
@@ -44,7 +47,11 @@ function toggle(): void {
                 type="button"
                 class="rounded-sm p-1 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 :aria-expanded="open"
-                :aria-label="open ? 'Collapse section' : 'Expand section'"
+                :aria-label="
+                    open
+                        ? t('forms.collapse_section')
+                        : t('forms.expand_section')
+                "
                 @click="toggle"
             >
                 <ChevronRight

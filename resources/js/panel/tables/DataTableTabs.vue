@@ -2,6 +2,9 @@
 import { Badge } from '@/components/ui/badge';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { TableTab } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * Filter tabs above a list page.
@@ -22,7 +25,7 @@ const emit = defineEmits<{
 <template>
     <nav
         v-if="tabs.length > 0"
-        aria-label="Filter"
+        :aria-label="t('tables.filter')"
         class="flex items-center gap-1 overflow-x-auto border-b px-3"
     >
         <button

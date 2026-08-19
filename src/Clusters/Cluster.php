@@ -8,6 +8,7 @@ use BackedEnum;
 use Illuminate\Support\Str;
 use PandaPanel\Core\Panel;
 use PandaPanel\Enums\ClusterPosition;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\NavigationItem;
 
 /**
@@ -47,8 +48,12 @@ abstract class Cluster
 
     public static function title(): string
     {
-        return static::$title ?? Str::headline(
-            Str::beforeLast(class_basename(static::class), 'Cluster'),
+        $name = Str::beforeLast(class_basename(static::class), 'Cluster');
+
+        return static::$title ?? Label::resolve(
+            'clusters',
+            $name,
+            static fn (): string => Str::headline($name),
         );
     }
 

@@ -9,6 +9,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Lang;
 use Inertia\Inertia;
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
@@ -53,9 +55,80 @@ final class SharePanelData
             'search' => fn (): array => $this->search(),
             'notifications' => fn (): array => $this->notifications($request),
             'tenancy' => fn (): ?array => $this->tenancy($request),
+            'locale' => fn (): string => App::getLocale(),
+            'locales' => fn (): ?array => $this->locales($request),
+            'translations' => fn (): array => $this->translations(),
         ]);
 
         return $next($request);
+    }
+
+    /**
+     * The languages this panel may be read in, and where to say so.
+     *
+     * Null — rather than an empty shape — for a panel offering one language
+     * or none, so the frontend's check is `locales === null` and no switcher
+     * renders for an application that has nothing to switch between. The
+     * same arrangement `tenancy` uses, for the same reason.
+     *
+     * The URL differs by whether anybody is signed in: the guest route lives
+     * outside the auth stack, because a reader who cannot read the login
+     * screen cannot sign in to reach the other one.
+     *
+     * @return array{current: string, url: string, available: list<array{code: string, name: string, current: bool}>}|null
+     */
+    private function locales(Request $request): ?array
+    {
+        $panel = $this->manager->currentPanel();
+
+        if ($panel === null || ! $panel->hasLocaleSwitcher()) {
+            return null;
+        }
+
+        $current = App::getLocale();
+
+        return [
+            'current' => $current,
+            'url' => route(
+                $panel->routeName($request->user() === null ? 'auth.locale' : 'locale'),
+                absolute: false,
+            ),
+            'available' => array_map(
+                static fn (string $code, string $name): array => [
+                    'code' => $code,
+                    'name' => $name,
+                    'current' => $code === $current,
+                ],
+                array_keys($panel->getLocales()),
+                array_values($panel->getLocales()),
+            ),
+        ];
+    }
+
+    /**
+     * The strings the published Vue components draw themselves with.
+     *
+     * One group — `frontend` — rather than everything in `lang/`. The rest is
+     * read in PHP and has no business crossing the wire; sending it would put
+     * a hundred abort messages in the page source of every screen.
+     *
+     * Every label that came from a schema is already in the payload,
+     * translated on the way out, so nothing here duplicates it. What is left
+     * is chrome the components own: "Rows per page", "Close", "Nothing found."
+     *
+     * A closure like every other prop, so Inertia leaves it out of a partial
+     * reload. Sorting a table or turning a page carries none of this.
+     *
+     * @return array<string, mixed>
+     */
+    private function translations(): array
+    {
+        $lines = Lang::get('panda-panel::frontend');
+
+        // A missing group comes back as the key it was asked for. An empty
+        // dictionary is what `useTranslator()` degrades from, and is a great
+        // deal better than a page that renders the string 'panda-panel::frontend'.
+        return is_array($lines) ? $lines : [];
     }
 
     /**

@@ -15,6 +15,9 @@ import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import { resolveIcon } from '@/panel/icons/registry';
 import { resolveShellComponent } from '@/panel/shell/registry';
 import type { PanelBreadcrumbItem } from '@/panel/types/breadcrumb';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 withDefaults(
     defineProps<{
@@ -99,7 +102,7 @@ const topLevelItems = computed(() =>
                 </Link>
 
                 <nav
-                    aria-label="Panel navigation"
+                    :aria-label="t('shell.panel_navigation')"
                     class="flex items-center gap-1 overflow-x-auto"
                 >
                     <Link

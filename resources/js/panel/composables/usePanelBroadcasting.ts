@@ -1,6 +1,7 @@
 import { echo } from '@laravel/echo-vue';
 import { onBeforeUnmount, onMounted } from 'vue';
 import { toast } from 'vue-sonner';
+import { useTranslator } from '@/composables/useTranslator';
 import { safeUrl } from '@/lib/utils';
 import { usePanel } from '@/panel/composables/usePanel';
 import type { FlashToast } from '@/types/ui';
@@ -96,6 +97,7 @@ function withEcho<T>(use: (client: ReturnType<typeof echo>) => T): T | null {
  */
 export function usePanelBroadcasting(): void {
     const { broadcasting } = usePanel();
+    const { t } = useTranslator();
 
     let subscribed: string | null = null;
 
@@ -137,7 +139,7 @@ export function usePanelBroadcasting(): void {
                         url === null
                             ? undefined
                             : {
-                                  label: notification.urlLabel ?? 'Open',
+                                  label: notification.urlLabel ?? t('ui.open'),
                                   onClick: () => {
                                       window.location.href = url;
                                   },

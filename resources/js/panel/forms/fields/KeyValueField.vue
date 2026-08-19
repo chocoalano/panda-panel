@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import type { KeyValueFieldDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: KeyValueFieldDefinition;
@@ -135,7 +138,7 @@ function remove(index: number): void {
             </div>
 
             <p v-if="pairs.length === 0" class="text-sm text-muted-foreground">
-                No entries yet.
+                {{ t('forms.no_entries') }}
             </p>
 
             <Button
@@ -147,7 +150,7 @@ function remove(index: number): void {
                 :disabled="field.disabled || atLimit"
                 @click="add"
             >
-                Add row
+                {{ t('forms.add_row') }}
             </Button>
         </div>
     </FieldWrapper>

@@ -22,6 +22,9 @@ import type {
     PanelNotificationAction,
     PanelNotificationItem,
 } from '@/panel/types/panel';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * The notification bell and the centre behind it.
@@ -216,8 +219,12 @@ async function run(
                 variant="ghost"
                 size="icon-sm"
                 class="relative"
-                :title="count > 0 ? `${count} unread` : 'Notifications'"
-                aria-label="Notifications"
+                :title="
+                    count > 0
+                        ? t('shell.unread_count', { count })
+                        : t('shell.notifications')
+                "
+                :aria-label="t('shell.notifications')"
             >
                 <Bell />
                 <span
@@ -231,9 +238,13 @@ async function run(
 
         <SheetContent side="right" class="gap-0 p-0 sm:max-w-md">
             <SheetHeader class="border-b px-4 py-3 pr-12">
-                <SheetTitle>Notifications</SheetTitle>
+                <SheetTitle>{{ t('shell.notifications') }}</SheetTitle>
                 <SheetDescription>
-                    {{ count > 0 ? `${count} unread` : 'Notification center' }}
+                    {{
+                        count > 0
+                            ? t('shell.unread_count', { count })
+                            : t('shell.notification_center')
+                    }}
                 </SheetDescription>
             </SheetHeader>
 
@@ -249,7 +260,7 @@ async function run(
                         class="h-auto px-2 py-1 text-xs"
                         @click="markRead(null)"
                     >
-                        Mark all read
+                        {{ t('shell.mark_all_read') }}
                     </Button>
                     <Button
                         v-if="items.length > 0"
@@ -258,7 +269,7 @@ async function run(
                         class="h-auto px-2 py-1 text-xs"
                         @click="clear(false)"
                     >
-                        Clear read
+                        {{ t('shell.clear_read') }}
                     </Button>
                 </div>
             </div>
@@ -272,14 +283,14 @@ async function run(
                     v-else-if="failed"
                     class="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
-                    Notifications could not be loaded.
+                    {{ t('shell.notifications_failed') }}
                 </p>
 
                 <p
                     v-else-if="items.length === 0"
                     class="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
-                    Nothing here yet.
+                    {{ t('shell.notifications_empty') }}
                 </p>
 
                 <ul v-else class="divide-y">
@@ -333,10 +344,10 @@ async function run(
                             variant="ghost"
                             size="sm"
                             class="h-auto shrink-0 px-2 py-1 text-xs"
-                            aria-label="Mark as read"
+                            :aria-label="t('shell.mark_as_read')"
                             @click="markRead(item.id)"
                         >
-                            Read
+                            {{ t('shell.read') }}
                         </Button>
                     </li>
                 </ul>

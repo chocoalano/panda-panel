@@ -23,15 +23,15 @@ final class DeleteAction
     public static function make(string $resource): Action
     {
         return Action::make('delete')
-            ->label('Delete')
+            ->label(__('panda-panel::actions.delete.label'))
             ->icon('trash-2')
             ->variant(ActionVariant::Destructive)
             ->requiresConfirmation(
-                heading: 'Delete this record?',
-                description: 'This permanently removes the record. This cannot be undone.',
-                button: 'Delete',
+                heading: __('panda-panel::actions.delete.heading'),
+                description: __('panda-panel::actions.delete.description'),
+                button: __('panda-panel::actions.delete.button'),
             )
-            ->successMessage('Record deleted.')
+            ->successMessage(__('panda-panel::actions.delete.success'))
             ->authorize(static fn (?Model $record): bool => $record !== null
                 && $resource::canDelete($record))
             ->action(static function (Model $record): void {

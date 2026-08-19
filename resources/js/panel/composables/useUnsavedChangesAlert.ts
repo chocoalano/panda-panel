@@ -1,9 +1,8 @@
 import { router } from '@inertiajs/vue3';
 import { onBeforeUnmount, onMounted } from 'vue';
 import type { Ref } from 'vue';
+import { useTranslator } from '@/composables/useTranslator';
 import { usePanel } from '@/panel/composables/usePanel';
-
-const MESSAGE = 'You have unsaved changes. Leave this page and lose them?';
 
 /**
  * Warns before leaving a form with unsaved edits.
@@ -20,6 +19,7 @@ const MESSAGE = 'You have unsaved changes. Leave this page and lose them?';
  */
 export function useUnsavedChangesAlert(isDirty: Ref<boolean>): void {
     const { panel } = usePanel();
+    const { t } = useTranslator();
 
     const enabled = (): boolean =>
         panel.value?.unsavedChangesAlerts === true && isDirty.value;
@@ -32,7 +32,7 @@ export function useUnsavedChangesAlert(isDirty: Ref<boolean>): void {
         // Assigning returnValue is what makes the browser prompt; the text
         // itself is ignored by every current browser.
         event.preventDefault();
-        event.returnValue = MESSAGE;
+        event.returnValue = t('shell.unsaved_changes');
     }
 
     let stopInertia: (() => void) | null = null;
@@ -46,7 +46,7 @@ export function useUnsavedChangesAlert(isDirty: Ref<boolean>): void {
                 return;
             }
 
-            return window.confirm(MESSAGE);
+            return window.confirm(t('shell.unsaved_changes'));
         });
     });
 

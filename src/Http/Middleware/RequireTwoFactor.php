@@ -49,7 +49,7 @@ final class RequireTwoFactor
         // Nowhere to send them means the panel is misconfigured. Letting them
         // through would silently turn a required second factor into a notice.
         if (! Route::has($security)) {
-            abort(403, 'Two-factor authentication is required, but the security page is not registered.');
+            abort(403, __('panda-panel::errors.two_factor_page_missing'));
         }
 
         if ($request->routeIs($security) || $request->routeIs($panel->routeName('pages.*'))) {
@@ -58,7 +58,7 @@ final class RequireTwoFactor
 
         return redirect()
             ->route($security)
-            ->with('warning', 'Set up two-factor authentication to continue.');
+            ->with('warning', __('panda-panel::notifications.two_factor_required'));
     }
 
     /**

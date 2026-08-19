@@ -7,6 +7,7 @@ namespace PandaPanel\Tables;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use PandaPanel\Support\Label;
 
 /**
  * One filter tab above a list page.
@@ -70,7 +71,11 @@ final class Tab
 
     public function getLabel(): string
     {
-        return $this->label ?? str($this->key)->headline()->toString();
+        return $this->label ?? Label::resolve(
+            'tabs',
+            $this->key,
+            fn (): string => str($this->key)->headline()->toString(),
+        );
     }
 
     /**

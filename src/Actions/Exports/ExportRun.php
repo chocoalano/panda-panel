@@ -48,7 +48,7 @@ final class ExportRun
         $temporary = tempnam(sys_get_temp_dir(), 'panel-export-');
 
         if ($temporary === false) {
-            throw new \RuntimeException('Cannot create a temporary file for the export.');
+            throw new \RuntimeException(__('panda-panel::errors.spreadsheet.export_temp_failed'));
         }
 
         $records = 0;
@@ -77,7 +77,7 @@ final class ExportRun
         $stream = fopen($temporary, 'rb');
 
         if ($stream === false) {
-            throw new \RuntimeException('The export file could not be read back.');
+            throw new \RuntimeException(__('panda-panel::errors.spreadsheet.export_unreadable'));
         }
 
         Storage::disk($exporter::disk())->put($path, $stream);

@@ -11,6 +11,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { usePanel } from '@/panel/composables/usePanel';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * Moves between the tenants the signed-in user belongs to.
@@ -43,17 +46,19 @@ const open = ref(false);
                 variant="ghost"
                 size="sm"
                 class="gap-2"
-                aria-label="Switch tenant"
+                :aria-label="t('shell.switch_tenant')"
             >
                 <Building2 class="size-4" />
                 <span class="max-w-32 truncate">
-                    {{ tenancy?.current?.name ?? 'Select' }}
+                    {{ tenancy?.current?.name ?? t('shell.select') }}
                 </span>
             </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" class="w-56">
-            <DropdownMenuLabel>Switch tenant</DropdownMenuLabel>
+            <DropdownMenuLabel>{{
+                t('shell.switch_tenant')
+            }}</DropdownMenuLabel>
 
             <DropdownMenuSeparator />
 

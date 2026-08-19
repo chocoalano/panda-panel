@@ -7,6 +7,9 @@ import type { PanelDefinition } from '@/panel/types/panel';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
 import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelBlankLayout });
 
@@ -19,16 +22,16 @@ defineProps<{
 <template>
     <PanelAuthLayout
         :panel="panel"
-        title="Verify your email"
-        description="We sent you a link. Open it to finish signing in."
+        :title="t('auth.verify_email')"
+        :description="t('auth.verify_email_description')"
     >
-        <Head :title="`Verify email · ${panel.brandName}`" />
+        <Head :title="`${t('auth.verify_email_title')} · ${panel.brandName}`" />
 
         <div
             v-if="status === 'verification-link-sent'"
             class="mb-4 text-center text-sm font-medium text-emerald-600"
         >
-            A new link has been sent to your address.
+            {{ t('auth.verify_email_sent') }}
         </div>
 
         <Form
@@ -38,7 +41,7 @@ defineProps<{
         >
             <Button type="submit" :disabled="processing">
                 <Spinner v-if="processing" />
-                Resend the link
+                {{ t('auth.resend_link') }}
             </Button>
 
             <Link
@@ -46,7 +49,7 @@ defineProps<{
                 as="button"
                 class="text-center text-sm text-muted-foreground underline underline-offset-4"
             >
-                Log out
+                {{ t('auth.log_out') }}
             </Link>
         </Form>
     </PanelAuthLayout>

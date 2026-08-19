@@ -5,6 +5,20 @@ import { Textarea } from '@/components/ui/textarea';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import { renderMarkdown } from '@/panel/forms/markdown';
 import type { MarkdownEditorFieldDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
+
+/**
+ * A toolbar button's face.
+ *
+ * Most are typographic — `B`, `H2`, `❝` — and mean the same thing in every
+ * language, so they are written literally. The few that are words hold a
+ * translation key instead, recognised by its dot.
+ */
+function toolbarLabel(label: string): string {
+    return label.includes('.') ? t(label) : label;
+}
 
 const props = defineProps<{
     field: MarkdownEditorFieldDefinition;
@@ -47,10 +61,14 @@ const WRAPPERS: Record<
     italic: { label: 'I', before: '*', after: '*' },
     strike: { label: 'S', before: '~~', after: '~~' },
     code: { label: '</>', before: '`', after: '`' },
-    link: { label: 'Link', before: '[', after: '](https://)' },
+    link: { label: 'forms.editor_link', before: '[', after: '](https://)' },
     heading: { label: 'H', before: '## ', after: '' },
-    bulletList: { label: '• List', before: '- ', after: '' },
-    orderedList: { label: '1. List', before: '1. ', after: '' },
+    bulletList: { label: 'forms.editor_bullet_list', before: '- ', after: '' },
+    orderedList: {
+        label: 'forms.editor_ordered_list',
+        before: '1. ',
+        after: '',
+    },
     blockquote: { label: '❝', before: '> ', after: '' },
 };
 
@@ -112,7 +130,7 @@ function apply(button: string): void {
                         :aria-label="button"
                         @click="apply(button)"
                     >
-                        {{ WRAPPERS[button].label }}
+                        {{ toolbarLabel(WRAPPERS[button].label) }}
                     </button>
                 </template>
 
@@ -123,7 +141,7 @@ function apply(button: string): void {
                     :aria-pressed="previewing"
                     @click="previewing = !previewing"
                 >
-                    {{ previewing ? 'Write' : 'Preview' }}
+                    {{ previewing ? t('forms.write') : t('forms.preview') }}
                 </button>
             </div>
 

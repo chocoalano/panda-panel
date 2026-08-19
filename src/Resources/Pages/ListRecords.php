@@ -143,7 +143,7 @@ abstract class ListRecords extends ResourcePage
         return [
             ...$this->headingMetadata(),
             'breadcrumbs' => $this->serializeBreadcrumbs([
-                Breadcrumb::make('Dashboard')->url($this->dashboardUrl()),
+                Breadcrumb::make(__('panda-panel::pages.dashboard.title'))->url($this->dashboardUrl()),
                 ...$this->parentBreadcrumbs(),
                 Breadcrumb::make($resource::pluralLabel())->current(),
             ]),

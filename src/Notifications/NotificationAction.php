@@ -6,6 +6,7 @@ namespace PandaPanel\Notifications;
 
 use Illuminate\Support\Str;
 use PandaPanel\Actions\Enums\ActionVariant;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\SafeUrl;
 
 /**
@@ -86,7 +87,11 @@ final class NotificationAction
     {
         return [
             'name' => $this->name,
-            'label' => $this->label ?? Str::headline($this->name),
+            'label' => $this->label ?? Label::resolve(
+                'actions',
+                $this->name,
+                fn (): string => Str::headline($this->name),
+            ),
             'url' => $this->url,
             'variant' => $this->variant->value,
             'markAsRead' => $this->markAsRead,

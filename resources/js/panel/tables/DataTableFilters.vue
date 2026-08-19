@@ -20,6 +20,9 @@ import type {
     QueryBuilderRule,
     TableState,
 } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     filters: FilterDefinition[];
@@ -103,7 +106,9 @@ function blankLabelFor(filter: FilterDefinition): string {
         return filter.blankLabel;
     }
 
-    return filter.type === 'select' ? (filter.placeholder ?? 'All') : 'All';
+    return filter.type === 'select'
+        ? (filter.placeholder ?? t('tables.all'))
+        : t('tables.all');
 }
 
 function onSelect(name: string, value: string): void {
@@ -220,7 +225,7 @@ function onDate(
                 <div class="flex items-center gap-2">
                     <PanelDatePicker
                         class="w-37.5"
-                        placeholder="From"
+                        :placeholder="t('tables.from')"
                         :aria-label="`${filter.label} from`"
                         :model-value="dateValue(filter.name).from ?? null"
                         :max="dateValue(filter.name).to ?? null"
@@ -231,7 +236,7 @@ function onDate(
                     <span class="text-muted-foreground">–</span>
                     <PanelDatePicker
                         class="w-37.5"
-                        placeholder="To"
+                        :placeholder="t('tables.to')"
                         :aria-label="`${filter.label} to`"
                         :model-value="dateValue(filter.name).to ?? null"
                         :min="dateValue(filter.name).from ?? null"

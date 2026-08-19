@@ -6,6 +6,7 @@ namespace PandaPanel\Tables\Filters;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use PandaPanel\Support\Format;
 use PandaPanel\Tables\Enums\FilterType;
 use Throwable;
 
@@ -14,10 +15,9 @@ final class DateFilter extends Filter
     /**
      * How a bound is spelled in the chip. Day-month-year with a short month
      * name because `01/02` is a different date either side of the Atlantic
-     * and a chip is read at a glance.
+     * and a chip is read at a glance — `formats.date_compact`, so a locale
+     * that writes it differently says so in one place
      */
-    private const DISPLAY_FORMAT = 'j M Y';
-
     public function type(): FilterType
     {
         return FilterType::Date;
@@ -77,11 +77,11 @@ final class DateFilter extends Filter
     protected function describe(mixed $value): string
     {
         $from = is_array($value) && $value['from'] instanceof CarbonImmutable
-            ? $value['from']->format(self::DISPLAY_FORMAT)
+            ? $value['from']->format(Format::dateCompact())
             : null;
 
         $to = is_array($value) && $value['to'] instanceof CarbonImmutable
-            ? $value['to']->format(self::DISPLAY_FORMAT)
+            ? $value['to']->format(Format::dateCompact())
             : null;
 
         return match (true) {

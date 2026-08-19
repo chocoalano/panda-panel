@@ -2,6 +2,9 @@
 import { Button } from '@/components/ui/button';
 import ActionButton from '@/panel/actions/ActionButton.vue';
 import type { ActionDefinition } from '@/panel/types/action';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * Appears only while rows are selected. The count comes from the selection
@@ -47,7 +50,7 @@ const emit = defineEmits<{
                 @run="emit('run', action)"
             />
             <Button variant="ghost" size="sm" @click="emit('clear')">
-                Clear
+                {{ t('tables.clear') }}
             </Button>
         </div>
     </div>

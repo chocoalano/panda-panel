@@ -15,6 +15,9 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t, locale } = useTranslator();
 
 /**
  * One date, chosen from a calendar.
@@ -53,7 +56,7 @@ const props = withDefaults(
         disabled: false,
         min: null,
         max: null,
-        placeholder: 'Pick a date',
+        placeholder: undefined,
         invalid: false,
         ariaLabel: undefined,
         clearable: true,
@@ -93,14 +96,19 @@ const maxValue = computed(() => toCalendarDate(props.max) ?? undefined);
  * Atlantic and the first of February on the other, and the trigger is read at
  * a glance. The same reasoning as the filter chip's own format.
  */
-const formatter = new DateFormatter('en', { dateStyle: 'medium' });
+// Rebuilt when the locale changes rather than constructed once: a date
+// written "Jan 5, 2026" is not how it reads anywhere the panel is not
+// English, and the locale is a prop the server resolved.
+const formatter = computed(
+    () => new DateFormatter(locale.value, { dateStyle: 'medium' }),
+);
 
 const label = computed(() => {
     const date = selected.value;
 
     return date === undefined
-        ? props.placeholder
-        : formatter.format(date.toDate(getLocalTimeZone()));
+        ? (props.placeholder ?? t('forms.pick_a_date'))
+        : formatter.value.format(date.toDate(getLocalTimeZone()));
 });
 
 const showClear = computed(
@@ -152,6 +160,7 @@ function onClear(): void {
             </PopoverTrigger>
             <PopoverContent class="w-auto p-0" align="start">
                 <Calendar
+                    :locale="locale"
                     :model-value="selected"
                     :min-value="minValue"
                     :max-value="maxValue"

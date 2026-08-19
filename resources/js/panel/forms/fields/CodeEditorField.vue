@@ -3,6 +3,23 @@ import { computed } from 'vue';
 import { Textarea } from '@/components/ui/textarea';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import type { CodeEditorFieldDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
+
+/**
+ * A language's name, translated only where it has one.
+ *
+ * `JSON`, `HTML`, `PHP` are names rather than words: they read the same in
+ * every language, so `LANGUAGE_LABELS` holds them literally and only the
+ * entries that are actually English — "Plain text" — hold a translation key.
+ * A key is recognised by its dot; anything else is passed through.
+ */
+function languageLabel(language: string): string {
+    const label = LANGUAGE_LABELS[language] ?? language;
+
+    return label.includes('.') ? t(label) : label;
+}
 
 const props = defineProps<{
     field: CodeEditorFieldDefinition;
@@ -22,7 +39,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
  * Tab inserting indentation rather than leaving the field.
  */
 const LANGUAGE_LABELS: Record<string, string> = {
-    plain: 'Plain text',
+    plain: 'forms.plain_text',
     json: 'JSON',
     html: 'HTML',
     css: 'CSS',
@@ -86,9 +103,7 @@ function onTab(event: KeyboardEvent): void {
             <div
                 class="flex items-center justify-between border-b border-input bg-muted/40 px-2 py-1 text-xs text-muted-foreground"
             >
-                <span>{{
-                    LANGUAGE_LABELS[field.language] ?? field.language
-                }}</span>
+                <span>{{ languageLabel(field.language) }}</span>
                 <span>{{ lineCount }} lines</span>
             </div>
 

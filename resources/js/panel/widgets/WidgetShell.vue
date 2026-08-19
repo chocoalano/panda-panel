@@ -4,6 +4,9 @@ import { onBeforeUnmount, onMounted } from 'vue';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import type { WidgetDefinition } from '@/panel/types/widget';
 import WidgetFilters from '@/panel/widgets/WidgetFilters.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * What every widget wears: its heading, its filters, and its refresh.
@@ -72,7 +75,7 @@ const { hook } = usePanelStyling();
                 :form="widget.filters.form"
                 :namespace="`widgets[${widget.id}]`"
                 :in-modal="widget.filters.inModal"
-                :title="widget.heading ?? 'Filters'"
+                :title="widget.heading ?? t('widgets.filters')"
             />
         </div>
 

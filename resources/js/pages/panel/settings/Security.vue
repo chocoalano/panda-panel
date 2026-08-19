@@ -13,6 +13,9 @@ import { Label } from '@/components/ui/label';
 import PageHeader from '@/panel/components/PageHeader.vue';
 import type { PageMetadata } from '@/panel/types/page';
 import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelLayout });
 
@@ -49,25 +52,29 @@ const props = defineProps<Props>();
                     class="space-y-6"
                 >
                     <div class="grid gap-2">
-                        <Label for="current_password">Current password</Label>
+                        <Label for="current_password">
+                            {{ t('settings.current_password') }}
+                        </Label>
                         <PasswordInput
                             id="current_password"
                             name="current_password"
                             class="block w-full"
                             autocomplete="current-password"
-                            placeholder="Current password"
+                            :placeholder="t('settings.current_password')"
                         />
                         <InputError :message="errors.current_password" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password">New password</Label>
+                        <Label for="password">{{
+                            t('settings.new_password')
+                        }}</Label>
                         <PasswordInput
                             id="password"
                             name="password"
                             class="block w-full"
                             autocomplete="new-password"
-                            placeholder="New password"
+                            :placeholder="t('settings.new_password')"
                             :passwordrules="props.passwordRules"
                         />
                         <InputError :message="errors.password" />
@@ -75,14 +82,14 @@ const props = defineProps<Props>();
 
                     <div class="grid gap-2">
                         <Label for="password_confirmation">
-                            Confirm password
+                            {{ t('settings.confirm_password') }}
                         </Label>
                         <PasswordInput
                             id="password_confirmation"
                             name="password_confirmation"
                             class="block w-full"
                             autocomplete="new-password"
-                            placeholder="Confirm password"
+                            :placeholder="t('settings.confirm_password')"
                             :passwordrules="props.passwordRules"
                         />
                         <InputError :message="errors.password_confirmation" />
@@ -92,7 +99,7 @@ const props = defineProps<Props>();
                         :disabled="processing"
                         data-test="update-password-button"
                     >
-                        Save
+                        {{ t('settings.save') }}
                     </Button>
                 </Form>
             </CardContent>
@@ -117,12 +124,14 @@ const props = defineProps<Props>();
         <Card class="shadow-xs">
             <CardContent class="flex flex-col gap-4">
                 <div>
-                    <h2 class="text-base font-medium">Email codes</h2>
+                    <h2 class="text-base font-medium">
+                        {{ t('settings.email_codes') }}
+                    </h2>
                     <p class="text-sm text-muted-foreground">
                         {{
                             emailCodeEnabled
-                                ? 'A one-time code is sent to your email address each time you sign in on a new session.'
-                                : 'Send a one-time code to your email address when signing in.'
+                                ? t('settings.email_codes_on')
+                                : t('settings.email_codes_off')
                         }}
                     </p>
                 </div>
@@ -141,7 +150,11 @@ const props = defineProps<Props>();
                         :variant="emailCodeEnabled ? 'outline' : 'default'"
                         :disabled="processing"
                     >
-                        {{ emailCodeEnabled ? 'Turn off' : 'Turn on' }}
+                        {{
+                            emailCodeEnabled
+                                ? t('settings.turn_off')
+                                : t('settings.turn_on')
+                        }}
                     </Button>
                 </Form>
             </CardContent>

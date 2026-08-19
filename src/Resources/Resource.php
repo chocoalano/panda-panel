@@ -25,6 +25,7 @@ use PandaPanel\Forms\FormSchema;
 use PandaPanel\Infolists\InfolistSchema;
 use PandaPanel\Integrations\Integrations;
 use PandaPanel\Resources\Resource as PanelResource;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\NavigationItem;
 use PandaPanel\Support\ParentRecord;
 use PandaPanel\Support\PolicyGate;
@@ -501,12 +502,39 @@ abstract class Resource implements ResourceContract
 
     public static function defaultLabel(): string
     {
-        return static::$label ?? Str::headline(class_basename(static::getModel()));
+        $model = class_basename(static::getModel());
+
+        return static::$label ?? Label::resolve(
+            'resources',
+            $model,
+            static fn (): string => Str::headline($model),
+        );
     }
 
+    /**
+     * The plural, which is a word rather than an inflection of the singular.
+     *
+     * `Str::plural()` knows English. Applied to a translated singular it
+     * produces "Penggunas" — so a resource whose singular came from the
+     * application's file and whose plural did not keeps the singular
+     * unchanged, which is right for every language that does not inflect and
+     * no worse than nothing for the ones that do. Say the plural in
+     * `resources_plural` to get a different word.
+     */
     public static function defaultPluralLabel(): string
     {
-        return static::$pluralLabel ?? Str::plural(static::defaultLabel());
+        if (static::$pluralLabel !== null) {
+            return static::$pluralLabel;
+        }
+
+        $model = class_basename(static::getModel());
+        $translated = Label::lookup('resources_plural', $model);
+
+        if ($translated !== null) {
+            return $translated;
+        }
+
+        return Label::lookup('resources', $model) ?? Str::plural(static::defaultLabel());
     }
 
     /**

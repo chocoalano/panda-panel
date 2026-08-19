@@ -24,22 +24,22 @@ final class ForceDeleteBulkAction
     public static function make(string $manager, Model $owner): Action
     {
         return Action::make('forceDelete')
-            ->label('Delete selected permanently')
+            ->label(__('panda-panel::actions.force_delete_bulk.label'))
             ->icon('trash-2')
             ->variant(ActionVariant::Destructive)
             ->requiresConfirmation(
-                heading: 'Delete the selected records permanently?',
-                description: 'This cannot be undone and the records cannot be restored afterwards.',
-                button: 'Delete permanently',
+                heading: __('panda-panel::actions.force_delete_bulk.heading'),
+                description: __('panda-panel::actions.force_delete_bulk.description'),
+                button: __('panda-panel::actions.force_delete_bulk.button'),
             )
-            ->successMessage('Selected records permanently deleted.')
+            ->successMessage(__('panda-panel::actions.force_delete_bulk.success'))
             ->visible(static fn (): bool => $manager::usesSoftDeletes($owner))
             ->authorize(static fn (?Model $record): bool => $record === null
                 || $manager::canForceDelete($owner, $record))
             ->bulkAction(static function (Collection $records) use ($manager, $owner): void {
                 foreach ($records as $record) {
                     if (! $manager::canForceDelete($owner, $record)) {
-                        throw new HttpException(403, 'You may not permanently delete every selected record.');
+                        throw new HttpException(403, __('panda-panel::actions.force_delete_bulk.denied'));
                     }
                 }
 

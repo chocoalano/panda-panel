@@ -10,6 +10,9 @@ import PanelAuthLayout from '@/panel/layouts/PanelAuthLayout.vue';
 import type { PanelDefinition } from '@/panel/types/panel';
 import { email } from '@/routes/password';
 import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelBlankLayout });
 
@@ -22,10 +25,10 @@ defineProps<{
 <template>
     <PanelAuthLayout
         :panel="panel"
-        title="Forgot password"
-        description="Enter your email and we will send you a reset link."
+        :title="t('auth.forgot_password')"
+        :description="t('auth.forgot_password_description')"
     >
-        <Head :title="`Forgot password · ${panel.brandName}`" />
+        <Head :title="`${t('auth.forgot_password')} · ${panel.brandName}`" />
 
         <div
             v-if="status"
@@ -40,7 +43,7 @@ defineProps<{
             class="flex flex-col gap-6"
         >
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email">{{ t('auth.email') }}</Label>
                 <Input
                     id="email"
                     type="email"
@@ -53,13 +56,13 @@ defineProps<{
 
             <Button type="submit" class="w-full" :disabled="processing">
                 <Spinner v-if="processing" />
-                Email reset link
+                {{ t('auth.email_reset_link') }}
             </Button>
 
             <p class="text-center text-sm text-muted-foreground">
-                <TextLink :href="`/${panel.path}/login`"
-                    >Back to log in</TextLink
-                >
+                <TextLink :href="`/${panel.path}/login`">
+                    {{ t('auth.back_to_login') }}
+                </TextLink>
             </p>
         </Form>
     </PanelAuthLayout>

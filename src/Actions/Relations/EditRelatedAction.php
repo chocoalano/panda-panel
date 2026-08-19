@@ -27,7 +27,7 @@ final class EditRelatedAction
     public static function make(string $resource, string $manager, Model $owner): Action
     {
         return Action::make('edit')
-            ->label('Edit')
+            ->label(__('panda-panel::actions.relations.edit.label'))
             ->icon('pencil')
             ->form(static fn (?Model $record): string => RelationEndpoints::form(
                 $resource,

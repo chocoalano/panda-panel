@@ -124,7 +124,7 @@ final class RunPanelExport implements ShouldQueue
             ->persistent()
             ->actions([
                 NotificationAction::make('download')
-                    ->label('Download')
+                    ->label(__('panda-panel::actions.export.download'))
                     ->url(route($panel->routeName('export-file'), [
                         'file' => $result['file'],
                         'exporter' => $exporter,
@@ -150,8 +150,8 @@ final class RunPanelExport implements ShouldQueue
         }
 
         Notification::make('export-failed')
-            ->title('Export failed')
-            ->body($exception?->getMessage() ?? 'The file could not be written.')
+            ->title(__('panda-panel::actions.export.failed_title'))
+            ->body($exception?->getMessage() ?? __('panda-panel::actions.export.failed_body'))
             ->danger()
             ->icon('triangle-alert')
             ->persistent()

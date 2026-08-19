@@ -6,6 +6,7 @@ namespace PandaPanel\Tables\Columns;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use PandaPanel\Support\Label;
 use PandaPanel\Tables\Enums\BadgeColor;
 use PandaPanel\Tables\Enums\ColumnType;
 
@@ -71,7 +72,11 @@ final class BadgeColumn extends Column
 
         return [
             'value' => $key,
-            'label' => $this->labels[$key] ?? Str::headline($key),
+            'label' => $this->labels[$key] ?? Label::resolve(
+                'values',
+                $key,
+                fn (): string => Str::headline($key),
+            ),
             'color' => ($this->colors[$key] ?? BadgeColor::Neutral)->value,
         ];
     }

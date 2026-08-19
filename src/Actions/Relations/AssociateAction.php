@@ -30,7 +30,9 @@ final class AssociateAction
     public static function make(string $resource, string $manager, Model $owner): Action
     {
         return Action::make('associate')
-            ->label('Associate '.$manager::title())
+            ->label(__('panda-panel::actions.relations.associate.label', [
+                'title' => $manager::title(),
+            ]))
             ->icon('link')
             ->variant(ActionVariant::Outline)
             ->form(static fn (): string => RelationEndpoints::form(

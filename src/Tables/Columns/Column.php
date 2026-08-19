@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use PandaPanel\Actions\Action;
 use PandaPanel\Exceptions\PanelSchemaException;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\SafeUrl;
 use PandaPanel\Tables\Columns\Concerns\HasRelationshipState;
 use PandaPanel\Tables\Enums\Alignment;
@@ -455,7 +456,11 @@ abstract class Column
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? Label::resolve(
+            'fields',
+            $this->name,
+            fn (): string => Str::headline($this->name),
+        );
     }
 
     public function isSortable(): bool

@@ -186,11 +186,11 @@ abstract class ResourcePage
     {
         $wizard = $schema->wizard();
 
-        abort_if($wizard === null, 400, 'This form has no steps.');
+        abort_if($wizard === null, 400, __('panda-panel::errors.form_has_no_steps'));
 
         $step = (int) $request->integer('step');
 
-        abort_unless($step >= 0 && $step < $wizard->countSteps(), 422, 'Unknown step.');
+        abort_unless($step >= 0 && $step < $wizard->countSteps(), 422, __('panda-panel::errors.unknown_step'));
 
         $rules = $schema->validationRulesForStep($step, $record);
 
@@ -415,7 +415,7 @@ abstract class ResourcePage
         $resource = static::$resource;
 
         return [
-            Breadcrumb::make('Dashboard')->url($this->dashboardUrl()),
+            Breadcrumb::make(__('panda-panel::pages.dashboard.title'))->url($this->dashboardUrl()),
             ...$this->parentBreadcrumbs(),
             Breadcrumb::make($resource::pluralLabel())->url($resource::url()),
         ];

@@ -36,7 +36,7 @@ final class TrashedFilter extends Filter
 
     public function getLabel(): string
     {
-        return $this->label ?? 'Deleted records';
+        return $this->label ?? __('panda-panel::tables.trashed_filter.label');
     }
 
     public function sanitize(mixed $value): ?string
@@ -78,13 +78,19 @@ final class TrashedFilter extends Filter
      * `only` is called, and they can only be relied on to agree if there is
      * one place that says so.
      *
-     * @var array<string, string>
+     * A method rather than a constant, because the names are translated and
+     * a constant is built before the translator can answer.
+     *
+     * @return array<string, string>
      */
-    private const LABELS = [
-        self::WITHOUT => 'Hidden',
-        self::WITH => 'Included',
-        self::ONLY => 'Only deleted',
-    ];
+    private static function labels(): array
+    {
+        return [
+            self::WITHOUT => __('panda-panel::tables.trashed_filter.without'),
+            self::WITH => __('panda-panel::tables.trashed_filter.with'),
+            self::ONLY => __('panda-panel::tables.trashed_filter.only'),
+        ];
+    }
 
     /**
      * The chip says the state's name, not its key: `only` is "Only deleted".
@@ -93,7 +99,7 @@ final class TrashedFilter extends Filter
     {
         $key = is_string($value) ? $value : '';
 
-        return self::LABELS[$key] ?? $key;
+        return self::labels()[$key] ?? $key;
     }
 
     /**
@@ -101,16 +107,18 @@ final class TrashedFilter extends Filter
      */
     protected function extraArray(): array
     {
+        $labels = self::labels();
+
         return [
             'options' => array_map(
                 static fn (string $value, string $label): array => [
                     'value' => $value,
                     'label' => $label,
                 ],
-                array_keys(self::LABELS),
-                array_values(self::LABELS),
+                array_keys($labels),
+                array_values($labels),
             ),
-            'placeholder' => self::LABELS[self::WITHOUT],
+            'placeholder' => $labels[self::WITHOUT],
         ];
     }
 }

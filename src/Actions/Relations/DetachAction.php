@@ -26,15 +26,15 @@ final class DetachAction
     public static function make(string $manager, Model $owner): Action
     {
         return Action::make('detach')
-            ->label('Detach')
+            ->label(__('panda-panel::actions.relations.detach.label'))
             ->icon('unlink')
             ->variant(ActionVariant::Ghost)
             ->requiresConfirmation(
-                heading: 'Detach this record?',
-                description: 'The record itself is kept; only the link to it is removed.',
-                button: 'Detach',
+                heading: __('panda-panel::actions.relations.detach.heading'),
+                description: __('panda-panel::actions.relations.detach.description'),
+                button: __('panda-panel::actions.relations.detach.button'),
             )
-            ->successMessage('Record detached.')
+            ->successMessage(__('panda-panel::actions.relations.detach.success'))
             ->visible(static fn (): bool => $manager::isManyToMany($owner))
             ->authorize(static fn (?Model $record): bool => $record !== null
                 && $manager::canDetach($owner, $record))

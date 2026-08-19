@@ -15,6 +15,7 @@ use PandaPanel\Actions\Support\Modal;
 use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\FormSchema;
 use PandaPanel\Support\DatabaseTransaction;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\SafeUrl;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -520,7 +521,11 @@ class Action
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? Label::resolve(
+            'actions',
+            $this->name,
+            fn (): string => Str::headline($this->name),
+        );
     }
 
     /**
@@ -655,10 +660,9 @@ class Action
         // write, not discovered halfway through.
         foreach ($records as $record) {
             if (! $this->isAuthorizedForEach($record)) {
-                throw new HttpException(403, sprintf(
-                    'You may not %s every selected record.',
-                    Str::lower($this->getLabel()),
-                ));
+                throw new HttpException(403, __('panda-panel::actions.bulk_denied', [
+                    'action' => Str::lower($this->getLabel()),
+                ]));
             }
         }
 
@@ -732,7 +736,8 @@ class Action
             ))),
             'confirmation' => $this->requiresConfirmation ? [
                 'heading' => $this->confirmationHeading ?? sprintf('%s?', $this->getLabel()),
-                'description' => $this->confirmationDescription ?? 'This cannot be undone.',
+                'description' => $this->confirmationDescription
+                    ?? __('panda-panel::actions.confirmation.description'),
                 'button' => $this->confirmationButton ?? $this->getLabel(),
             ] : null,
         ];

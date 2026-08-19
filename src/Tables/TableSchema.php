@@ -152,7 +152,12 @@ final class TableSchema
      */
     private array $serializedColumns = [];
 
-    private string $emptyStateHeading = 'No records found';
+    /*
+     * Null rather than the sentence itself, because a property default is
+     * evaluated before the translator can answer. What "no default" means is
+     * decided where it is read, not where it is declared.
+     */
+    private ?string $emptyStateHeading = null;
 
     private ?string $emptyStateDescription = null;
 
@@ -1508,14 +1513,14 @@ final class TableSchema
             ],
             'filterBehaviour' => [
                 'deferred' => $this->defersFilters,
-                'triggerLabel' => $this->filtersTriggerLabel ?? 'Filters',
+                'triggerLabel' => $this->filtersTriggerLabel ?? __('panda-panel::tables.filters.trigger'),
                 'triggerIcon' => $this->filtersTriggerIcon,
-                'applyLabel' => $this->filtersApplyLabel ?? 'Apply filters',
-                'resetLabel' => $this->filtersResetLabel ?? 'Clear',
+                'applyLabel' => $this->filtersApplyLabel ?? __('panda-panel::tables.filters.apply'),
+                'resetLabel' => $this->filtersResetLabel ?? __('panda-panel::tables.filters.reset'),
                 'showReset' => $this->showsFiltersResetAction,
             ],
             'searchable' => $this->isSearchable(),
-            'searchPlaceholder' => $this->searchPlaceholder ?? 'Search...',
+            'searchPlaceholder' => $this->searchPlaceholder ?? __('panda-panel::tables.search.placeholder'),
             'searchDebounce' => $this->searchDebounce,
             'searchOnBlur' => $this->searchOnBlur,
             'individualSearchColumns' => array_map(
@@ -1553,7 +1558,8 @@ final class TableSchema
             'headerActions' => $this->serializeActions($this->headerActions),
             'toolbarActions' => $this->serializeActions($this->toolbarActions),
             'emptyState' => [
-                'heading' => $this->emptyStateHeading,
+                'heading' => $this->emptyStateHeading
+                    ?? __('panda-panel::tables.empty_state.heading'),
                 'description' => $this->emptyStateDescription,
                 'icon' => $this->emptyStateIcon,
                 'component' => $this->emptyStateComponent,

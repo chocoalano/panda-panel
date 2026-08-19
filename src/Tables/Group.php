@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use PandaPanel\Support\Label;
 use PandaPanel\Tables\Enums\SortDirection;
 
 /**
@@ -97,7 +98,11 @@ final class Group
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? Label::resolve(
+            'fields',
+            $this->name,
+            fn (): string => Str::headline($this->name),
+        );
     }
 
     public function getColumn(): string

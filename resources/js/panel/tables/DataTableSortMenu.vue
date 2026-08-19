@@ -9,6 +9,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { TableDefinition, TableState } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * The sort control for a layout that has no column headers.
@@ -58,12 +61,14 @@ const directionIcon = computed(() =>
  */
 const label = computed(() => {
     if (active.value !== null) {
-        return `Sorted by ${active.value.label}`;
+        return t('tables.sorted_by', { column: active.value.label });
     }
 
     const declared = props.table.defaultSort?.label;
 
-    return declared ? `Sorted by ${declared}` : 'Sort';
+    return declared
+        ? t('tables.sorted_by', { column: declared })
+        : t('tables.sort');
 });
 </script>
 

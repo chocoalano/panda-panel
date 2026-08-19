@@ -48,7 +48,7 @@ final class PanelFormOptionsController
 
         $field = $request->query('field');
 
-        abort_unless(is_string($field), 422, 'Invalid field.');
+        abort_unless(is_string($field), 422, __('panda-panel::errors.invalid_field'));
 
         $search = $request->query('search');
         $search = is_string($search) ? mb_substr(trim($search), 0, 255) : null;
@@ -76,7 +76,7 @@ final class PanelFormOptionsController
     ): array {
         $page = $request->query('page');
 
-        abort_unless(in_array($page, ['create', 'edit'], true), 422, 'Invalid page.');
+        abort_unless(in_array($page, ['create', 'edit'], true), 422, __('panda-panel::errors.invalid_page'));
 
         $page = (string) $page;
 
@@ -115,11 +115,11 @@ final class PanelFormOptionsController
     ): array {
         $manager = $resource::relationManager($relationKey);
 
-        abort_if($manager === null, 404, 'Unknown relation.');
+        abort_if($manager === null, 404, __('panda-panel::errors.unknown_relation'));
 
         $operation = RelationOperation::tryFromRequest($request->query('operation'));
 
-        abort_if($operation === null, 404, 'Unknown relation operation.');
+        abort_if($operation === null, 404, __('panda-panel::errors.unknown_relation_operation'));
 
         $owner = $this->resolveOwner($request, $resource);
 
@@ -166,8 +166,8 @@ final class PanelFormOptionsController
         // A field the schema does not declare does not exist, however the
         // request spells it — the same rule that governs sorting and
         // filtering.
-        abort_if($component === null, 404, 'Unknown field.');
-        abort_unless($component instanceof Select, 400, 'That field has no options.');
+        abort_if($component === null, 404, __('panda-panel::errors.unknown_field'));
+        abort_unless($component instanceof Select, 400, __('panda-panel::errors.field_has_no_options'));
 
         return $component->resolveOptions($modelClass, $search);
     }
@@ -179,7 +179,7 @@ final class PanelFormOptionsController
     {
         $key = $request->query('record');
 
-        abort_unless(is_string($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         $record = $resource::findRecord($key);
 
@@ -195,7 +195,7 @@ final class PanelFormOptionsController
     {
         $key = $request->query('record');
 
-        abort_unless(is_string($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         $owner = $resource::query()->find($key);
 
@@ -210,11 +210,11 @@ final class PanelFormOptionsController
      */
     private function resolveResource(Panel $panel, mixed $slug): string
     {
-        abort_unless(is_string($slug), 422, 'Invalid resource.');
+        abort_unless(is_string($slug), 422, __('panda-panel::errors.invalid_resource'));
 
         $resource = $this->manager->resources($panel)->bySlug($slug);
 
-        abort_if($resource === null, 404, 'Unknown resource.');
+        abort_if($resource === null, 404, __('panda-panel::errors.unknown_resource'));
 
         /** @var class-string<PanelResource> $resource */
         return $resource;

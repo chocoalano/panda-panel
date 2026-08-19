@@ -37,10 +37,10 @@ final class TwoFactorCode extends LaravelNotification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Your sign-in code')
-            ->line('Use this code to finish signing in:')
+            ->subject(__('panda-panel::notifications.two_factor_code.subject'))
+            ->line(__('panda-panel::notifications.two_factor_code.intro'))
             ->line('**'.$this->code.'**')
-            ->line('It expires in ten minutes and can be used once.')
-            ->line('If you did not try to sign in, change your password — somebody else knows it.');
+            ->line(__('panda-panel::notifications.two_factor_code.expiry'))
+            ->line(__('panda-panel::notifications.two_factor_code.warning'));
     }
 }

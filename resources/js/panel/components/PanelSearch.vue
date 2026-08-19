@@ -15,6 +15,9 @@ import { Input } from '@/components/ui/input';
 import { usePanel } from '@/panel/composables/usePanel';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { PanelSearchGroup } from '@/panel/types/panel';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * The panel's command palette.
@@ -236,7 +239,7 @@ router.on('start', () => {
         <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Search"
+            :aria-label="t('shell.search')"
             @click="open = true"
         >
             <Search />
@@ -244,9 +247,11 @@ router.on('start', () => {
 
         <DialogContent class="max-w-xl gap-0 p-0">
             <DialogHeader class="border-b px-4 py-3">
-                <DialogTitle class="sr-only">Search</DialogTitle>
+                <DialogTitle class="sr-only">{{
+                    t('shell.search')
+                }}</DialogTitle>
                 <DialogDescription class="sr-only">
-                    Search across this panel's resources.
+                    {{ t('shell.search_description') }}
                 </DialogDescription>
 
                 <div class="flex items-center gap-2">
@@ -254,7 +259,7 @@ router.on('start', () => {
                     <Input
                         v-model="term"
                         autofocus
-                        placeholder="Search..."
+                        :placeholder="t('shell.search_placeholder')"
                         class="border-0 shadow-none focus-visible:ring-0"
                         @keydown="onListKeydown"
                     />
@@ -272,8 +277,8 @@ router.on('start', () => {
                 >
                     {{
                         term.trim().length < 2
-                            ? 'Type at least two characters.'
-                            : 'Nothing found.'
+                            ? t('shell.search_too_short')
+                            : t('shell.search_empty')
                     }}
                 </p>
 

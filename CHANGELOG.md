@@ -47,6 +47,164 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A reader can choose the language, and numbers and dates follow it.** The first three phases
+  made the panel translatable; this one makes it switchable, and fixes the half that stayed
+  English however the locale was set.
+
+  Name the languages and a switcher appears in the panel header and on the login screen:
+
+  ```php
+  // config/panda-panel.php
+  'locales' => ['en' => 'English', 'id' => 'Bahasa Indonesia'],
+  ```
+
+  Empty by default, and empty means no switcher — an application that serves one language should
+  not grow a language menu in every panel header because it upgraded, and one locale is the same
+  as none. This decides only the switcher: a panel already follows `app()->getLocale()` however
+  that was set. `Panel::locales()` narrows it for a panel serving a different audience. Names are
+  written in their own language, because somebody looking for their language is looking for the
+  word they would use for it.
+
+  The choice lives in the session, not in a column on your `users` table: a package that required
+  a migration to render a dropdown is asking for a schema change to draw a menu. `SetPanelLocale`
+  runs directly after `ResolvePanel` in both route groups — before every controller, because a
+  schema is built with its labels already resolved. There are two routes rather than one, because
+  a login screen is exactly where somebody notices they are reading the wrong language and cannot
+  sign in to reach the other one. Both check the submitted code against the panel's own list:
+  `app()->setLocale()` accepts any string, and an unchecked one would let a request write a
+  directory traversal into the session for the translator to try to load.
+
+  **`number_format($value, 2, '.', ',')` was English in every panel.** Grouping is the one place a
+  half-translated interface is not merely awkward — `1,234.56` shown to a reader for whom that
+  means one and a bit is a number misread without anybody noticing. A new
+  `lang/{locale}/formats.php` holds the separators and the default date patterns, and
+  `PandaPanel\Support\Format` is what `Summarizer`, `NumberColumn`, `Stat`, `DateColumn`,
+  `DateTimeColumn`, `DateTimeEntry` and the date filter's chips all go through. `DateColumn` gained
+  a `defaultFormat()` seam so `DateTimeColumn` can ask for a different pattern; a column that calls
+  `->format()` is never touched.
+
+  Deliberately **not** `Illuminate\Support\Number`, which would do this properly through ICU and
+  calls `ensureIntlExtensionIsInstalled()` — this package requires only `ext-json` and `ext-zip`,
+  and making `ext-intl` a hard requirement of an admin panel is a real install barrier on shared
+  hosting. English separators are the fallback for a locale that ships no table: `1234.56` grouped
+  with nothing is still readable, `1234 56` is not.
+
+  `Calendar` now receives the panel's locale from `PanelDatePicker`, so the month and weekday names
+  in a date picker are the reader's — the vendored shadcn component already took a `locale` prop
+  and was simply never given one. Carbon's `diffForHumans()` needed nothing: its locale already
+  follows `app()->setLocale()`.
+
+- **The Vue components speak the locale too, without `vue-i18n`.** Phase one and two translated
+  what the server renders; a panel in Indonesian still had an English "Rows per page", "Close",
+  "Nothing found." and a fully English login screen, because those strings live in the components.
+
+  `lang/{locale}/frontend.php` is a new group — 232 keys across ten sections — and the only one
+  that leaves the server: `SharePanelData` puts it on every page as `translations`, beside a
+  `locale` string, and `resources/js/composables/useTranslator.ts` reads it. 258 call sites across
+  71 components now go through `t('tables.rows_per_page')`, with Laravel's own `:name` placeholder
+  syntax so a line reads the same whether it is rendered on the server or in the browser.
+
+  **No `vue-i18n`.** These components are *published* into an application, so a runtime dependency
+  here is a line every application has to add to its own `package.json` and keep in step with this
+  package's — for a lookup that is thirty lines. The cost of the dependency is larger than the
+  thing it replaces.
+
+  It is a closure like every other shared prop, so Inertia leaves it out of a partial reload:
+  sorting a table or turning a page carries none of the ~9 KB. Only `frontend` crosses the wire —
+  the abort messages and the mail lines are read in PHP and would be a hundred sentences in the
+  page source of every screen. Schema labels are not in it either: a column header arrives inside
+  the payload already translated, because that is where the schema lives.
+
+  A missing key renders as English rather than as a key — `t('tables.rows_per_page')` with nothing
+  behind it reads "Rows per page", not `tables.rows_per_page`, so a gap degrades to approximately
+  the source language instead of to something that looks broken. That is the runtime behaviour,
+  not the plan: two tests read every `t('…')` call and every frontend key held in a component
+  constant and assert each resolves in **both** locales, so a missing key fails CI.
+
+  Ten files under `resources/js/components/ui/**` now call `t()`, for the screen-reader labels on
+  dialogs, sheets, the sidebar and the spinner. That directory is vendored from shadcn-vue and
+  deliberately kept in its formatting, so those lines will conflict on the next upstream pull. It
+  was taken deliberately: leaving them English means a screen-reader user in Indonesian hears
+  "Close" on every dialog in the panel, which is worse than a ten-line merge.
+
+  Two things fixed on the way past. `PanelDatePicker` built its `DateFormatter` with a hardcoded
+  `'en'`, so a picked date read "Jan 5, 2026" in every locale; it now follows `locale` and is
+  rebuilt when that changes. And `StatsWidget`'s trend badge carried a `label` on its class table
+  that nothing rendered — the arrow and the percentage had no accessible name at all — so it is
+  now the badge's `aria-label`.
+
+- **Labels derived from your own names follow the locale too.** Translating what the package wrote
+  was only half a translation: a column named `created_at` still rendered as "Created At" in every
+  locale, because that string is `Str::headline()` and `Str::headline()` knows English. The only
+  fix was `->label()` on every column of every table, which is most of the value of a table builder
+  handed back.
+
+  Every one of the 23 places that derived a label now asks the application first, through the new
+  `PandaPanel\Support\Label`. Write `lang/id/panel.php` with `'fields' => ['created_at' => 'Dibuat
+  pada']` and every column, form field, infolist entry, filter, summary and export column of that
+  name follows it, in every table, in every panel. Twelve groups — `fields`, `relations`,
+  `resources`, `resources_plural`, `pages`, `clusters`, `actions`, `notifications`, `tabs`,
+  `blocks`, `values`, `panels` — cover every derivation but one.
+
+  The file is the application's rather than the package's, because the names in it are the
+  application's: `created_at` is its column and `User` is its model. Its name comes from the new
+  `panda-panel.labels.file` config key and defaults to `panel`. Nothing is required — an
+  application with no such file behaves exactly as it did, and `->label()` is still checked before
+  the file is ever read, so one table that needs a different word says so without changing
+  anything.
+
+  Two details the obvious implementation gets wrong. `Str::plural()` knows English, so a resource
+  whose singular is translated and whose plural is not keeps the singular unchanged rather than
+  becoming "Penggunas" — say the plural in `resources_plural` to get a different word. And a
+  relation attribute *is* named `user.name`, so the lookup reads the group and indexes it by the
+  exact name rather than walking Laravel's dots; `'user' => 'Pengguna'` and `'user.name' => 'Nama
+  pemilik'` can both be present, which nesting would not allow. Nesting still works for an
+  application that prefers it.
+
+  `RecordSubNavigation`'s `view` and `edit` tabs moved the other way — into the package's own
+  `pages.record_navigation`, because those two words are the package's, not yours. The one
+  derivation left in English is `Plugin::metadata()`, whose name is read by `panel:plugins` and the
+  plugin list, both developer surfaces.
+
+- **The panel speaks Indonesian, and English is now a translation like any other.** The package
+  ships `lang/en` and `lang/id` under the `panda-panel` namespace, registered by
+  `loadTranslationsFrom()` before anything else in `boot()`. Set `app()->setLocale('id')` and every
+  built-in action label, confirmation, success message, empty state, filter chrome, error
+  notification, abort message and the two-factor email follows it. Nothing has to be published,
+  and a locale the package does not ship falls back to English rather than rendering raw keys.
+
+  Seven groups, 196 keys, key-for-key identical between the two locales. `actions` covers every
+  built-in action including import and export; `tables`, `forms`, `notifications`, `errors`,
+  `pages` and `integrations` cover the rest. A new `panda-panel-translations` publish tag copies
+  them to `lang/vendor/panda-panel` for **rewording** — a third locale needs no publish at all,
+  because Laravel reads that directory first either way.
+
+  What is *not* translated is the more interesting half. Everything in `PandaPanel\Exceptions`,
+  everything in `PandaPanel\Testing`, and every console command stay in English: their reader is a
+  developer holding a stack trace or a terminal, and a translated message is one that cannot be
+  pasted into a search box. Labels derived from your own code — `Str::headline('created_at')`,
+  a resource label from a model class name — stay yours to translate with `->label()`.
+
+  Several places had to stop holding a sentence, because a `const` and a static property default
+  are both evaluated before the translator can answer: `Panel::DEFAULT_ERROR_NOTIFICATIONS` became
+  `defaultErrorNotifications()`, `TrashedFilter::LABELS` became `labels()`, and
+  `TableSchema::$emptyStateHeading`, `TableWidget::$emptyMessage`, `Page::$subheading` and
+  `Page::$navigationGroup` are now resolved where they are read rather than where they are
+  declared. `Page::subheading()` and `Page::navigationGroup()` are new method seams over the
+  existing properties — a page that assigns either still behaves exactly as it did.
+  `TableWidget::$emptyMessage` stayed typed `string` rather than becoming `?string` for the same
+  reason: a widget already declaring `protected static string $emptyMessage` would fatal on a
+  redeclaration that widened the type.
+
+  `panel:cache` was already safe and needed no change — `PanelManifest` stores class names and
+  nothing else, so a cached panel is not frozen into the locale it was cached in.
+
+  Guarded by six tests rather than by remembering: one asserts the two locales hold identical keys,
+  one reads every `__('panda-panel::…')` call in `src` and asserts each key resolves in **both**
+  locales, and the rest assert the behaviour end to end. `Negative/DistributionTest` asserts `lang`
+  reaches the Composer archive — a package that shipped without it would boot and then render
+  `panda-panel::actions.delete.label` on the delete button.
+
 - **A table can be drawn as a grid of cards.** `TableSchema::cards()` declares a card face and the
   toolbar grows a layout toggle; `?layout=grid` is whitelisted against the layouts the table offers,
   echoed in `state()['layout']`, and remembered by `persistColumnsInSession()`. It is a second

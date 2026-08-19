@@ -25,15 +25,15 @@ final class DeleteRelatedAction
     public static function make(string $manager, Model $owner): Action
     {
         return Action::make('delete')
-            ->label('Delete')
+            ->label(__('panda-panel::actions.relations.delete.label'))
             ->icon('trash-2')
             ->variant(ActionVariant::Destructive)
             ->requiresConfirmation(
-                heading: 'Delete this record?',
-                description: 'This removes the record itself, not just its link to this one.',
-                button: 'Delete',
+                heading: __('panda-panel::actions.relations.delete.heading'),
+                description: __('panda-panel::actions.relations.delete.description'),
+                button: __('panda-panel::actions.relations.delete.button'),
             )
-            ->successMessage('Record deleted.')
+            ->successMessage(__('panda-panel::actions.relations.delete.success'))
             ->authorize(static fn (?Model $record): bool => $record !== null
                 && $manager::canDelete($owner, $record))
             ->action(static function (Model $record): void {

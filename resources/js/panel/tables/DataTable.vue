@@ -37,6 +37,9 @@ import type {
     TableState,
     TableSummaries,
 } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = withDefaults(
     defineProps<{
@@ -327,7 +330,7 @@ const { hook } = usePanelStyling();
                         :class="frozenClass(REORDER_KEY)"
                         :style="styleFor(REORDER_KEY, true)"
                     >
-                        <span class="sr-only">Reorder</span>
+                        <span class="sr-only">{{ t('tables.reorder') }}</span>
                     </TableHead>
                     <TableHead
                         v-if="table.selectable"
@@ -338,7 +341,7 @@ const { hook } = usePanelStyling();
                     >
                         <Checkbox
                             :model-value="allSelected"
-                            aria-label="Select all rows on this page"
+                            :aria-label="t('tables.select_all_rows')"
                             @update:model-value="
                                 (checked) => toggleAll(checked === true)
                             "
@@ -355,7 +358,9 @@ const { hook } = usePanelStyling();
                         :style="styleFor(ACTIONS_KEY, true)"
                     >
                         <span class="sr-only">
-                            {{ table.recordActions.label ?? 'Actions' }}
+                            {{
+                                table.recordActions.label ?? t('tables.actions')
+                            }}
                         </span>
                     </TableHead>
                     <TableHead
@@ -410,7 +415,9 @@ const { hook } = usePanelStyling();
                         :style="styleFor(ACTIONS_KEY, true)"
                     >
                         <span class="sr-only">
-                            {{ table.recordActions.label ?? 'Actions' }}
+                            {{
+                                table.recordActions.label ?? t('tables.actions')
+                            }}
                         </span>
                     </TableHead>
                 </TableRow>
@@ -445,8 +452,16 @@ const { hook } = usePanelStyling();
                             :model-value="columnTerms[column.name] ?? ''"
                             class="h-8"
                             type="search"
-                            :placeholder="`Search ${column.label.toLowerCase()}`"
-                            :aria-label="`Search ${column.label}`"
+                            :placeholder="
+                                t('tables.search_column', {
+                                    column: column.label.toLowerCase(),
+                                })
+                            "
+                            :aria-label="
+                                t('tables.search_column', {
+                                    column: column.label,
+                                })
+                            "
                             @update:model-value="
                                 (value) =>
                                     onColumnSearch(column.name, String(value))

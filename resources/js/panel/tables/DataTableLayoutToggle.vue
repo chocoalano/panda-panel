@@ -3,6 +3,9 @@ import { LayoutGrid, Rows3 } from '@lucide/vue';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import type { TableLayout } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * Switches between the table's renderers.
@@ -24,11 +27,11 @@ const emit = defineEmits<{ select: [layout: TableLayout] }>();
 
 const options: Array<{
     value: TableLayout;
-    label: string;
+    key: string;
     icon: typeof Rows3;
 }> = [
-    { value: 'table', label: 'Table view', icon: Rows3 },
-    { value: 'grid', label: 'Card view', icon: LayoutGrid },
+    { value: 'table', key: 'tables.layout_table', icon: Rows3 },
+    { value: 'grid', key: 'tables.layout_cards', icon: LayoutGrid },
 ];
 
 const available = computed(() =>
@@ -41,7 +44,7 @@ const available = computed(() =>
         v-if="available.length > 1"
         class="flex items-center rounded-md border p-0.5"
         role="group"
-        aria-label="Layout"
+        :aria-label="t('tables.layout')"
     >
         <Button
             v-for="option in available"
@@ -49,7 +52,7 @@ const available = computed(() =>
             type="button"
             variant="ghost"
             size="icon-sm"
-            :aria-label="option.label"
+            :aria-label="t(option.key)"
             :aria-pressed="layout === option.value"
             :class="
                 layout === option.value

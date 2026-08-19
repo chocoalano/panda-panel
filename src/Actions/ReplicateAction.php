@@ -34,15 +34,15 @@ final class ReplicateAction
         ?Closure $using = null,
     ): Action {
         return Action::make('replicate')
-            ->label('Replicate')
+            ->label(__('panda-panel::actions.replicate.label'))
             ->icon('copy')
             ->variant(ActionVariant::Outline)
             ->requiresConfirmation(
-                heading: 'Replicate this record?',
-                description: 'A copy will be created. You can edit it afterwards.',
-                button: 'Replicate',
+                heading: __('panda-panel::actions.replicate.heading'),
+                description: __('panda-panel::actions.replicate.description'),
+                button: __('panda-panel::actions.replicate.button'),
             )
-            ->successMessage('Record replicated.')
+            ->successMessage(__('panda-panel::actions.replicate.success'))
             ->authorize(static fn (?Model $record): bool => $record !== null
                 && $resource::canCreate()
                 && $resource::canView($record))

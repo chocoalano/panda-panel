@@ -11,6 +11,9 @@ import PanelAuthLayout from '@/panel/layouts/PanelAuthLayout.vue';
 import type { PanelDefinition } from '@/panel/types/panel';
 import { store } from '@/routes/register';
 import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelBlankLayout });
 
@@ -23,10 +26,12 @@ defineProps<{
 <template>
     <PanelAuthLayout
         :panel="panel"
-        title="Create an account"
-        :description="`Sign up to continue to ${panel.brandName}.`"
+        :title="t('auth.create_an_account')"
+        :description="
+            t('auth.register_description', { brand: panel.brandName })
+        "
     >
-        <Head :title="`Register · ${panel.brandName}`" />
+        <Head :title="`${t('auth.register')} · ${panel.brandName}`" />
 
         <Form
             v-slot="{ errors, processing }"
@@ -35,7 +40,7 @@ defineProps<{
             class="flex flex-col gap-6"
         >
             <div class="grid gap-2">
-                <Label for="name">Name</Label>
+                <Label for="name">{{ t('auth.name') }}</Label>
                 <Input
                     id="name"
                     name="name"
@@ -47,7 +52,7 @@ defineProps<{
             </div>
 
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email">{{ t('auth.email') }}</Label>
                 <Input
                     id="email"
                     type="email"
@@ -59,7 +64,7 @@ defineProps<{
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">Password</Label>
+                <Label for="password">{{ t('auth.password') }}</Label>
                 <PasswordInput
                     id="password"
                     name="password"
@@ -71,7 +76,9 @@ defineProps<{
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">Confirm password</Label>
+                <Label for="password_confirmation">
+                    {{ t('auth.confirm_password') }}
+                </Label>
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
@@ -83,12 +90,14 @@ defineProps<{
 
             <Button type="submit" class="w-full" :disabled="processing">
                 <Spinner v-if="processing" />
-                Create account
+                {{ t('auth.create_account') }}
             </Button>
 
             <p class="text-center text-sm text-muted-foreground">
-                Already have an account?
-                <TextLink :href="`/${panel.path}/login`">Log in</TextLink>
+                {{ t('auth.have_account') }}
+                <TextLink :href="`/${panel.path}/login`">
+                    {{ t('auth.log_in') }}
+                </TextLink>
             </p>
         </Form>
     </PanelAuthLayout>

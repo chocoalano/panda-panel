@@ -9,6 +9,9 @@ import type {
     ChartVariant,
     StatColor,
 } from '@/panel/types/widget';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = withDefaults(
     defineProps<{
@@ -416,7 +419,7 @@ function deactivate(): void {
                 class="flex min-h-48 items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/10"
             >
                 <p class="text-sm text-muted-foreground">
-                    No data for this period.
+                    {{ t('widgets.no_data') }}
                 </p>
             </div>
 

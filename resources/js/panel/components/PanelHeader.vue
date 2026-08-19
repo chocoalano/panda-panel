@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAppearance } from '@/composables/useAppearance';
 import PanelBreadcrumb from '@/panel/components/PanelBreadcrumb.vue';
+import PanelLocaleSwitcher from '@/panel/components/PanelLocaleSwitcher.vue';
 import PanelNotifications from '@/panel/components/PanelNotifications.vue';
 import PanelRenderHook from '@/panel/components/PanelRenderHook.vue';
 import PanelSearch from '@/panel/components/PanelSearch.vue';
@@ -14,6 +15,9 @@ import PanelTenantSwitcher from '@/panel/components/PanelTenantSwitcher.vue';
 import { usePanel } from '@/panel/composables/usePanel';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import type { PanelBreadcrumbItem } from '@/panel/types/breadcrumb';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 withDefaults(
     defineProps<{
@@ -75,6 +79,9 @@ function toggleAppearance(): void {
 
             <PanelSwitcher />
 
+            <!-- Hides itself unless the panel offers more than one language. -->
+            <PanelLocaleSwitcher />
+
             <!-- Hides itself when the panel turned notifications off. -->
             <PanelNotifications />
 
@@ -82,7 +89,7 @@ function toggleAppearance(): void {
                 variant="ghost"
                 size="icon-sm"
                 :aria-label="
-                    isDark ? 'Switch to light mode' : 'Switch to dark mode'
+                    isDark ? t('shell.light_mode') : t('shell.dark_mode')
                 "
                 @click="toggleAppearance"
             >

@@ -12,6 +12,9 @@ import type {
     StatDefinition,
     StatTrend,
 } from '@/panel/types/widget';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     stats: StatDefinition[];
@@ -75,21 +78,21 @@ const TREND_CLASSES: Record<
         icon: ArrowUpRight,
         text: 'text-emerald-700 dark:text-emerald-400',
         background: 'bg-emerald-500/[0.08] ring-emerald-500/15',
-        label: 'Increased',
+        label: 'widgets.increased',
     },
 
     down: {
         icon: ArrowDownRight,
         text: 'text-red-700 dark:text-red-400',
         background: 'bg-red-500/[0.08] ring-red-500/15',
-        label: 'Decreased',
+        label: 'widgets.decreased',
     },
 
     neutral: {
         icon: ArrowRight,
         text: 'text-muted-foreground',
         background: 'bg-muted/60 ring-border/60',
-        label: 'Unchanged',
+        label: 'widgets.unchanged',
     },
 };
 
@@ -195,6 +198,9 @@ function sparkline(values: number[]): string {
                             TREND_CLASSES[stat.trend.direction].text,
                             TREND_CLASSES[stat.trend.direction].background,
                         ]"
+                        :aria-label="
+                            t(TREND_CLASSES[stat.trend.direction].label)
+                        "
                     >
                         <component
                             :is="TREND_CLASSES[stat.trend.direction].icon"

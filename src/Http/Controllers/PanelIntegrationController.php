@@ -47,10 +47,13 @@ final class PanelIntegrationController
 
         return Inertia::render('panel/resources/Integrations', [
             'page' => [
-                'title' => $class::pluralLabel().' integrations',
-                'heading' => 'Integrations',
-                'subheading' => 'Requests this panel sends when a '
-                    .mb_strtolower($class::label()).' is written.',
+                'title' => __('panda-panel::integrations.page.title', [
+                    'resource' => $class::pluralLabel(),
+                ]),
+                'heading' => __('panda-panel::integrations.page.heading'),
+                'subheading' => __('panda-panel::integrations.page.subheading', [
+                    'label' => mb_strtolower($class::label()),
+                ]),
                 'breadcrumbs' => [],
                 'headerActions' => [],
                 'scope' => 'resource:'.$class::slug(),
@@ -83,7 +86,7 @@ final class PanelIntegrationController
             'resource' => $class::slug(),
         ]);
 
-        return back()->with('success', 'Integration saved.');
+        return back()->with('success', __('panda-panel::integrations.saved'));
     }
 
     public function update(Request $request, string $resource, string $integration): RedirectResponse
@@ -94,7 +97,7 @@ final class PanelIntegrationController
 
         $model->update($this->validated($request, $class));
 
-        return back()->with('success', 'Integration saved.');
+        return back()->with('success', __('panda-panel::integrations.saved'));
     }
 
     public function destroy(Request $request, string $resource, string $integration): RedirectResponse
@@ -103,7 +106,7 @@ final class PanelIntegrationController
 
         $this->find($class, $integration)->delete();
 
-        return back()->with('success', 'Integration deleted.');
+        return back()->with('success', __('panda-panel::integrations.deleted'));
     }
 
     /**
@@ -155,7 +158,7 @@ final class PanelIntegrationController
             ->forceFill(['secret' => IntegrationSignature::generate()])
             ->save();
 
-        return back()->with('success', 'Signing secret replaced.');
+        return back()->with('success', __('panda-panel::integrations.secret_rotated'));
     }
 
     /**
@@ -184,7 +187,7 @@ final class PanelIntegrationController
         abort_if(
             $trigger === null || ! $settings->supports($trigger),
             422,
-            'That trigger is not one this resource fires.',
+            __('panda-panel::errors.unsupported_trigger'),
         );
 
         // The allowlist is enforced here as well as at send time. Storing a

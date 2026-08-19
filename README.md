@@ -32,6 +32,7 @@ fast paths from here:
 | Build a CRUD screen | [Creating resources](docs/resources/creating-resources.md), [Forms](docs/forms/overview.md), [Tables](docs/tables/overview.md) |
 | Ship it | [Production checklist](docs/deployment/production-checklist.md) |
 | Fix something | [Troubleshooting](docs/troubleshooting/panel-routes-404.md) |
+| Run it in another language | [Translations](docs/localization/translations.md) |
 
 ## Installation
 
@@ -198,6 +199,68 @@ keeps working.
 
 Panels themselves are configured in code — path, domain, middleware, navigation, branding, access
 — because those are decisions with logic in them.
+
+## Languages
+
+The package ships its own strings in **English** and **Indonesian**, and follows whatever locale
+the application sets:
+
+```php
+app()->setLocale('id');
+```
+
+To let each reader choose instead, name the languages and a switcher appears in the panel header
+and on the login screen:
+
+```php
+// config/panda-panel.php
+'locales' => [
+    'en' => 'English',
+    'id' => 'Bahasa Indonesia',
+],
+```
+
+Numbers and dates follow too — `1.234,56` and `5 Jan 2026` in Indonesian, from
+`lang/{locale}/formats.php`. Not through `ext-intl`, which this package does not require.
+
+Nothing has to be published or configured. Buttons, confirmations, empty states, error toasts and
+the two-factor email all follow, and a locale the package does not ship falls back to English
+rather than rendering raw keys. Reword a sentence with
+`php artisan vendor:publish --tag=panda-panel-translations`, or add a third locale under
+`lang/vendor/panda-panel/`.
+
+Your own names follow too. A column named `created_at` renders as "Created At" through
+`Str::headline()` — English, in every locale. Name it once and every table, form, infolist,
+filter and export column in every panel follows:
+
+```php
+// lang/id/panel.php
+return [
+    'fields' => ['created_at' => 'Dibuat pada'],
+    'resources' => ['User' => 'Pengguna'],
+];
+```
+
+`->label()` still wins where it is set, and an application with no such file behaves exactly as it
+did.
+
+The Vue components follow the same locale. `SharePanelData` puts one dictionary on the page and
+`useTranslator()` reads it — no `vue-i18n`, because these components are published into your
+application and a runtime dependency would be a line every application has to keep in step:
+
+```vue
+<script setup lang="ts">
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t, locale } = useTranslator();
+</script>
+
+<template>
+    <span>{{ t('tables.rows_per_page') }}</span>
+</template>
+```
+
+See [Translations](docs/localization/translations.md).
 
 ## What the panel asks of your user model
 

@@ -5,6 +5,9 @@ import { Spinner } from '@/components/ui/spinner';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import { uploadFile, useUploadUrl } from '@/panel/forms/uploadEndpoint';
 import type { FileUploadFieldDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: FileUploadFieldDefinition;
@@ -79,7 +82,7 @@ async function onFiles(event: Event): Promise<void> {
     const url = uploadUrl();
 
     if (url === null) {
-        failure.value = 'This form cannot store files.';
+        failure.value = t('forms.uploads_unavailable');
 
         return;
     }
@@ -188,7 +191,7 @@ function remove(path: string): void {
                         :aria-label="`Remove ${displayName(path)}`"
                         @click="remove(path)"
                     >
-                        Remove
+                        {{ t('forms.remove') }}
                     </Button>
                 </li>
             </ul>

@@ -12,6 +12,9 @@ import EmptyState from '@/panel/components/EmptyState.vue';
 import PageHeader from '@/panel/components/PageHeader.vue';
 import PanelLayout from '@/panel/layouts/PanelLayout.vue';
 import type { PageMetadata } from '@/panel/types/page';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelLayout });
 
@@ -94,11 +97,11 @@ const TEMPLATE_HINT = '{{ record.field }}';
 const SIGNED_STRING = 'timestamp + "." + body';
 
 const TABS = [
-    { key: 'params', label: 'Params' },
-    { key: 'headers', label: 'Headers' },
-    { key: 'body', label: 'Body' },
-    { key: 'signing', label: 'Signing' },
-    { key: 'history', label: 'History' },
+    { key: 'params', label: 'integrations.params' },
+    { key: 'headers', label: 'integrations.headers' },
+    { key: 'body', label: 'integrations.body' },
+    { key: 'signing', label: 'integrations.signing' },
+    { key: 'history', label: 'integrations.history' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -106,7 +109,7 @@ type TabKey = (typeof TABS)[number]['key'];
 function blank(): Integration {
     return {
         id: null,
-        name: 'New request',
+        name: t('integrations.new_request'),
         trigger: props.triggers[0]?.value ?? 'after_create',
         method: 'POST',
         url: '',
@@ -285,7 +288,7 @@ async function send(): Promise<void> {
     } catch {
         sendResult.value = {
             status: null,
-            error: 'The request could not be made.',
+            error: t('integrations.send_failed'),
         };
     } finally {
         processing.value = false;
@@ -335,7 +338,7 @@ function triggerLabel(value: string): string {
                     size="sm"
                     @click="startNew"
                 >
-                    New request
+                    {{ t('integrations.new_request') }}
                 </Button>
             </template>
         </PageHeader>
@@ -344,10 +347,10 @@ function triggerLabel(value: string): string {
             v-if="allowedHosts.length === 0"
             class="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground"
         >
-            No destination is allowed yet. Add a host to
+            {{ t('integrations.no_hosts') }}
             <code class="font-mono text-xs">integrations.allowed_hosts</code> in
-            <code class="font-mono text-xs">config/panda-panel.php</code>; until
-            then every URL here is refused when it is saved.
+            <code class="font-mono text-xs">config/panda-panel.php</code
+            >{{ t('integrations.no_hosts_after') }}
         </div>
 
         <div class="grid gap-4 lg:grid-cols-[18rem_1fr]">
@@ -355,8 +358,8 @@ function triggerLabel(value: string): string {
             <div class="flex flex-col gap-1 rounded-lg border p-2">
                 <EmptyState
                     v-if="integrations.length === 0"
-                    heading="No requests yet"
-                    description="A request here is sent when a record is written."
+                    :heading="t('integrations.empty')"
+                    :description="t('integrations.empty_description')"
                 />
 
                 <button
@@ -386,7 +389,7 @@ function triggerLabel(value: string): string {
                             variant="outline"
                             class="text-[10px]"
                         >
-                            Off
+                            {{ t('integrations.off') }}
                         </Badge>
                     </span>
                 </button>
@@ -398,13 +401,13 @@ function triggerLabel(value: string): string {
                     <Input
                         v-model="draft.name"
                         class="h-9 w-48"
-                        aria-label="Request name"
+                        :aria-label="t('integrations.request_name')"
                     />
 
                     <select
                         v-model="draft.trigger"
                         class="h-9 rounded-md border bg-background px-2 text-sm"
-                        aria-label="Trigger"
+                        :aria-label="t('integrations.trigger')"
                     >
                         <option
                             v-for="option in triggers"
@@ -417,7 +420,7 @@ function triggerLabel(value: string): string {
 
                     <label class="flex items-center gap-2 text-sm">
                         <input v-model="draft.isActive" type="checkbox" />
-                        Active
+                        {{ t('integrations.active') }}
                     </label>
                 </div>
 
@@ -426,7 +429,7 @@ function triggerLabel(value: string): string {
                     <select
                         v-model="draft.method"
                         class="h-10 rounded-md border bg-background px-2 font-mono text-sm font-semibold"
-                        aria-label="Method"
+                        :aria-label="t('integrations.method')"
                     >
                         <option v-for="method in METHODS" :key="method">
                             {{ method }}
@@ -436,13 +439,13 @@ function triggerLabel(value: string): string {
                     <Input
                         v-model="draft.url"
                         class="h-10 min-w-0 flex-1 font-mono text-sm"
-                        placeholder="https://api.example.com/hooks/record"
-                        aria-label="URL"
+                        :placeholder="t('integrations.url_placeholder')"
+                        :aria-label="t('integrations.url')"
                     />
 
                     <Button type="button" :disabled="processing" @click="save">
                         <Spinner v-if="processing" class="size-4" />
-                        Save
+                        {{ t('integrations.save') }}
                     </Button>
                     <Button
                         type="button"
@@ -450,10 +453,10 @@ function triggerLabel(value: string): string {
                         :disabled="processing || isNew"
                         @click="send"
                     >
-                        Send
+                        {{ t('integrations.send') }}
                     </Button>
                     <Button type="button" variant="ghost" @click="destroy">
-                        Delete
+                        {{ t('integrations.delete') }}
                     </Button>
                 </div>
 
@@ -471,7 +474,7 @@ function triggerLabel(value: string): string {
                         "
                         @click="tab = item.key"
                     >
-                        {{ item.label }}
+                        {{ t(item.label) }}
                     </button>
                 </div>
 
@@ -490,7 +493,9 @@ function triggerLabel(value: string): string {
                             v-model="row.key"
                             class="h-9 font-mono text-xs"
                             :placeholder="
-                                tab === 'headers' ? 'Header' : 'Parameter'
+                                tab === 'headers'
+                                    ? t('integrations.header')
+                                    : t('integrations.parameter')
                             "
                             @input="
                                 syncRows(
@@ -502,7 +507,7 @@ function triggerLabel(value: string): string {
                         <Input
                             v-model="row.value"
                             class="h-9 font-mono text-xs"
-                            placeholder="Value"
+                            :placeholder="t('integrations.value')"
                             @input="
                                 syncRows(
                                     tab === 'headers' ? headerRows : queryRows,
@@ -516,16 +521,15 @@ function triggerLabel(value: string): string {
                 <!-- Signing -->
                 <div v-else-if="tab === 'signing'" class="flex flex-col gap-3">
                     <p class="max-w-prose text-sm text-muted-foreground">
-                        Every request carries
+                        {{ t('integrations.signature_intro') }}
                         <code class="font-mono text-xs">X-Panel-Signature</code
-                        >, an HMAC-SHA256 over
+                        >{{ t('integrations.signature_hmac') }}
                         <code class="font-mono text-xs">{{
                             SIGNED_STRING
                         }}</code>
-                        using the secret below, and
+                        {{ t('integrations.signature_middle') }}
                         <code class="font-mono text-xs">X-Panel-Delivery</code>,
-                        which is stable across the retries of one delivery so
-                        the receiver can deduplicate.
+                        {{ t('integrations.signature_after') }}
                     </p>
 
                     <div class="flex flex-wrap items-center gap-2">
@@ -537,7 +541,7 @@ function triggerLabel(value: string): string {
                             "
                             readonly
                             class="h-9 min-w-0 flex-1 font-mono text-xs"
-                            aria-label="Signing secret"
+                            :aria-label="t('integrations.signing_secret')"
                         />
                         <Button
                             type="button"
@@ -545,7 +549,11 @@ function triggerLabel(value: string): string {
                             size="sm"
                             @click="secretVisible = !secretVisible"
                         >
-                            {{ secretVisible ? 'Hide' : 'Reveal' }}
+                            {{
+                                secretVisible
+                                    ? t('integrations.hide')
+                                    : t('integrations.reveal')
+                            }}
                         </Button>
                         <Button
                             type="button"
@@ -554,13 +562,12 @@ function triggerLabel(value: string): string {
                             :disabled="isNew"
                             @click="rotate"
                         >
-                            Rotate
+                            {{ t('integrations.rotate') }}
                         </Button>
                     </div>
 
                     <p class="text-xs text-muted-foreground">
-                        Rotating takes effect on the very next send. Update the
-                        receiving system first.
+                        {{ t('integrations.rotate_warning') }}
                     </p>
                 </div>
 
@@ -568,8 +575,10 @@ function triggerLabel(value: string): string {
                 <div v-else-if="tab === 'history'" class="flex flex-col gap-2">
                     <EmptyState
                         v-if="draft.deliveries.length === 0"
-                        heading="Nothing sent yet"
-                        description="Attempts appear here once this request fires."
+                        :heading="t('integrations.history_empty')"
+                        :description="
+                            t('integrations.history_empty_description')
+                        "
                     />
 
                     <div
@@ -579,7 +588,9 @@ function triggerLabel(value: string): string {
                     >
                         <div class="flex flex-wrap items-center gap-2">
                             <Badge :variant="statusTone(delivery.status)">
-                                {{ delivery.status ?? 'failed' }}
+                                {{
+                                    delivery.status ?? t('integrations.failed')
+                                }}
                             </Badge>
                             <span
                                 class="font-mono text-[10px] text-muted-foreground"
@@ -605,7 +616,7 @@ function triggerLabel(value: string): string {
                             <summary
                                 class="cursor-pointer text-muted-foreground"
                             >
-                                Bodies
+                                {{ t('integrations.bodies') }}
                             </summary>
                             <pre
                                 v-if="delivery.requestBody"
@@ -648,8 +659,7 @@ function triggerLabel(value: string): string {
 
                     <p class="text-xs text-muted-foreground">
                         <code class="font-mono">{{ TEMPLATE_HINT }}</code>
-                        is substituted from the payload. It is not Blade — paths
-                        only, no expressions.
+                        {{ t('integrations.template_hint') }}
                     </p>
                 </div>
 
@@ -671,12 +681,15 @@ function triggerLabel(value: string): string {
                             {{
                                 (sendResult
                                     ? sendResult.status
-                                    : draft.lastStatus) ?? 'failed'
+                                    : draft.lastStatus) ??
+                                t('integrations.failed')
                             }}
                         </Badge>
                         <span class="text-muted-foreground">
                             {{
-                                sendResult ? 'just now' : draft.lastAttemptedAt
+                                sendResult
+                                    ? t('integrations.just_now')
+                                    : draft.lastAttemptedAt
                             }}
                         </span>
                     </span>

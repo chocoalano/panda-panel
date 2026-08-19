@@ -11,6 +11,9 @@ import {
 } from '@/components/ui/dialog';
 import FormComponentRenderer from '@/panel/forms/FormComponentRenderer.vue';
 import type { FormDefinition, FormValue, FormValues } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * The controls a widget or a dashboard is filtered by.
@@ -109,13 +112,15 @@ function onChange(name: string, value: FormValue): void {
     <template v-else>
         <Button variant="outline" size="sm" class="gap-2" @click="open = true">
             <SlidersHorizontal class="size-4" />
-            Filters
+            {{ t('widgets.filters') }}
         </Button>
 
         <Dialog v-model:open="open">
             <DialogContent class="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{{ title ?? 'Filters' }}</DialogTitle>
+                    <DialogTitle>{{
+                        title ?? t('widgets.filters')
+                    }}</DialogTitle>
                 </DialogHeader>
 
                 <div class="flex flex-col gap-4">

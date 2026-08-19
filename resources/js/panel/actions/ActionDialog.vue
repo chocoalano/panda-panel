@@ -10,6 +10,9 @@ import {
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import type { ActionDefinition } from '@/panel/types/action';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * Confirmation for a destructive or irreversible action.
@@ -43,7 +46,7 @@ const emit = defineEmits<{ confirm: []; cancel: [] }>();
                     :disabled="processing"
                     @click="emit('cancel')"
                 >
-                    Cancel
+                    {{ t('actions.cancel') }}
                 </Button>
                 <Button
                     :variant="action.variant"

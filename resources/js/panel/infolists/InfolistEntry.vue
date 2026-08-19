@@ -9,6 +9,9 @@ import InfolistNode from '@/panel/infolists/InfolistNode.vue';
 import { BADGE_CLASSES, ICON_CLASSES } from '@/panel/palette';
 import type { ActionDefinition } from '@/panel/types/action';
 import type { EntryDefinition } from '@/panel/types/infolist';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * One entry. The switch is exhaustive by construction: a PHP entry type
@@ -173,7 +176,7 @@ async function copy(value: string): Promise<void> {
                         class="text-xs text-muted-foreground underline underline-offset-4"
                         @click="copy(entry.value)"
                     >
-                        Copy
+                        {{ t('actions.copy') }}
                     </button>
                 </span>
                 <span v-else class="text-muted-foreground">
@@ -192,7 +195,7 @@ async function copy(value: string): Promise<void> {
                         class="w-fit text-xs text-muted-foreground underline underline-offset-4"
                         @click="copy(entry.value)"
                     >
-                        Copy
+                        {{ t('actions.copy') }}
                     </button>
                 </div>
                 <span v-else class="text-muted-foreground">

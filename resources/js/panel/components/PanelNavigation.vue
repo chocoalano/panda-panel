@@ -10,6 +10,9 @@ import {
 import PanelNavigationItem from '@/panel/components/PanelNavigationItem.vue';
 import { useNavigation } from '@/panel/composables/useNavigation';
 import type { NavigationGroup } from '@/panel/types/navigation';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const { groups, isCollapsed, toggle } = useNavigation();
 
@@ -31,7 +34,7 @@ function isNested(group: NavigationGroup): boolean {
 </script>
 
 <template>
-    <nav aria-label="Panel navigation">
+    <nav :aria-label="t('shell.panel_navigation')">
         <SidebarGroup
             v-for="group in groups"
             :key="group.label ?? '__ungrouped__'"
