@@ -9,17 +9,18 @@ use PandaPanel\Support\Installer\FrontendRequirements;
  * Numbers the documentation states about itself.
  *
  * Every one of these was already wrong once. `README.md` claimed a file count
- * that was eight short, `docs/index.md` claimed a page count that was two
- * short, and both were written by hand in the same session that corrected an
- * earlier version of the same claim — because a number in prose has nothing
- * holding it to the thing it describes.
+ * that was eight short, the index claimed a page count that was two short, and
+ * both were written by hand in the same session that corrected an earlier
+ * version of the same claim — because a number in prose has nothing holding it
+ * to the thing it describes.
  *
  * The counts are stated two different ways on purpose, and the difference is
  * the point:
  *
  * - **An exact count** is right for something whose whole job is to be
- *   complete. `docs/index.md` is the index; a page missing from it is a page
- *   nobody can find, so the number and the list have to agree exactly.
+ *   complete. `docs/pages.md` is the index — `docs/index.md` is the site's home
+ *   page and lists nothing — and a page missing from the index is a page nobody
+ *   can find, so the number and the tree have to agree exactly.
  * - **A floor** is right for something that only grows. "over 350 files" and a
  *   "1,200-test suite" describe scale, and a claim that gets *safer* as the
  *   codebase grows is a claim nobody has to remember to update. It only fails
@@ -27,24 +28,45 @@ use PandaPanel\Support\Installer\FrontendRequirements;
  *   case worth being told about.
  */
 
-it('states the number of pages its own index actually lists', function (): void {
-    $index = File::get(base_path('docs/index.md'));
+it('states the number of pages the documentation actually has', function (): void {
+    $index = File::get(base_path('docs/pages.md'));
 
     preg_match('/^(\d+) pages\./m', $index, $claim);
 
-    expect($claim)->not->toBeEmpty('docs/index.md no longer states a page count.');
+    expect($claim)->not->toBeEmpty('docs/pages.md no longer states a page count.');
 
-    $listed = preg_match_all('/^- \[/m', $index);
+    $actual = collect(File::allFiles(base_path('docs')))
+        ->filter(static fn (SplFileInfo $file): bool => $file->getExtension() === 'md')
+        ->count();
 
-    // A page added to the tree and linked from the index but not counted here
-    // is harmless; a page counted and not linked is one nobody can reach. The
-    // assertion is exact because the index is the one document whose contract
-    // is completeness.
-    expect((int) $claim[1])->toBe($listed);
+    // Exact, not a floor: the index is the one document whose contract is
+    // completeness, and the next test holds the tree to it.
+    expect((int) $claim[1])->toBe($actual);
+
+    // The same number is spelled out again on every page that sends a reader
+    // to the index. A count repeated in prose drifts one copy at a time, so
+    // all of them are checked against the tree rather than against each other.
+    $stale = [];
+
+    foreach ([...File::allFiles(base_path('docs')), new SplFileInfo(base_path('README.md'))] as $file) {
+        if (! str_ends_with($file->getPathname(), '.md')) {
+            continue;
+        }
+
+        preg_match_all('/All ([\d,]+) pages/', File::get($file->getPathname()), $matches);
+
+        foreach ($matches[1] as $stated) {
+            if ((int) str_replace(',', '', $stated) !== $actual) {
+                $stale[] = str_replace(base_path().'/', '', $file->getPathname());
+            }
+        }
+    }
+
+    expect(array_values($stale))->toBe([]);
 });
 
 it('links every documentation page from its index', function (): void {
-    $index = File::get(base_path('docs/index.md'));
+    $index = File::get(base_path('docs/pages.md'));
 
     $pages = collect(File::allFiles(base_path('docs')))
         ->filter(static fn (SplFileInfo $file): bool => $file->getExtension() === 'md')
@@ -53,11 +75,12 @@ it('links every documentation page from its index', function (): void {
             '',
             $file->getPathname(),
         ))
-        // The index does not link itself, and the two navigation documents are
-        // named in its footer as prose rather than as entries.
+        // The index does not link itself, and the other two are navigation
+        // rather than pages to read: `index.md` is the site's home page and
+        // `sidebar.md` is this same tree collapsed to one entry per section.
         ->reject(static fn (string $path): bool => in_array(
             $path,
-            ['index.md', 'sidebar.md', 'framework-docs.md'],
+            ['index.md', 'sidebar.md', 'pages.md'],
             true,
         ))
         ->values();

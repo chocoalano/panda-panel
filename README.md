@@ -21,8 +21,8 @@ is in [docs/getting-started/compatibility.md](docs/getting-started/compatibility
 
 ## Documentation
 
-[**docs/index.md**](docs/index.md) is the entry point, and
-[docs/sidebar.md](docs/sidebar.md) is the full table of contents in learning order. The
+[**docs/pages.md**](docs/pages.md) is the entry point: every page in learning order.
+[docs/sidebar.md](docs/sidebar.md) is the same tree collapsed to one entry per section. The
 fast paths from here:
 
 | You want to | Start at |

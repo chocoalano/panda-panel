@@ -45,6 +45,20 @@ From `composer require` to a panel you can sign into.
 - [Package name migration](getting-started/package-name-migration.md)
 - [Common install problems](getting-started/common-install-problems.md)
 
+### Tutorial
+
+One project taken from an empty directory to a deployed panel, in eight steps.
+
+- [Overview — what you will build](tutorial/index.md)
+- [1 · Prepare your environment](tutorial/prepare.md)
+- [2 · Create the project](tutorial/project.md)
+- [3 · Install Panda Panel](tutorial/install.md)
+- [4 · First account, first login](tutorial/first-login.md)
+- [5 · Your first resource](tutorial/resource.md)
+- [6 · Shape the form and the table](tutorial/form-and-table.md)
+- [7 · Actions and dashboard widgets](tutorial/actions-and-widgets.md)
+- [8 · Go to production](tutorial/production.md)
+
 ## How it works
 
 ### Core concepts
@@ -437,6 +451,12 @@ The public classes, grouped by subsystem.
 - [Plugins Reference](api/plugins.md)
 - [Events, Jobs and Controllers Reference](api/events-jobs-controllers.md)
 - [Exceptions Reference](api/exceptions.md)
+
+### Glossary
+
+Every term this documentation uses as if you already knew it, with the page that defines it.
+
+- [Glossary](glossary.md)
 
 ## Running it in production
 

@@ -29,6 +29,10 @@ For **every** page at once, see [the documentation index](pages.md).
 - [Package Name Migration](getting-started/package-name-migration.md)
 - [Common Install Problems](getting-started/common-install-problems.md)
 
+## Tutorial
+
+- [Step-by-Step Tutorial](tutorial/index.md)
+
 ## Core Concepts
 
 - [Panels](concepts/panels.md)
@@ -74,6 +78,7 @@ For **every** page at once, see [the documentation index](pages.md).
 - [Configuration Reference](configuration/panda-panel.md)
 - [Testing](testing/setup.md)
 - [API Reference](api/core.md)
+- [Glossary](glossary.md)
 
 ## Operations
 
