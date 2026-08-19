@@ -435,7 +435,7 @@ final class CatalogPlugin implements PanelPlugin
         return new PluginMetadata(
             name: 'Acme Catalog',
             package: 'acme/panda-catalog',
-            requiresPanel: '^1.0',
+            requiresPanel: '^0.1',
         );
     }
 
@@ -477,7 +477,7 @@ final class CatalogServiceProvider extends ServiceProvider
     "name": "acme/panda-catalog",
     "require": {
         "php": "^8.2",
-        "chocoalano/panel": "^1.0"
+        "chocoalano/panel": "^0.1"
     },
     "autoload": {
         "psr-4": {

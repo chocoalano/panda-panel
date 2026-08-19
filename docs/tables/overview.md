@@ -201,14 +201,6 @@ $table
 
 `reorderableColumns()` lets the user rearrange *columns*; `reorderable('position')` lets the user drag *rows* and writes the arranged order to that column, fixing the default sort to it ascending. See [Column manager](column-manager.md), [Persisted table state](persisted-state.md), [Reordering](reordering.md), and [Frozen and pinned columns](pinned-columns.md).
 
-## Card layout
-
-```php
-$table->cards();
-```
-
-The same records, drawn as a grid of cards instead of rows — one schema and two renderers, sharing the query, the filters, the search and the pagination. The face is an arrangement of the columns the table already declares, inferred when nothing is said and declarable slot by slot when it matters. A toggle appears in the toolbar, and the choice is remembered alongside the column arrangement. See [Card layout](card-layout.md).
-
 ## Every `TableSchema` method
 
 Builder methods all return `self`.
@@ -246,8 +238,6 @@ Builder methods all return `self`.
 | `emptyStateComponent(string $component)` | `null` | this page |
 | `selectable(bool $selectable = true)` | `false` | [Bulk actions](bulk-actions.md) |
 | `reorderable(string $column)` | off | [Reordering](reordering.md) |
-| `cards(?CardLayout $layout = null)` | not declared | [Card layout](card-layout.md) |
-| `defaultLayout(TableLayout $layout)` | `TableLayout::Table` | [Card layout](card-layout.md) |
 | `recordActions(array $actions)` | `[]` | [Record actions](record-actions.md) |
 | `recordActionsPosition(RecordActionsPosition $position)` | `AfterColumns` | [Record actions](record-actions.md) |
 | `recordActionsLabel(string $label)` | `null` | [Record actions](record-actions.md) |

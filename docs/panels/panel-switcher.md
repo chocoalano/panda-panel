@@ -266,7 +266,7 @@ other questions come up, and each has one answer.
 ```php
 use PandaPanel\Facades\PandaPanel;
 
-PandaPanel::all();                        // list<Panel>, in registration order
+PandaPanel::all();                        // list<Panel>, sorted by id
 PandaPanel::has('admin');                 // bool
 PandaPanel::get('admin');                 // Panel, throws when unknown
 PandaPanel::currentPanel();               // ?Panel for this request
@@ -281,11 +281,11 @@ panel();          // the panel for this request, or null
 panel('admin');   // an explicit panel; throws if unknown
 ```
 
-`firstAccessibleTo()` walks panels in registration order and returns the first
-the user may enter, which is why the order in `config/panda-panel.php` matters:
-the answer is the same on every request rather than depending on which route
-happened to run. It is what decides where a user lands when the request names
-no panel at all — the starter kit's `/dashboard`, redirected by
+`firstAccessibleTo()` walks panels in id order and returns the first the user
+may enter, which is why a panel's id is part of its routing policy: the answer
+is the same on every request rather than depending on config order or which
+route happened to run. It is what decides where a user lands when the request
+names no panel at all — the starter kit's `/dashboard`, redirected by
 `PandaPanel\Support\PanelHomeRedirect`:
 
 ```php

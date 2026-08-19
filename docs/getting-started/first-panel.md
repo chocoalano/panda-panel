@@ -156,9 +156,10 @@ never a redirect — hiding navigation is not an access control.
 ],
 ```
 
-Panels are listed rather than discovered, for two reasons: registration order decides which panel a
-user lands in when the request does not name one, and adding a panel should be a deliberate edit
-rather than a filesystem side effect. The classes *inside* a panel are discovered.
+Panels are listed rather than discovered, for two reasons: the application declares its panel set in
+one place, and adding a panel should be a deliberate edit rather than a filesystem side effect. When
+the request does not name a panel, Panda Panel walks panels by id, not by config order. The classes
+*inside* a panel are discovered.
 
 `make:panel` prints the line rather than writing it. `panel:install` writes it — see
 [Running panel:install](installer.md) for the four outcomes.

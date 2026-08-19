@@ -305,8 +305,6 @@ The builder handed to `summaries()` is the same instance `paginate()` was given,
 - **`Average` over an empty per-page set is `null`**, which formats as `—`; the database's `avg()` of nothing is `null` too.
 - **The figures ignore pagination but respect everything else** — search, per-column search, filters, the query builder, and the resource's own scope.
 - **Group summaries cost one query per band on screen.** With a large `perPage` and a high-cardinality group column, that is a lot of bands; group by something with few values.
-- **[Card layout](card-layout.md) keeps every figure, as strips rather than footer rows.** Table figures sit under the grid and a band's own close the run of cards it heads. There are no columns for a figure to sit under, so the column name becomes part of its label.
-- **A hidden column's summaries are not computed.** The figure would be an aggregate query whose result the frontend discards, so hiding a column with three summarizers saves three queries per page — and three more per band. See [Query performance](../resources/performance.md).
 
 ## See also
 

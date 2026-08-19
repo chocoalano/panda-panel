@@ -91,7 +91,7 @@ is skipped.
 
 ### SharePanelData
 
-Shares ten props through `Inertia::share()`, which merges — the
+Shares seven props through `Inertia::share()`, which merges — the
 application's own `HandleInertiaRequests` is untouched.
 
 | Prop | Value outside a panel |

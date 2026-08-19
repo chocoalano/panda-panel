@@ -305,7 +305,7 @@ final class ReportingPlugin implements PanelPlugin
         return new PluginMetadata(
             name: 'Acme Reporting',
             package: 'acme/panda-reporting',
-            requiresPanel: '^1.0',
+            requiresPanel: '^0.1',
         );
     }
 
@@ -353,7 +353,7 @@ final class ReportingServiceProvider extends ServiceProvider
     "name": "acme/panda-reporting",
     "require": {
         "php": "^8.2",
-        "chocoalano/panel": "^1.0"
+        "chocoalano/panel": "^0.1"
     },
     "autoload": {
         "psr-4": {

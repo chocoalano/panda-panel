@@ -129,7 +129,7 @@ The two halves fail differently and neither is loud:
 ## Rolling back the package itself
 
 ```bash
-composer require chocoalano/panel:^1.0.0 --update-with-dependencies
+composer require chocoalano/panel:0.1.6 --update-with-dependencies
 php artisan optimize:clear
 php artisan optimize
 ```

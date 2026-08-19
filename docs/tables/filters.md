@@ -117,30 +117,6 @@ DateFilter::make('registered')->label('Registered between')->column('created_at'
 
 The value is `{from?: string, to?: string}` with `Y-m-d` dates. Each bound is parsed strictly and dropped if it is not a real date, so a malformed range narrows to whatever part of it was valid instead of failing the request. A reversed range is swapped. The constraint compares against `startOfDay()` and `endOfDay()`, so both bounds are inclusive.
 
-### The control
-
-Each bound is a [shadcn-vue date picker](https://www.shadcn-vue.com/docs/components/date-picker) —
-the same `PanelDatePicker.vue` a [`DatePicker` form field](../forms/fields/date.md#what-the-control-is)
-mounts, so a date is chosen the same way here as on a form. It replaced a pair
-of `<input type="date">`, whose appearance was the browser's rather than the
-panel's.
-
-Each picker bounds the other: choosing a **from** date greys out earlier days in
-the **to** calendar, and the reverse. That is a convenience rather than the
-rule — a reversed range arriving from a hand-edited URL is still swapped by
-`sanitize()`, because a control cannot be the thing that enforces this.
-
-Clearing one bound with its `×` leaves the range open-ended on that side.
-Clearing both removes the filter, which is the same thing as closing its chip:
-
-```text
-from 1 Jan 2026, to cleared   →  filters[registered][from]=2026-01-01
-both cleared                  →  filters=          (the filter is gone)
-```
-
-The chip reads the range in words — `Registered between: 1 Jan 2026 – 1 Feb 2026`,
-or `from 1 Jan 2026` for a one-sided range. See [Indicators](#indicators).
-
 ## `TrashedFilter`
 
 ```php
@@ -303,27 +279,6 @@ $state['filterIndicators'];
 ```
 
 Indicators are built on the server, because only a filter knows what its value means: `1` is "Verified", not "1". Override `describe(mixed $value): string` on a custom filter to change the right-hand side; the left-hand side is always the filter's label.
-
-Each built-in filter says its value the way its own control spelled it:
-
-| Filter | Chip |
-| --- | --- |
-| `SelectFilter` | `Status: Published` — the option's label, not its key |
-| `BooleanFilter` | `Verified: Yes` — the label pair, not `1` |
-| `TernaryFilter` | `Project: Assigned` |
-| `TrashedFilter` | `Deleted records: Only deleted` |
-| `DateFilter` | `Created: 1 Jan 2026 – 1 Feb 2026`, or `from …` / `until …` |
-| `FormFilter` | each filled field, by label |
-| `QueryBuilderFilter` | each rule, joined with `and` |
-
-`Filter::describe()` — the inherited one — casts a scalar and returns `''` for
-anything else. A custom filter whose value is an array or an enum **must**
-override it, or its chip will name the filter and then say nothing after the
-colon.
-
-Closing a chip removes that one filter. The last chip closing writes `filters=`
-rather than deleting the key, which is what tells the server "filters, and there
-are none" — see [Clearing, and the empty-map problem](#clearing-and-the-empty-map-problem).
 
 ## Persistence
 

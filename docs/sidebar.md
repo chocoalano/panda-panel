@@ -3,7 +3,7 @@
 One entry per section, in learning order — the shape a navigation bar wants. Each link is that
 section's first page; the rest of the section follows from the cross-links at the foot of it.
 
-For **every** page at once, see [the documentation index](index.md).
+For **every** page at once, see [the documentation index](pages.md).
 
 ## Introduction
 
@@ -62,7 +62,6 @@ For **every** page at once, see [the documentation index](index.md).
 - [Notifications and Broadcasting](notifications/toast.md)
 - [Search](search/overview.md)
 - [Import and Export](import-export/export-action.md)
-- [Localization](localization/translations.md)
 
 ## Customization and Extension
 

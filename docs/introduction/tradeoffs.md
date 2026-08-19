@@ -48,7 +48,7 @@ error rather than an empty cell.
 | PHP metadata plus a Vue renderer | Two places to touch for a new column type; in exchange the boundary is explicit and type-checked on both sides |
 | Explicit over magic | More verbose than Filament's conventions in places, for example `getId()` versus a combined accessor |
 | Dependency-free SVG chart | No tooltips, zoom or animation; in exchange no charting library and the widget union stays complete |
-| Panels listed by hand | One edit per new panel; in exchange registration order is visible |
+| Panels listed by hand | One edit per new panel; in exchange the panel set is visible |
 | No browser test runner | Client-side interaction is covered by types, the build and server-side request tests only |
 
 ### Server round trips

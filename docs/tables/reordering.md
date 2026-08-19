@@ -60,8 +60,6 @@ TableSchema::isReorderable(): bool
 
 `reorderable()` also fixes the sort: it calls `defaultSort($column, SortDirection::Ascending)` for you. An order the user arranged only means something while the table is showing that order, so the two are one decision rather than two that can disagree.
 
-**A reorderable table offers no [card layout](card-layout.md).** `availableLayouts()` returns `['table']` for it however its card face is declared. An order arranged by dragging is a linear one, and dragging a card into place in a grid that wraps is a different interaction needing a different affordance — a layout that cannot do the thing reordering was turned on for is worse than no layout at all. The rule is enforced on the server, so the toggle simply does not render.
-
 ```php
 use PandaPanel\Tables\Columns\TextColumn;
 use PandaPanel\Tables\Enums\SortDirection;

@@ -32,7 +32,7 @@ All four are off by default and independent of one another.
 | `persistSearchInSession(bool $persist = true)` | `search` | `persistsSearchInSession(): bool` |
 | `persistSortInSession(bool $persist = true)` | `sort`, `direction`, `group` | `persistsSortInSession(): bool` |
 | `persistFiltersInSession(bool $persist = true)` | the whole `filters` map | `persistsFiltersInSession(): bool` |
-| `persistColumnsInSession(bool $persist = true)` | `columns.visible`, `columns.order`, and `layout` | `persistsColumnsInSession(): bool` |
+| `persistColumnsInSession(bool $persist = true)` | `columns.visible` and `columns.order` | `persistsColumnsInSession(): bool` |
 
 `group` rides with sort because the two are one decision about how rows are arranged.
 
@@ -51,7 +51,6 @@ All four are off by default and independent of one another.
 | `group` | `persistSortInSession()` | declared groups |
 | `filters[{name}]` | `persistFiltersInSession()` | each filter's own `sanitize()` |
 | `columns[visible][]`, `columns[order][]` | `persistColumnsInSession()` | declared and toggleable column names |
-| `layout` | `persistColumnsInSession()` | the layouts the table offers |
 
 ## The two rules that make restoring safe
 
@@ -148,7 +147,6 @@ $request = Request::create('/?filters=', 'GET');
 - **Persistence is per user, not per session cookie value you control.** It is ordinary session storage; clearing the session clears it.
 - **A default filter and a remembered filter interact.** A default only fills genuine silence. Once the session records that the user has been here and chosen — including choosing to clear everything — the default no longer applies. See [Filters](filters.md).
 - **`persistSortInSession()` also persists the group.** There is no separate switch, because ungrouping and re-sorting are the same kind of decision.
-- **`persistColumnsInSession()` also persists the [card layout](card-layout.md).** Same reasoning in the other direction: how a list is drawn and which columns are drawn are one decision, and both are presentation rather than a question about the data.
 - **Per-column search boxes are never remembered.** They narrow an already-narrowed view, and restoring one silently would make an empty table hard to explain.
 - **A stale session is ignored, not repaired.** Narrowing a schema does not need a migration; the values that no longer validate stop applying.
 - **The URL still wins over everything.** Anything the request states is applied and stored; persistence only fills silence.

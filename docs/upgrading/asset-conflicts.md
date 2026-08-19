@@ -189,7 +189,7 @@ diff -u resources/js/panel/tables/DataTable.vue \
         vendor/chocoalano/panel/resources/js/panel/tables/DataTable.vue
 
 php artisan panel:assets --force
-php artisan panel:icons      # --force overwrote the generated icon registry
+php artisan panel:icons      # rebuild after panel:assets --force rewrote assets
 npm run build
 ```
 

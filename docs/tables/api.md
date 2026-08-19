@@ -74,29 +74,6 @@ public function showColumnManagerReset(bool $show = true): self;                
 
 The column manager's reset label is fixed at `Reset`; only its visibility is configurable.
 
-### Card layout
-
-```php
-public function cards(?CardLayout $layout = null): self;          // not declared
-public function defaultLayout(TableLayout $layout): self;         // TableLayout::Table
-public function getDefaultLayout(): TableLayout;
-public function availableLayouts(): array;                        // list<TableLayout>
-```
-
-`CardLayout` — every slot holds the name of a column the table already declares. `null`, or `[]` for a list, declares the slot empty rather than asking for inference.
-
-```php
-public static function make(): self;
-public function image(?string $column): self;        // inferred: first image column
-public function title(?string $column): self;        // inferred: first non-editable column
-public function description(?string $column): self;  // never inferred
-public function badges(?array $columns): self;       // inferred: badge, boolean, icon columns
-public function details(?array $columns): self;      // inferred: the rest, capped at 4
-public function columns(int $count): self;           // 3, clamped to ColumnCount::MAX
-```
-
-`availableLayouts()` is `['table']` for a table with no card face **and** for a reorderable one. See [Card layout](card-layout.md).
-
 ### Rows, selection, actions
 
 ```php
@@ -238,7 +215,6 @@ Read from the namespace when there is one (`?relations[tasks][page]=2`).
     'columnSearches' => array<string, string>,
     'columns' => ['visible' => list<string>, 'order' => list<string>],
     'group' => ?string,
-    'layout' => 'table'|'grid',                 // always one of `layouts`
 ]
 ```
 
@@ -588,22 +564,7 @@ Both form routes sit at the path `actions/form`; `scope` is one of `record`, `ta
 
 ### `TableSchema::toArray()`
 
-`columns`, `filters`, `groups`, `defaultGroup`, `columnManager`, `filterBehaviour`, `searchable`, `searchPlaceholder`, `searchDebounce`, `searchOnBlur`, `individualSearchColumns`, `selectable`, `reorderable`, `frozen`, `perPageOptions`, `defaultPerPage`, `defaultSort`, `layouts`, `cards`, `bulkActions`, `recordActions`, `headerActions`, `toolbarActions`, `emptyState`.
-
-### `CardLayout::toArray()`
-
-```php
-[
-    'columns' => int,
-    'image' => ?string,
-    'title' => ?string,
-    'description' => ?string,
-    'badges' => list<string>,
-    'details' => list<string>,
-]
-```
-
-Column names, never definitions — those are already in `columns`. `null` for a table with no card face.
+`columns`, `filters`, `groups`, `defaultGroup`, `columnManager`, `filterBehaviour`, `searchable`, `searchPlaceholder`, `searchDebounce`, `searchOnBlur`, `individualSearchColumns`, `selectable`, `reorderable`, `frozen`, `perPageOptions`, `defaultPerPage`, `defaultSort`, `bulkActions`, `recordActions`, `headerActions`, `toolbarActions`, `emptyState`.
 
 ### `TableSchema::toRow()`
 

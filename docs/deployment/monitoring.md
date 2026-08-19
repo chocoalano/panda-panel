@@ -289,7 +289,7 @@ php artisan panel:plugins --panel=admin
 +-------+---------+-----------+------------------+---------+----------+
 | Panel | ID      | Name      | Package          | Version | Requires |
 +-------+---------+-----------+------------------+---------+----------+
-| admin | audit   | Audit Log | acme/panel-audit | 1.4.1   | ^1.0     |
+| admin | audit   | Audit Log | acme/panel-audit | 1.4.1   | ^0.1     |
 +-------+---------+-----------+------------------+---------+----------+
 ```
 

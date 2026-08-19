@@ -70,7 +70,7 @@ it('keeps the panel auth pages out of the panel shell', function (): void {
 
 ### The shared-props accessor
 
-`SharePanelData` puts ten keys on the page. Reading any of them through `usePage()` anywhere except the one accessor means depending on an Inertia module augmentation reaching the application, being picked up by its tsconfig, and merging with what its starter kit already declares. When any of that fails the prop is `{}` and the *application's* build breaks inside files nobody there wrote.
+`SharePanelData` puts seven keys on the page. Reading any of them through `usePage()` anywhere except the one accessor means depending on an Inertia module augmentation reaching the application, being picked up by its tsconfig, and merging with what its starter kit already declares. When any of that fails the prop is `{}` and the *application's* build breaks inside files nobody there wrote.
 
 ```php
 it('reads the panel shared props through one accessor', function (): void {

@@ -62,7 +62,7 @@ the client bundle.
 
 ## Shared props
 
-`PandaPanel\Http\Middleware\SharePanelData` shares ten props on every `web` request through
+`PandaPanel\Http\Middleware\SharePanelData` shares seven props on every `web` request through
 `Inertia::share()`, which merges — your own `HandleInertiaRequests` is untouched. The TypeScript
 mirror is `PanelSharedProps` in `resources/js/panel/types/shared.ts`:
 

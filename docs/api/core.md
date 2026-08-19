@@ -394,7 +394,7 @@ The registrar names the classes directly. The aliases exist for applications tha
 
 ## Shared Inertia props
 
-`SharePanelData` shares ten props, each as a closure, so a request that never reaches a panel pays for none of them.
+`SharePanelData` shares seven props, each as a closure, so a request that never reaches a panel pays for none of them.
 
 | Prop | Shape |
 | --- | --- |
@@ -491,7 +491,7 @@ abstract class Cluster
 | `register_guest_redirect` | `true` | Whether a guest on a panel URL is sent to that panel's login |
 | `home_redirect.enabled` | `true` | Whether a signed-in user on `/dashboard` is sent into a panel |
 | `home_redirect.paths` | `['dashboard']` | `Request::is()` patterns handed over |
-| `load_migrations` | `true` | Whether the package's two migrations run from the package |
+| `load_migrations` | `true` | Whether the package migrations run from the package |
 | `integrations.allowed_hosts` | `[]` | Allowlist for outbound integration URLs |
 | `integrations.block_private_networks` | `true` | Refuse unresolved, private, loopback, and link-local hosts |
 | `integrations.history.enabled` | `true` | Keep a delivery log |

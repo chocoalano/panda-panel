@@ -10,7 +10,7 @@ Generate the panel and its directories:
 php artisan make:panel Admin
 ```
 
-Register the provider — panels are listed by hand, so registration order is visible in one place:
+Register the provider — panels are listed by hand, so the panel set is visible in one place:
 
 ```php
 // config/panda-panel.php

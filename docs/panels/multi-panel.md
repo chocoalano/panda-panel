@@ -56,9 +56,9 @@ Two things use it, and both matter on the first screen after signing in:
 - `RedirectPanelHome` sends a signed-in user who lands on `/dashboard` into the first panel they can enter — see [Home Redirect](../configuration/home-redirect.md).
 - The starter kit's `/settings/*` addresses redirect into the same panel.
 
-So with Admin listed first, an administrator lands on `/admin` and a plain user — refused Admin — lands on `/app`. Reordering the list reorders that answer, which is exactly why the list is written by hand.
+So with the ids `admin` and `app`, id order considers Admin before App: an administrator lands on `/admin` and a plain user — refused Admin — lands on `/app`. Renaming a panel id can reorder that answer, which is why ids are routing policy.
 
-`PanelManager::all()` is sorted by id, not by config order, and that is what route registration walks. Registration order and route order are deliberately different: one is a policy about people, the other has to be stable across machines.
+`PanelManager::all()` is sorted by id, not by config order, and both route registration and `firstAccessibleTo()` walk that order so the result is stable across machines.
 
 ## What is isolated
 

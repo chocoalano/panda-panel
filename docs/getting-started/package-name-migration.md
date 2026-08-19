@@ -18,7 +18,7 @@ Or edit `composer.json` directly and update:
 
 ```json
 "require": {
-    "chocoalano/panel": "^1.0"
+    "chocoalano/panel": "^0.1"
 }
 ```
 

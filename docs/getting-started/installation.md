@@ -117,9 +117,10 @@ app/Panels/Admin/
 
 ### 5. Register it
 
-Panels are listed rather than discovered: registration order decides which panel a user lands in
-when the request does not name one, and adding a panel should be a deliberate edit rather than a
-filesystem side effect.
+Panels are listed rather than discovered: the config is the explicit set of panels the application
+has. When the request does not name one, Panda Panel walks panels by id, not by config order, so the
+landing panel stays stable and adding a panel remains a deliberate edit rather than a filesystem
+side effect.
 
 ```php
 // config/panda-panel.php
@@ -130,8 +131,8 @@ filesystem side effect.
 
 `panel:install` writes this line for you — see [Running panel:install](installer.md) for the three
 outcomes and what happens when the config has been restructured. `make:panel` on its own only
-prints it, because a generator editing config silently is how a project loses track of its panel
-order.
+prints it, because a generator editing config silently is how a project loses track of which panels
+are enabled.
 
 **Without this step the install finishes, the provider exists, and the panel's URL 404s.** It is
 the single most common "it did not work" after an install.

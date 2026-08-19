@@ -1,12 +1,8 @@
 # Architecture Decisions
 
-This package has one architecture decision record — [`adr/001-panel-framework.md`](adr/001-panel-framework.md) — and it is the reason most of the framework looks the way it does. Read it before proposing a change to the boundary between PHP and Vue, to discovery, to caching, or to how panels are isolated from each other; those are settled questions with written reasons, and a pull request that reopens one without addressing the reason is a pull request that will be sent back.
+This package has one accepted architecture decision record, ADR 001, and it is the reason most of the framework looks the way it does. Read this summary before proposing a change to the boundary between PHP and Vue, to discovery, to caching, or to how panels are isolated from each other; those are settled questions with written reasons, and a pull request that reopens one without addressing the reason is a pull request that will be sent back.
 
 ## A minimal working example
-
-```bash
-cat docs/contributing/adr/001-panel-framework.md
-```
 
 The header is the whole format:
 
@@ -36,7 +32,7 @@ Nine things, each of which shows up somewhere you would otherwise find surprisin
 
 **Panel isolation is structural.** Each panel has its own resource, page, widget and navigation registries. Routes are registered per panel, `Resource::url()` throws when asked for a URL in a panel that does not register it, and the action endpoint resolves the named resource against **that panel's** registry — so a valid session on one panel cannot address another panel's resource through it. That last point is the only place a cross-panel request is plausible, and it is covered by a test.
 
-**Panels are explicit, their contents are discovered.** Registration order and panel count are things a reader should see in one place. File paths become class names through Composer's registered PSR-4 prefixes; discovery parses and evaluates nothing, because the autoloader already knows what a file declares. Only concrete classes implementing the expected contract are included, and results are sorted so two machines produce the same manifest.
+**Panels are explicit, their contents are discovered.** Panel count is something a reader should see in one place, while panel execution order is stabilised by id. File paths become class names through Composer's registered PSR-4 prefixes; discovery parses and evaluates nothing, because the autoloader already knows what a file declares. Only concrete classes implementing the expected contract are included, and results are sorted so two machines produce the same manifest.
 
 **The cache holds class names only.** `php artisan panel:cache` writes `bootstrap/cache/panels.php` atomically. Never cached: authorization results, navigation active state, badge values, record data, widget data — all of them depend on the current user or URL, so caching them would serve one person's answers to another. A test asserts the manifest contains no closure. With a manifest present, discovery does not run at all; the test proves it by pointing a panel at a directory that does not exist and asserting the classes still resolve.
 
@@ -52,16 +48,14 @@ Written down so they are not re-argued as bugs:
 | PHP metadata plus a Vue renderer | Two places to touch for a new column type; in exchange the boundary is explicit and type-checked on both sides |
 | Explicit over magic | More verbose than Filament's conventions in places, for example `getId()` versus a combined accessor |
 | Dependency-free SVG chart | No tooltips, zoom or animation; in exchange no charting library and the widget union stays complete |
-| Panels listed by hand | One edit per new panel; in exchange registration order is visible |
-| No browser test runner | Client-side interaction is covered by types, the build and server-side request tests only. Pure frontend logic is unit-tested — see `D20`. |
+| Panels listed by hand | One edit per new panel; in exchange the panel set is visible |
+| No browser test runner | Client-side interaction is covered by types, the build and server-side request tests only |
 
 "No browser test runner" is a decision rather than a gap. A proposal to add one is a proposal to reverse a recorded trade-off, and it needs an ADR.
 
-`D20` narrows it rather than reversing it. The row is about *interaction* — a click, a popover, a component under a DOM. A plain function is not that: `npm run test` runs vitest over the frontend's pure modules, with no DOM and no component harness, and `resources/js/**/*.test.ts` is where those live.
-
 ## The decisions table
 
-The ADR ends with twenty smaller decisions recorded during implementation, `D1` to `D20`. They are the ones that changed an API without changing the architecture:
+The ADR ends with eighteen smaller decisions recorded during implementation, `D1` to `D18`. They are the ones that changed an API without changing the architecture:
 
 | # | Decision |
 | --- | --- |
@@ -83,8 +77,6 @@ The ADR ends with twenty smaller decisions recorded during implementation, `D1` 
 | D16 | `render`/`handle` routing, with `store` and `update` route names |
 | D17 | Delete hooks live on `Action`, not on the page trait, because the endpoint runs without a page instance |
 | D18 | `Field::dehydrateTo()` maps a field onto a different attribute |
-| D19 | A card grid is a second renderer over one `TableSchema`, not an alternative page class |
-| D20 | Vitest unit-tests the frontend's pure modules; components and interaction stay uncovered by design |
 
 Three of them corrected an earlier mistake rather than choosing between options: D17 replaced two documented hooks that could never have been called, D14 replaced a shell that could never have been reached, and the phase 8 work replaced a `PanelContext` that leaked between requests. A row that records a correction is more useful than a quiet fix, because the next person to have the same idea reads why it did not work.
 
@@ -128,11 +120,7 @@ Several of these have since been built — relation managers, clusters, global s
 
 ## Writing one
 
-Add a file beside the first:
-
-```bash
-$EDITOR docs/contributing/adr/002-your-decision.md
-```
+Add a record beside the first in the repository's internal documentation area.
 
 Number it sequentially, name the file after the decision, and open with the same three fields:
 
@@ -159,8 +147,8 @@ Link the new record from the pull request that implements it, and add a `Changed
 
 ## Notes
 
-- **The ADR lives under `docs/contributing/adr/`, which is `export-ignore`d.** So does the rest of `docs/`. It is a repository document, not something an installed package carries.
-- **The reference documentation is the master, not the ADR.** [`docs/index.md`](../index.md) indexes it, and it describes what the framework *does*; the ADR describes *why it is that shape*. When the two disagree about a command name or a level number, the source files win — the configuration in the repository root is the authority. (The old single-file master, `docs/target_framework/panel-framework.md`, was removed once it had drifted past the sectioned documentation that replaced it; `git log` still has it.)
+- **The archived ADR source lives outside the published docs.** It is a repository planning document, not an installed-package reference.
+- **Source files are the authority.** Internal planning documents explain design intent; when they disagree with a command name, method signature, or config key in source, the source wins.
 - **A known gap is not a bug report.** The two ADR 001 names are deliberate and documented; closing one is a normal change, and neither needs an ADR to close.
 - **`Supersedes: nothing` is a real value.** Write it rather than omitting the field, so a reader can tell the field was considered.
 - **Nothing enforces this mechanically.** There is no test that fails when an ADR is missing. It is a review question, which is why the table above is written as a table.

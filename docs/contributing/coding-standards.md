@@ -85,7 +85,7 @@ Markdown keeps trailing whitespace because two trailing spaces are a line break 
 
 `phpstan.neon`, in full:
 
-```neon
+```yaml
 includes:
     - vendor/larastan/larastan/extension.neon
 

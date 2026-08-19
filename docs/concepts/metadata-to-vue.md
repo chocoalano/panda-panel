@@ -29,7 +29,7 @@ In the browser, `usePage().props` holds the same object.
 
 ## The shared props
 
-`PandaPanel\Http\Middleware\SharePanelData` shares ten keys through
+`PandaPanel\Http\Middleware\SharePanelData` shares seven keys through
 `Inertia::share()`, which merges — the application's own
 `HandleInertiaRequests` is untouched. Every value is a closure, so a request
 that never reaches a panel pays for none of them.
@@ -43,29 +43,23 @@ that never reaches a panel pays for none of them.
 | `search` | `{enabled, url, debounce, keyBindings}` | disabled |
 | `notifications` | `{enabled, indexUrl, readUrl, clearUrl, unread}` | disabled |
 | `tenancy` | `{current, available}` | `null` |
-| `locale` | `App::getLocale()` | the application's locale |
-| `translations` | `lang/{locale}/frontend.php` | the same dictionary |
-| `locales` | `{current, url, available}` | `null` |
 
 Read them through the panel's own composables rather than `usePage()` directly.
-`usePanel()` covers six; `navigation` is read through `useNavigation()`, which
-also owns the collapsed-group state, and `locale` and `translations` through
-`useTranslator()` — see [Translations](../localization/translations.md):
+`usePanel()` covers six of the seven; `navigation` is read through
+`useNavigation()`, which also owns the collapsed-group state:
 
 ```ts
-import { useTranslator } from '@/composables/useTranslator';
 import { useNavigation } from '@/panel/composables/useNavigation';
 import { usePanel } from '@/panel/composables/usePanel';
 
 const { panel, panels, broadcasting, search, notifications, tenancy } = usePanel();
 const { groups } = useNavigation();
-const { t, locale } = useTranslator();
 ```
 
 `resources/js/panel/types/shared.ts` performs the single cast in the whole
 panel frontend, and `PanelSharedProps` mirrors that middleware exactly. A
 contract test asserts that no other file under `resources/js/panel` reads one
-of those ten keys off `usePage()`.
+of those seven keys off `usePage()`.
 
 ### `panel`
 

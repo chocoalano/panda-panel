@@ -87,7 +87,7 @@ return redirect()
 public function handle(Request $request, Closure $next): Response
 ```
 
-Shares ten props through `Inertia::share()`, which merges — the application's own
+Shares seven props through `Inertia::share()`, which merges — the application's own
 `HandleInertiaRequests` is untouched, and `auth`, `errors` and anything else it shares still
 arrive.
 

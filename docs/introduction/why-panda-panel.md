@@ -214,9 +214,9 @@ php artisan panel:assets --update   # write only the files you have never touche
 
 ## Explicit over magic
 
-Panels are listed in `config/panda-panel.php` rather than discovered, because registration order
-decides where a user lands when the request does not name a panel, and a reader should see that in
-one place. The classes *inside* a panel are discovered, because listing every resource by hand is
+Panels are listed in `config/panda-panel.php` rather than discovered, because the panel set should
+be visible in one place. When a request does not name a panel, Panda Panel walks panels by id, not by
+config order. The classes *inside* a panel are discovered, because listing every resource by hand is
 the boilerplate worth removing.
 
 Fluent setters keep bare names (`->id()`, `->path()`); readers are `get`-prefixed (`getId()`,

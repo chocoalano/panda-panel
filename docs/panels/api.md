@@ -366,7 +366,7 @@ final class PanelManager
     public function get(string $id): Panel;                      // throws when unknown
 
     public function resolveFromRequest(Request $request): ?Panel;         // longest path first
-    public function firstAccessibleTo(?Authenticatable $user): ?Panel;    // registration order
+    public function firstAccessibleTo(?Authenticatable $user): ?Panel;    // id order
 
     public function setCurrentPanel(?Panel $panel): void;
     public function currentPanel(): ?Panel;

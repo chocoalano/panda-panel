@@ -84,7 +84,7 @@ Twice, because the two ends of the range disagree about what is real. `toPasswor
 
 `phpstan.neon`:
 
-```neon
+```yaml
 includes:
     - vendor/larastan/larastan/extension.neon
 

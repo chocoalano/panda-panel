@@ -27,7 +27,7 @@ That order is the whole point of this page. Everything else is detail.
 
 ```json
 "require": {
-    "chocoalano/panel": "^1.0"
+    "chocoalano/panel": "^0.1"
 }
 ```
 
