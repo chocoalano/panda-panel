@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
+import { Activity } from '@lucide/vue';
 import { onBeforeUnmount, onMounted } from 'vue';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import type { WidgetDefinition } from '@/panel/types/widget';
@@ -53,18 +54,29 @@ const { hook } = usePanelStyling();
 </script>
 
 <template>
-    <div class="flex flex-col gap-3" :class="hook('widget')">
+    <section
+        class="relative flex flex-col gap-4 rounded-xl border border-border/70 bg-card/80 p-4 shadow-sm shadow-black/[0.025] transition-shadow hover:shadow-md hover:shadow-black/[0.04] sm:p-5"
+        :class="hook('widget')"
+    >
         <div
             v-if="widget.heading || widget.description || widget.filters"
-            class="flex flex-wrap items-start justify-between gap-3"
+            class="flex flex-wrap items-start justify-between gap-4"
         >
-            <div v-if="widget.heading || widget.description">
-                <p v-if="widget.heading" class="text-sm font-medium">
-                    {{ widget.heading }}
-                </p>
+            <div v-if="widget.heading || widget.description" class="min-w-0">
+                <div v-if="widget.heading" class="flex items-center gap-2">
+                    <span class="size-1.5 rounded-full bg-primary" />
+                    <p class="truncate text-sm font-semibold tracking-tight">
+                        {{ widget.heading }}
+                    </p>
+                    <Activity
+                        v-if="widget.polling && widget.polling > 0"
+                        class="size-3.5 text-muted-foreground"
+                        aria-hidden="true"
+                    />
+                </div>
                 <p
                     v-if="widget.description"
-                    class="text-sm text-muted-foreground"
+                    class="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground"
                 >
                     {{ widget.description }}
                 </p>
@@ -80,5 +92,5 @@ const { hook } = usePanelStyling();
         </div>
 
         <slot />
-    </div>
+    </section>
 </template>

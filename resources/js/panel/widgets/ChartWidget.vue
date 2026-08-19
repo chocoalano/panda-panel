@@ -389,13 +389,13 @@ function deactivate(): void {
 
 <template>
     <Card
-        class="overflow-hidden rounded-lg border-border/60 bg-card py-0 shadow-xs"
+        class="overflow-hidden rounded-lg border-border/70 bg-background/60 py-0 shadow-xs"
     >
-        <CardContent class="p-5">
+        <CardContent class="p-4 sm:p-5">
             <!-- Legend -->
             <div
                 v-if="series.length && options.legend"
-                class="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2"
+                class="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border/60 pb-4"
             >
                 <div
                     v-for="item in series"
@@ -403,7 +403,7 @@ function deactivate(): void {
                     class="flex items-center gap-2 text-xs font-medium text-muted-foreground"
                 >
                     <span
-                        class="size-2 rounded-full bg-current shadow-[0_0_0_2px_var(--card)] ring-1 ring-border/60"
+                        class="size-2 rounded-full bg-current ring-1 ring-border/60"
                         :class="SERIES_CLASSES[item.color]"
                     />
 
@@ -416,7 +416,7 @@ function deactivate(): void {
             <!-- Empty state -->
             <div
                 v-if="isEmpty"
-                class="flex min-h-48 items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/10"
+                class="flex min-h-48 items-center justify-center rounded-lg border border-dashed border-border/70 bg-muted/15"
             >
                 <p class="text-sm text-muted-foreground">
                     {{ t('widgets.no_data') }}

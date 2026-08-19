@@ -134,7 +134,7 @@ function sparkline(values: number[]): string {
 </script>
 
 <template>
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <!--
             A stat with a URL is a link to what it counts. `Link` rather than
             an anchor so it is an Inertia navigation like every other, and the
@@ -146,7 +146,7 @@ function sparkline(values: number[]): string {
             :key="stat.label"
             :href="stat.url ?? undefined"
             :class="[
-                'group block min-w-0 rounded-lg border border-l-4 border-border bg-card p-4 shadow-xs transition-colors hover:bg-accent/20',
+                'group relative block min-w-0 overflow-hidden rounded-lg border border-border/70 bg-background/70 p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-border hover:bg-background hover:shadow-sm',
                 COLOR_CLASSES[stat.color].accent,
                 stat.url
                     ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
@@ -166,7 +166,7 @@ function sparkline(values: number[]): string {
 
                     <div
                         v-if="stat.resolvedIcon"
-                        class="flex size-9 shrink-0 items-center justify-center rounded-md ring-1 ring-inset"
+                        class="flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset transition-transform group-hover:scale-105"
                         :class="[
                             COLOR_CLASSES[stat.color].iconBackground,
                             COLOR_CLASSES[stat.color].icon,
@@ -182,10 +182,10 @@ function sparkline(values: number[]): string {
 
                 <!-- Metric -->
                 <div
-                    class="mt-4 flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2"
+                    class="mt-5 flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2"
                 >
                     <p
-                        class="min-w-0 break-words text-2xl leading-none font-semibold text-foreground tabular-nums"
+                        class="min-w-0 wrap-break-word text-3xl leading-none font-semibold tracking-tight text-foreground tabular-nums"
                     >
                         {{ stat.display }}
                     </p>

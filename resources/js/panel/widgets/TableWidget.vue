@@ -150,7 +150,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
     <div class="flex flex-col gap-3">
         <form
             v-if="searchable && namespace"
-            class="flex items-center gap-2"
+            class="flex items-center gap-2 rounded-lg border border-border/70 bg-background/60 p-2"
             @submit.prevent="submitSearch"
         >
             <div class="relative flex-1">
@@ -159,7 +159,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                 />
                 <Input
                     v-model="search"
-                    class="pl-8"
+                    class="h-9 border-0 bg-transparent pl-8 shadow-none focus-visible:ring-0"
                     :placeholder="t('widgets.search')"
                     :aria-label="t('widgets.search_table')"
                     @blur="submitSearch"
@@ -169,10 +169,12 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
 
         <!-- `py-0` and `overflow-hidden`: the rows sit flush inside the card
              and the header row is clipped by its radius. -->
-        <Card class="overflow-hidden rounded-lg py-0 shadow-xs">
+        <Card
+            class="overflow-hidden rounded-lg border-border/70 py-0 shadow-xs"
+        >
             <Table>
                 <TableHeader>
-                    <TableRow>
+                    <TableRow class="bg-muted/25 hover:bg-muted/25">
                         <TableHead
                             v-for="column in visibleColumns"
                             :key="column.name"
@@ -180,7 +182,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                             <button
                                 v-if="column.sortable && namespace"
                                 type="button"
-                                class="flex items-center gap-1"
+                                class="flex items-center gap-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground"
                                 @click="toggleSort(column.name)"
                             >
                                 {{ column.label }}
@@ -196,7 +198,12 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                                     class="size-3"
                                 />
                             </button>
-                            <template v-else>{{ column.label }}</template>
+                            <template v-else>
+                                <span
+                                    class="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+                                    >{{ column.label }}</span
+                                >
+                            </template>
                         </TableHead>
                     </TableRow>
                 </TableHeader>
@@ -204,7 +211,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                     <TableRow v-if="rows.length === 0">
                         <TableCell
                             :colspan="visibleColumns.length"
-                            class="py-8 text-center text-sm text-muted-foreground"
+                            class="h-28 py-8 text-center text-sm text-muted-foreground"
                         >
                             {{
                                 emptyMessage === ''
@@ -230,7 +237,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
 
         <div
             v-if="pagination && lastPage > 1"
-            class="flex items-center justify-between text-xs text-muted-foreground"
+            class="flex items-center justify-between border-t border-border/60 pt-3 text-xs text-muted-foreground"
         >
             <span>
                 {{ pagination.from }}–{{ pagination.to }} of
@@ -238,7 +245,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
             </span>
             <div class="flex items-center gap-1">
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     :disabled="page <= 1"
                     @click="go({ page: String(page - 1) })"
@@ -246,7 +253,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                     {{ t('widgets.previous') }}
                 </Button>
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     :disabled="page >= lastPage"
                     @click="go({ page: String(page + 1) })"
