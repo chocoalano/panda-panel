@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -9,6 +8,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import PanelDatePicker from '@/panel/components/PanelDatePicker.vue';
 import FormComponentRenderer from '@/panel/forms/FormComponentRenderer.vue';
 import DataTableQueryBuilder from '@/panel/tables/DataTableQueryBuilder.vue';
 import type { FormValues } from '@/panel/types/form';
@@ -20,6 +20,9 @@ import type {
     QueryBuilderRule,
     TableState,
 } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     filters: FilterDefinition[];
@@ -103,15 +106,33 @@ function blankLabelFor(filter: FilterDefinition): string {
         return filter.blankLabel;
     }
 
-    return filter.type === 'select' ? (filter.placeholder ?? 'All') : 'All';
+    return filter.type === 'select'
+        ? (filter.placeholder ?? t('tables.all'))
+        : t('tables.all');
 }
 
 function onSelect(name: string, value: string): void {
     emit('change', name, value === CLEARED ? null : value);
 }
 
-function onDate(name: string, bound: 'from' | 'to', value: string): void {
-    const next: DateFilterValue = { ...dateValue(name), [bound]: value };
+/**
+ * One bound of a range. `null` is the picker being cleared, which removes that
+ * bound rather than setting it to an empty string: the server reads an absent
+ * bound as open-ended, and `{from: ''}` would travel as a key that says
+ * nothing. Clearing both is clearing the filter.
+ */
+function onDate(
+    name: string,
+    bound: 'from' | 'to',
+    value: string | null,
+): void {
+    const next: DateFilterValue = { ...dateValue(name) };
+
+    if (value === null || value === '') {
+        delete next[bound];
+    } else {
+        next[bound] = value;
+    }
 
     if (!next.from && !next.to) {
         emit('change', name, null);
@@ -202,24 +223,25 @@ function onDate(name: string, bound: 'from' | 'to', value: string): void {
                     {{ filter.label }}
                 </Label>
                 <div class="flex items-center gap-2">
-                    <Input
-                        type="date"
-                        class="h-8 w-37.5"
+                    <PanelDatePicker
+                        class="w-37.5"
+                        :placeholder="t('tables.from')"
                         :aria-label="`${filter.label} from`"
-                        :model-value="dateValue(filter.name).from ?? ''"
+                        :model-value="dateValue(filter.name).from ?? null"
+                        :max="dateValue(filter.name).to ?? null"
                         @update:model-value="
-                            (value) =>
-                                onDate(filter.name, 'from', String(value))
+                            (value) => onDate(filter.name, 'from', value)
                         "
                     />
                     <span class="text-muted-foreground">–</span>
-                    <Input
-                        type="date"
-                        class="h-8 w-37.5"
+                    <PanelDatePicker
+                        class="w-37.5"
+                        :placeholder="t('tables.to')"
                         :aria-label="`${filter.label} to`"
-                        :model-value="dateValue(filter.name).to ?? ''"
+                        :model-value="dateValue(filter.name).to ?? null"
+                        :min="dateValue(filter.name).from ?? null"
                         @update:model-value="
-                            (value) => onDate(filter.name, 'to', String(value))
+                            (value) => onDate(filter.name, 'to', value)
                         "
                     />
                 </div>

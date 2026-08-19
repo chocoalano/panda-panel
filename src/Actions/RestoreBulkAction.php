@@ -33,17 +33,17 @@ final class RestoreBulkAction
     public static function make(string $resource): Action
     {
         return Action::make('restore')
-            ->label('Restore selected')
+            ->label(__('panda-panel::actions.restore_bulk.label'))
             ->icon('rotate-ccw')
             ->variant(ActionVariant::Outline)
-            ->successMessage('Selected records restored.')
+            ->successMessage(__('panda-panel::actions.restore_bulk.success'))
             ->authorize(static fn (?Model $record): bool => $record === null
                 ? $resource::canRestoreAny()
                 : $resource::canRestore($record))
             ->bulkAction(static function (Collection $records) use ($resource): void {
                 foreach ($records as $record) {
                     if (! $resource::canRestore($record)) {
-                        throw new HttpException(403, 'You may not restore every selected record.');
+                        throw new HttpException(403, __('panda-panel::actions.restore_bulk.denied'));
                     }
                 }
 

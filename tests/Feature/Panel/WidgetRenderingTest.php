@@ -7,10 +7,15 @@ use App\Panels\Admin\Widgets\RecentUsers;
 use App\Panels\Admin\Widgets\SystemInfo;
 use App\Panels\Admin\Widgets\UserGrowth;
 use App\Panels\Admin\Widgets\UserStats;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Inertia\Testing\AssertableInertia;
 use PandaPanel\Core\PanelManager;
 use PandaPanel\Exceptions\PanelSchemaException;
+use PandaPanel\Tables\Columns\TextColumn;
+use PandaPanel\Tables\TableQuery;
+use PandaPanel\Tables\TableSchema;
 use PandaPanel\Widgets\Support\ColumnSpan;
 use PandaPanel\Widgets\Support\Stat;
 
@@ -212,4 +217,42 @@ it('serializes widget definitions without closures or class names', function ():
                 ->and($encoded)->not->toContain('App\\\\Panels')
                 ->and($encoded)->not->toContain('Closure');
         });
+});
+
+/*
+ * What a widget's hidden column costs
+ */
+
+it('sends a table widget only the cells the arrangement shows', function (): void {
+    // A widget has no column manager, so its arrangement is whatever the
+    // schema declared visible. A column hidden by the schema is absent from
+    // the rows rather than present and empty.
+    $schema = TableSchema::make()->columns([
+        TextColumn::make('name'),
+        TextColumn::make('email')->visible(false),
+    ]);
+
+    $request = Request::create('/', 'GET');
+    $query = new TableQuery($schema, $request);
+    $record = User::factory()->create();
+
+    $visible = $query->state()['columns']['visible'];
+
+    expect($visible)->toBe(['name'])
+        ->and($schema->toRow($record, null, $visible)['cells'])
+        ->toBe(['name' => $record->getAttribute('name')]);
+});
+
+it('draws a table widget from the arrangement rather than the declaration', function (): void {
+    // The renderer's half of the same rule. `columns` carries every declared
+    // column including hidden ones, so a template drawing from that list put a
+    // header over a column of placeholders — a hidden column read as an empty
+    // one rather than as absent.
+    $component = File::get(base_path('resources/js/panel/widgets/TableWidget.vue'));
+
+    expect($component)->toContain('v-for="column in visibleColumns"')
+        ->and($component)->toContain(':colspan="visibleColumns.length"')
+        // The full list survives only where it should: deciding what is
+        // sortable, which is a property of the schema rather than the view.
+        ->and($component)->not->toContain('v-for="column in columns"');
 });

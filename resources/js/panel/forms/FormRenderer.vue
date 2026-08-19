@@ -22,6 +22,9 @@ import type {
     FormValue,
     FormValues,
 } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     form: FormDefinition;
@@ -218,7 +221,7 @@ const values = ref<FormValues>({ ...initial });
 const errors = ref<Record<string, string>>({});
 const processing = ref(false);
 
-const label = computed(() => props.submitLabel ?? 'Save');
+const label = computed(() => props.submitLabel ?? t('forms.save'));
 
 /**
  * A wizard owns the whole form when present: it renders the steps and its
@@ -500,7 +503,7 @@ const { hook } = usePanelStyling();
                 as="a"
                 :href="cancelUrl"
             >
-                Cancel
+                {{ t('forms.cancel') }}
             </Button>
         </div>
     </form>

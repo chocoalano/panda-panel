@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PandaPanel\Pages\Settings;
 
-use BackedEnum;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Session\Session;
@@ -33,19 +32,34 @@ final class SecuritySettings extends Page
      */
     use InteractsWithTwoFactorState;
 
-    protected static ?string $title = 'Security';
-
-    protected static ?string $subheading = 'Password, two-factor authentication, and passkeys.';
-
     protected static ?string $slug = 'settings-security';
 
     protected static string $component = 'panel/settings/Security';
 
     protected static ?string $navigationIcon = 'shield';
 
-    protected static string|BackedEnum|null $navigationGroup = 'Account';
-
     protected static int $navigationSort = 20;
+
+    /*
+     * Title, subheading and navigation group are read through methods rather
+     * than set as static properties, because a property default is evaluated
+     * before the translator can answer and would freeze this page's English
+     * into every locale.
+     */
+    public static function title(): string
+    {
+        return __('panda-panel::pages.security.title');
+    }
+
+    public static function subheading(): string
+    {
+        return __('panda-panel::pages.security.subheading');
+    }
+
+    public static function navigationGroup(): string
+    {
+        return __('panda-panel::pages.navigation_group.account');
+    }
 
     /** @var list<string> */
     protected static array $middleware = [RequirePassword::class];

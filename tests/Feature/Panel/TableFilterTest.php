@@ -7,13 +7,16 @@ use Illuminate\Http\Request;
 use PandaPanel\Forms\Components\TextInput;
 use PandaPanel\Forms\FormSchema;
 use PandaPanel\Tables\Columns\TextColumn;
+use PandaPanel\Tables\Filters\BooleanFilter;
 use PandaPanel\Tables\Filters\Constraints\BooleanConstraint;
 use PandaPanel\Tables\Filters\Constraints\NumberConstraint;
 use PandaPanel\Tables\Filters\Constraints\TextConstraint;
+use PandaPanel\Tables\Filters\DateFilter;
 use PandaPanel\Tables\Filters\FormFilter;
 use PandaPanel\Tables\Filters\QueryBuilderFilter;
 use PandaPanel\Tables\Filters\SelectFilter;
 use PandaPanel\Tables\Filters\TernaryFilter;
+use PandaPanel\Tables\Filters\TrashedFilter;
 use PandaPanel\Tables\TableQuery;
 use PandaPanel\Tables\TableSchema;
 use Tests\Fixtures\Panel\Relations\Project;
@@ -169,6 +172,91 @@ it('says what is narrowing the table in words', function (): void {
         ['name' => 'project_id', 'label' => 'Project Id: Assigned'],
     ]);
 });
+
+/**
+ * Every filter type says its value the way its own control said it.
+ *
+ * The whole reason indicators are built here rather than in Vue is that only
+ * a filter knows what its value means — and four of them did not use that
+ * knowledge. `describe()` is inherited from `Filter`, which casts a scalar and
+ * returns `''` for anything else, so a select chip named its option *key*, a
+ * boolean chip read `1`, a trashed chip read `only`, and a date chip read
+ * nothing at all after the colon. Each one named a filter while failing to say
+ * what it was doing, which is the one job a chip has.
+ */
+it('says each filter value the way its own control spelled it', function (Closure $filter, mixed $value, string $label): void {
+    $schema = TableSchema::make()
+        ->columns([TextColumn::make('name')])
+        ->filters([$filter()]);
+
+    $name = $filter()->getName();
+    $state = filterQuery($schema, ['filters' => [$name => $value]])->state();
+
+    expect($state['filterIndicators'])->toBe([['name' => $name, 'label' => $label]]);
+})->with([
+    'select names the option, not its key' => [
+        fn () => SelectFilter::make('status')->options(['published' => 'Published']),
+        'published',
+        'Status: Published',
+    ],
+    'boolean names the label, not the bool' => [
+        fn () => BooleanFilter::make('project_id')->nullable()->labels('Assigned', 'Unassigned'),
+        '1',
+        'Project Id: Assigned',
+    ],
+    'trashed names the state, not its key' => [
+        fn () => TrashedFilter::make('trashed'),
+        TrashedFilter::ONLY,
+        'Deleted records: Only deleted',
+    ],
+    'a date range reads as a range' => [
+        fn () => DateFilter::make('created_at'),
+        ['from' => '2026-01-01', 'to' => '2026-02-01'],
+        'Created At: 1 Jan 2026 – 1 Feb 2026',
+    ],
+    'a one-sided range reads as a bound' => [
+        fn () => DateFilter::make('created_at'),
+        ['from' => '2026-01-01'],
+        'Created At: from 1 Jan 2026',
+    ],
+    'an upper bound says so' => [
+        fn () => DateFilter::make('created_at'),
+        ['to' => '2026-02-01'],
+        'Created At: until 1 Feb 2026',
+    ],
+]);
+
+/**
+ * The chip's X, from the server's side.
+ *
+ * Closing the last chip deletes its key and writes `filters=`, which is the
+ * only way a query string can spell "filters, and there are none". Every
+ * filter type has to drop out of the indicators on that request, or the chip
+ * the user just closed comes back on the next render.
+ */
+it('drops a chip when its filter is closed, whatever the filter type', function (Closure $filter, mixed $value): void {
+    $schema = TableSchema::make()
+        ->columns([TextColumn::make('name')])
+        ->filters([$filter()]);
+
+    $name = $filter()->getName();
+
+    expect(filterQuery($schema, ['filters' => [$name => $value]])->state()['filterIndicators'])
+        ->toHaveCount(1);
+
+    expect(filterQuery($schema, ['filters' => ''])->state()['filterIndicators'])
+        ->toBe([]);
+})->with([
+    'select' => [fn () => SelectFilter::make('status')->options(['open' => 'Open']), 'open'],
+    'ternary' => [fn () => TernaryFilter::make('project_id')->nullable(), TernaryFilter::TRUE],
+    'boolean' => [fn () => BooleanFilter::make('project_id')->nullable(), '1'],
+    'trashed' => [fn () => TrashedFilter::make('trashed'), TrashedFilter::ONLY],
+    'date' => [fn () => DateFilter::make('created_at'), ['from' => '2026-01-01']],
+    'query builder' => [
+        fn () => QueryBuilderFilter::make('adv')->constraints([TextConstraint::make('name')]),
+        [['column' => 'name', 'operator' => 'contains', 'value' => 'ada']],
+    ],
+]);
 
 /*
  * Session persistence

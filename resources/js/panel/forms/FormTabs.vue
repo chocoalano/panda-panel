@@ -3,6 +3,9 @@ import { computed, ref, watch } from 'vue';
 import FormComponentRenderer from '@/panel/forms/FormComponentRenderer.vue';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { FormValue, FormValues, TabsDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     tabs: TabsDefinition;
@@ -100,7 +103,7 @@ function hasError(fields: string[]): boolean {
                 <span
                     v-if="hasError(tab.fields)"
                     class="size-1.5 rounded-full bg-destructive"
-                    aria-label="This tab has errors"
+                    :aria-label="t('forms.tab_has_errors')"
                 />
             </button>
         </div>

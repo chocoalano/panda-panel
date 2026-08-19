@@ -9,7 +9,7 @@ npm ci
 npm run ci
 ```
 
-`npm run ci` is `format:check`, then `lint`, then `typecheck`, then `build` — in that order, because a type error is a better message than the bundler's version of the same problem. It is what the blocking CI job runs, across Node 20, 22 and 24.
+`npm run ci` is `format:check`, then `lint`, then `typecheck`, then `test`, then `build` — in that order, because a type error is a better message than the bundler's version of the same problem. It is what the blocking CI job runs, across Node 20, 22 and 24.
 
 ## The scripts
 
@@ -22,13 +22,15 @@ All seven, from `package.json`:
 | `format` | `prettier --write resources/js frontend resources/css` |
 | `format:check` | `prettier --check resources/js frontend resources/css` |
 | `typecheck` | `vue-tsc --noEmit -p tsconfig.json` |
+| `test` | `vitest run` — the pure modules under `resources/js/**/*.test.ts` |
 | `build` | `vite build` |
-| `ci` | `npm run format:check && npm run lint && npm run typecheck && npm run build` |
+| `ci` | `npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build` |
 
 ```bash
 npm run format           # fix formatting
 npm run lint:fix         # fix what eslint can fix
 npm run typecheck        # vue-tsc over every component
+npm run test             # vitest over the pure modules
 npm run build            # does all of it compile together
 ```
 

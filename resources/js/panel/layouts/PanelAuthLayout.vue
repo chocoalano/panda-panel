@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { Toaster } from '@/components/ui/sonner';
+import PanelLocaleSwitcher from '@/panel/components/PanelLocaleSwitcher.vue';
 import { usePanelBranding } from '@/panel/composables/usePanelBranding';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { PanelDefinition } from '@/panel/types/panel';
@@ -13,6 +14,11 @@ import type { PanelDefinition } from '@/panel/types/panel';
  * there is no navigation to draw, no notifications to count, and no user
  * menu. What is left is the panel's identity, which is the whole reason a
  * panel has a front door of its own rather than sharing the application's.
+ *
+ * One exception: the language switcher. A login screen is exactly where
+ * somebody notices they are reading the wrong language, and it has to work
+ * before there is an account to remember the choice on — which is why the
+ * locale route has a guest twin outside the auth stack.
  */
 const props = defineProps<{
     panel: PanelDefinition;
@@ -26,6 +32,10 @@ const icon = computed(() => resolveIcon(iconName.value));
 
 <template>
     <div class="flex min-h-svh flex-col items-center justify-center gap-6 p-6">
+        <div class="absolute top-4 right-4">
+            <PanelLocaleSwitcher />
+        </div>
+
         <div class="flex w-full max-w-sm flex-col gap-6">
             <Link
                 :href="`/${panel.path}`"
@@ -40,7 +50,7 @@ const icon = computed(() => resolveIcon(iconName.value));
                         alt=""
                         class="size-5 object-contain"
                     />
-                    <component v-else-if="icon" :is="icon" class="size-5" />
+                    <component :is="icon" v-else-if="icon" class="size-5" />
                 </span>
                 <span>{{ panel.brandName }}</span>
             </Link>

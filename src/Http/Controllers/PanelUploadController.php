@@ -93,7 +93,7 @@ final class PanelUploadController
 
         $file = $request->file('file');
 
-        abort_unless($file instanceof UploadedFile, 422, 'No file was uploaded.');
+        abort_unless($file instanceof UploadedFile, 422, __('panda-panel::errors.no_file_uploaded'));
 
         // The field's own limits, applied to the real file rather than to
         // what the browser claimed before sending it.
@@ -107,7 +107,7 @@ final class PanelUploadController
 
         $path = $file->store($field->getDirectory(), $field->getDisk());
 
-        abort_if($path === false, 500, 'The file could not be stored.');
+        abort_if($path === false, 500, __('panda-panel::errors.file_not_stored'));
 
         return response()->json([
             'path' => $path,
@@ -153,7 +153,7 @@ final class PanelUploadController
     {
         $page = $request->query('page');
 
-        abort_unless(in_array($page, ['create', 'edit'], true), 422, 'Invalid page.');
+        abort_unless(in_array($page, ['create', 'edit'], true), 422, __('panda-panel::errors.invalid_page'));
 
         if ($page === 'create') {
             abort_unless($resource::canCreate(), 403);
@@ -190,11 +190,11 @@ final class PanelUploadController
     {
         $manager = $resource::relationManager((string) $request->query('relation'));
 
-        abort_if($manager === null, 404, 'Unknown relation.');
+        abort_if($manager === null, 404, __('panda-panel::errors.unknown_relation'));
 
         $operation = RelationOperation::tryFromRequest($request->query('operation'));
 
-        abort_if($operation === null, 404, 'Unknown relation operation.');
+        abort_if($operation === null, 404, __('panda-panel::errors.unknown_relation_operation'));
 
         $owner = $this->resolveRecord($resource, $request->query('record'));
 
@@ -224,7 +224,7 @@ final class PanelUploadController
     {
         $scope = $request->query('scope');
 
-        abort_unless(in_array($scope, self::ACTION_SCOPES, true), 422, 'Invalid scope.');
+        abort_unless(in_array($scope, self::ACTION_SCOPES, true), 422, __('panda-panel::errors.invalid_scope'));
 
         $key = $request->query('record');
 
@@ -238,7 +238,7 @@ final class PanelUploadController
 
         $schema = $action->resolveSchema($record);
 
-        abort_if($schema === null, 400, 'This action has no form.');
+        abort_if($schema === null, 400, __('panda-panel::errors.action_no_form'));
 
         return $schema;
     }
@@ -255,7 +255,7 @@ final class PanelUploadController
             default => $resource::infolist(InfolistSchema::make())->getAction($name),
         };
 
-        abort_if($action === null, 404, 'Unknown action.');
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
 
         return $action;
     }
@@ -271,8 +271,8 @@ final class PanelUploadController
     {
         $field = $schema->field($name);
 
-        abort_if($field === null, 404, 'Unknown field.');
-        abort_unless($field instanceof FileUpload, 400, 'That field does not accept files.');
+        abort_if($field === null, 404, __('panda-panel::errors.unknown_field'));
+        abort_unless($field instanceof FileUpload, 400, __('panda-panel::errors.field_rejects_files'));
 
         return $field;
     }
@@ -288,7 +288,7 @@ final class PanelUploadController
      */
     private function resolveRecord(string $resource, mixed $key): Model
     {
-        abort_unless(is_string($key) && $key !== '', 422, 'Invalid record key.');
+        abort_unless(is_string($key) && $key !== '', 422, __('panda-panel::errors.invalid_record_key'));
 
         $record = $resource::query()->find($key);
 
@@ -308,7 +308,7 @@ final class PanelUploadController
      */
     private function resolveActionRecord(string $resource, mixed $key): Model
     {
-        abort_unless(is_string($key) || is_int($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         $record = $resource::findRecord($key);
 
@@ -333,7 +333,7 @@ final class PanelUploadController
         $key = $request->query('parent');
 
         abort_if($parentResource === null, 404);
-        abort_unless(is_string($key) && $key !== '', 422, 'Invalid parent key.');
+        abort_unless(is_string($key) && $key !== '', 422, __('panda-panel::errors.invalid_parent_key'));
 
         $parent = ParentRecord::resolve($parentResource, $key);
 
@@ -347,11 +347,11 @@ final class PanelUploadController
      */
     private function resolveResource(Panel $panel, mixed $slug): string
     {
-        abort_unless(is_string($slug), 422, 'Invalid resource.');
+        abort_unless(is_string($slug), 422, __('panda-panel::errors.invalid_resource'));
 
         $resource = $this->manager->resources($panel)->bySlug($slug);
 
-        abort_if($resource === null, 404, 'Unknown resource.');
+        abort_if($resource === null, 404, __('panda-panel::errors.unknown_resource'));
 
         /** @var class-string<PanelResource> $resource */
         return $resource;

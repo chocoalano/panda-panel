@@ -9,6 +9,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { ActionDefinition } from '@/panel/types/action';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * Row actions collapse into one menu so a wide table does not grow a column
@@ -24,7 +27,11 @@ const emit = defineEmits<{ run: [action: ActionDefinition] }>();
 <template>
     <DropdownMenu v-if="actions.length > 0">
         <DropdownMenuTrigger as-child>
-            <Button variant="ghost" size="icon-sm" aria-label="Row actions">
+            <Button
+                variant="ghost"
+                size="icon-sm"
+                :aria-label="t('actions.row_actions')"
+            >
                 <MoreHorizontal />
             </Button>
         </DropdownMenuTrigger>

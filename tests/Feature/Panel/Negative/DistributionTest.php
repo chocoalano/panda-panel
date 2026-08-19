@@ -33,6 +33,18 @@ it('keeps the lock file out of the archive', function (): void {
     expect($attribute)->toContain('export-ignore: set');
 });
 
+it('ships its translations in the Composer archive', function (): void {
+    // The counterpart to `docs` and `tests` being export-ignored. A panel
+    // whose lang directory did not ship would boot — `loadTranslationsFrom()`
+    // does not check that the path exists — and then render every string as
+    // its own key: `panda-panel::actions.delete.label` on the delete button.
+    $attribute = trim((string) shell_exec('git check-attr export-ignore -- lang/en/actions.php 2>/dev/null'));
+
+    expect($attribute)->toContain('export-ignore: unspecified')
+        ->and(File::isDirectory(base_path('lang/en')))->toBeTrue()
+        ->and(File::isDirectory(base_path('lang/id')))->toBeTrue();
+});
+
 it('can tell a missing dependency list from an empty one', function (): void {
     // Two different facts that were the same empty array. `panel:install`
     // reports the second as "nothing is missing", which is true only if it

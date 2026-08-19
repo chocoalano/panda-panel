@@ -8,6 +8,9 @@ import { Spinner } from '@/components/ui/spinner';
 import PanelAuthLayout from '@/panel/layouts/PanelAuthLayout.vue';
 import type { PanelDefinition } from '@/panel/types/panel';
 import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelBlankLayout });
 
@@ -29,10 +32,10 @@ defineProps<{
 <template>
     <PanelAuthLayout
         :panel="panel"
-        title="Check your email"
-        :description="`We sent a six-digit code to ${sentTo}.`"
+        :title="t('auth.check_email')"
+        :description="t('auth.email_code_description', { email: sentTo })"
     >
-        <Head :title="`Sign-in code · ${panel.brandName}`" />
+        <Head :title="`${t('auth.sign_in_code')} · ${panel.brandName}`" />
 
         <Form
             v-slot="{ errors, processing }"
@@ -41,7 +44,7 @@ defineProps<{
             class="flex flex-col gap-6"
         >
             <div class="grid gap-2">
-                <Label for="code">Code</Label>
+                <Label for="code">{{ t('auth.code') }}</Label>
                 <Input
                     id="code"
                     name="code"
@@ -58,7 +61,7 @@ defineProps<{
 
             <Button type="submit" class="w-full" :disabled="processing">
                 <Spinner v-if="processing" />
-                Continue
+                {{ t('auth.continue') }}
             </Button>
         </Form>
 
@@ -75,8 +78,8 @@ defineProps<{
             >
                 {{
                     retryAfter > 0
-                        ? `Wait ${retryAfter}s before asking again`
-                        : 'Send another code'
+                        ? t('auth.wait_before_retry', { seconds: retryAfter })
+                        : t('auth.send_another_code')
                 }}
             </Button>
         </Form>

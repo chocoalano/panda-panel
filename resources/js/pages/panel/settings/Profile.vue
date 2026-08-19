@@ -12,6 +12,9 @@ import PageHeader from '@/panel/components/PageHeader.vue';
 import type { PageMetadata } from '@/panel/types/page';
 import { send } from '@/routes/verification';
 import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelLayout });
 
@@ -51,7 +54,7 @@ const user = computed(() => inertiaPage.props.auth.user);
                     class="space-y-6"
                 >
                     <div class="grid gap-2">
-                        <Label for="name">Name</Label>
+                        <Label for="name">{{ t('settings.name') }}</Label>
                         <Input
                             id="name"
                             class="block w-full"
@@ -59,13 +62,13 @@ const user = computed(() => inertiaPage.props.auth.user);
                             :default-value="user.name"
                             required
                             autocomplete="name"
-                            placeholder="Full name"
+                            :placeholder="t('settings.full_name')"
                         />
                         <InputError :message="errors.name" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="email">Email address</Label>
+                        <Label for="email">{{ t('settings.email') }}</Label>
                         <Input
                             id="email"
                             type="email"
@@ -74,20 +77,20 @@ const user = computed(() => inertiaPage.props.auth.user);
                             :default-value="user.email"
                             required
                             autocomplete="username"
-                            placeholder="Email address"
+                            :placeholder="t('settings.email')"
                         />
                         <InputError :message="errors.email" />
                     </div>
 
                     <div v-if="mustVerifyEmail && !user.email_verified_at">
                         <p class="text-sm text-muted-foreground">
-                            Your email address is unverified.
+                            {{ t('settings.email_unverified') }}
                             <Link
                                 :href="send()"
                                 as="button"
                                 class="text-foreground underline underline-offset-4"
                             >
-                                Click here to re-send the verification email.
+                                {{ t('settings.email_resend') }}
                             </Link>
                         </p>
 
@@ -95,8 +98,7 @@ const user = computed(() => inertiaPage.props.auth.user);
                             v-if="status === 'verification-link-sent'"
                             class="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400"
                         >
-                            A new verification link has been sent to your email
-                            address.
+                            {{ t('settings.email_resent') }}
                         </div>
                     </div>
 
@@ -104,7 +106,7 @@ const user = computed(() => inertiaPage.props.auth.user);
                         :disabled="processing"
                         data-test="update-profile-button"
                     >
-                        Save
+                        {{ t('settings.save') }}
                     </Button>
                 </Form>
             </CardContent>

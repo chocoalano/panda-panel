@@ -26,6 +26,7 @@ use PandaPanel\Actions\ViewAction;
 use PandaPanel\Forms\Components\DatePicker;
 use PandaPanel\Forms\Components\Select;
 use PandaPanel\Forms\FormSchema;
+use PandaPanel\Tables\CardLayout;
 use PandaPanel\Tables\Columns\BadgeColumn;
 use PandaPanel\Tables\Columns\Column;
 use PandaPanel\Tables\Columns\CustomColumn;
@@ -159,6 +160,18 @@ final class UsersTable
             ->reorderableColumns()
             ->columnManagerInModal()
             ->columnManagerTrigger('Columns', 'settings')
+            // A user is a person, so a card reads better than a row of
+            // figures. Declared rather than inferred here because the
+            // inference would take `email` as a detail row and the avatar as
+            // the picture, and a directory wants the address under the name.
+            ->cards(
+                CardLayout::make()
+                    ->image('avatar')
+                    ->title('name')
+                    ->description('email')
+                    ->badges(['email_verified_at', 'is_admin'])
+                    ->details(['passkeys_count', 'created_at']),
+            )
             ->emptyStateActions(self::headerActions())
             ->emptyState(
                 heading: 'No users match this view',

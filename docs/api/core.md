@@ -394,7 +394,7 @@ The registrar names the classes directly. The aliases exist for applications tha
 
 ## Shared Inertia props
 
-`SharePanelData` shares seven props, each as a closure, so a request that never reaches a panel pays for none of them.
+`SharePanelData` shares ten props, each as a closure, so a request that never reaches a panel pays for none of them.
 
 | Prop | Shape |
 | --- | --- |

@@ -3,6 +3,9 @@ import { computed, defineAsyncComponent } from 'vue';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import { resolveFormComponent } from '@/panel/forms/registry';
 import type { CustomFieldDefinition, FormValue } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: CustomFieldDefinition;
@@ -49,7 +52,7 @@ const component = computed(() => {
             "
         />
         <p v-else class="text-sm text-muted-foreground">
-            This field has no renderer.
+            {{ t('forms.no_renderer') }}
         </p>
     </FieldWrapper>
 </template>

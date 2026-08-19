@@ -10,6 +10,9 @@ import PanelAuthLayout from '@/panel/layouts/PanelAuthLayout.vue';
 import type { PanelDefinition } from '@/panel/types/panel';
 import { update } from '@/routes/password';
 import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelBlankLayout });
 
@@ -22,8 +25,8 @@ defineProps<{
 </script>
 
 <template>
-    <PanelAuthLayout :panel="panel" title="Reset password">
-        <Head :title="`Reset password · ${panel.brandName}`" />
+    <PanelAuthLayout :panel="panel" :title="t('auth.reset_password')">
+        <Head :title="`${t('auth.reset_password')} · ${panel.brandName}`" />
 
         <Form
             v-slot="{ errors, processing }"
@@ -33,7 +36,7 @@ defineProps<{
             <input type="hidden" name="token" :value="token" />
 
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email">{{ t('auth.email') }}</Label>
                 <Input
                     id="email"
                     type="email"
@@ -46,7 +49,7 @@ defineProps<{
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">New password</Label>
+                <Label for="password">{{ t('auth.new_password') }}</Label>
                 <PasswordInput
                     id="password"
                     name="password"
@@ -59,7 +62,9 @@ defineProps<{
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">Confirm password</Label>
+                <Label for="password_confirmation">
+                    {{ t('auth.confirm_password') }}
+                </Label>
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
@@ -71,7 +76,7 @@ defineProps<{
 
             <Button type="submit" class="w-full" :disabled="processing">
                 <Spinner v-if="processing" />
-                Reset password
+                {{ t('auth.reset_password') }}
             </Button>
         </Form>
     </PanelAuthLayout>

@@ -8,9 +8,9 @@
 *.vue diff=html
 *.ts  diff=typescript
 
-# Kept out of the distributed package. `src`, `config`, `database`, `stubs`
-# and `resources` are what an application installs; everything else is how
-# this repository is developed.
+# Kept out of the distributed package. `src`, `config`, `database`, `lang`,
+# `stubs` and `resources` are what an application installs; everything else is
+# how this repository is developed.
 #
 # `package.json` is deliberately NOT in this list, however much it looks like
 # a development file. `FrontendRequirements::npmPackages()` reads it at

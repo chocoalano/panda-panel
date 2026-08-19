@@ -17,6 +17,7 @@ use PandaPanel\Exceptions\PanelRegistrationException;
 use PandaPanel\Forms\FormSchema;
 use PandaPanel\Support\Breadcrumb;
 use PandaPanel\Support\ClusterNavigation;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\NavigationGroupName;
 use PandaPanel\Support\NavigationItem;
 use PandaPanel\Widgets\Support\WidgetFilters;
@@ -122,12 +123,37 @@ abstract class Page implements PageContract
 
     public static function title(): string
     {
-        return static::$title ?? Str::headline(class_basename(static::class));
+        return static::$title ?? Label::resolve(
+            'pages',
+            class_basename(static::class),
+            static fn (): string => Str::headline(class_basename(static::class)),
+        );
     }
 
     public static function heading(): string
     {
         return static::$heading ?? static::title();
+    }
+
+    /**
+     * The line under the heading.
+     *
+     * A method rather than a direct read of the property, so a page whose
+     * subheading is translated has somewhere to put `__()` — a static
+     * property is initialized before the translator can answer. Every page
+     * that assigns the property still works: this is what reads it.
+     */
+    public static function subheading(): ?string
+    {
+        return static::$subheading;
+    }
+
+    /**
+     * Which navigation group this page sits in, for the same reason.
+     */
+    public static function navigationGroup(): string|BackedEnum|null
+    {
+        return static::$navigationGroup;
     }
 
     public static function canAccess(): bool
@@ -147,7 +173,7 @@ abstract class Page implements PageContract
             icon: static::$navigationIcon,
             activeIcon: static::activeNavigationIcon(),
             sort: static::$navigationSort,
-            group: static::$navigationGroup,
+            group: static::navigationGroup(),
         );
     }
 
@@ -187,10 +213,10 @@ abstract class Page implements PageContract
     public function breadcrumbs(): array
     {
         $crumbs = [
-            Breadcrumb::make('Dashboard')->url($this->dashboardUrl()),
+            Breadcrumb::make(__('panda-panel::pages.dashboard.title'))->url($this->dashboardUrl()),
         ];
 
-        $group = NavigationGroupName::resolve(static::$navigationGroup);
+        $group = NavigationGroupName::resolve(static::navigationGroup());
 
         if ($group !== null) {
             $crumbs[] = Breadcrumb::make($group);
@@ -273,7 +299,7 @@ abstract class Page implements PageContract
         return [
             'title' => static::title(),
             'heading' => static::heading(),
-            'subheading' => static::$subheading,
+            'subheading' => static::subheading(),
             'breadcrumbs' => array_map(
                 static fn (Breadcrumb $crumb): array => $crumb->toArray(),
                 $this->breadcrumbs(),

@@ -21,6 +21,9 @@ import type {
     ModalWidth,
 } from '@/panel/types/action';
 import type { FormDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * The one dialog every action opens.
@@ -274,7 +277,7 @@ const { hook } = usePanelStyling();
                     {{ description }}
                 </DialogDescription>
                 <DialogDescription v-else-if="failed">
-                    This form could not be loaded.
+                    {{ t('forms.load_failed') }}
                 </DialogDescription>
             </DialogHeader>
 
@@ -341,7 +344,7 @@ const { hook } = usePanelStyling();
                     :disabled="processing"
                     @click="emit('cancel')"
                 >
-                    {{ modal.cancelLabel ?? 'Cancel' }}
+                    {{ modal.cancelLabel ?? t('actions.cancel') }}
                 </Button>
                 <Button
                     v-if="action?.confirmation || action?.type === 'callback'"

@@ -113,7 +113,7 @@ final class Xlsx
         $zip = new ZipArchive;
 
         if ($zip->open($path) !== true) {
-            throw new SpreadsheetException('That file is not a readable spreadsheet.');
+            throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.unreadable'));
         }
 
         try {
@@ -123,7 +123,7 @@ final class Xlsx
             $xml = @simplexml_load_string($sheet, SimpleXMLElement::class, LIBXML_NONET);
 
             if ($xml === false) {
-                throw new SpreadsheetException('That spreadsheet could not be read.');
+                throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.read_failed'));
             }
 
             foreach ($xml->sheetData->row as $row) {
@@ -219,7 +219,7 @@ final class Xlsx
             }
         }
 
-        throw new SpreadsheetException('That workbook has no readable sheet.');
+        throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.no_sheet'));
     }
 
     private static function part(ZipArchive $zip, string $name, int $maxBytes, bool $required): ?string
@@ -228,7 +228,7 @@ final class Xlsx
 
         if ($stat === false) {
             if ($required) {
-                throw new SpreadsheetException('That workbook has no readable sheet.');
+                throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.no_sheet'));
             }
 
             return null;
@@ -237,21 +237,21 @@ final class Xlsx
         $size = $stat['size'];
 
         if ($size > $maxBytes) {
-            throw new SpreadsheetException('That spreadsheet is too large to read safely.');
+            throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.too_large'));
         }
 
         $contents = $zip->getFromName($name);
 
         if ($contents === false) {
             if ($required) {
-                throw new SpreadsheetException('That workbook has no readable sheet.');
+                throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.no_sheet'));
             }
 
             return null;
         }
 
         if (strlen($contents) > $maxBytes) {
-            throw new SpreadsheetException('That spreadsheet is too large to read safely.');
+            throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.too_large'));
         }
 
         return $contents;

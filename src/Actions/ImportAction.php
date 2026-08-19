@@ -58,14 +58,14 @@ final class ImportAction
     public static function make(string $importer, string $resource): Action
     {
         return Action::make('import')
-            ->label('Import')
+            ->label(__('panda-panel::actions.import.label'))
             ->icon('upload')
             ->variant(ActionVariant::Outline)
-            ->modalHeading('Import records')
-            ->modalSubmitLabel('Import')
+            ->modalHeading(__('panda-panel::actions.import.modal_heading'))
+            ->modalSubmitLabel(__('panda-panel::actions.import.submit'))
             ->modalWidth(ModalWidth::Large)
             ->modal(static function (Modal $modal): void {
-                $modal->description('Upload a CSV or Excel file, then say which column is which.');
+                $modal->description(__('panda-panel::actions.import.description'));
 
                 // A long dialog with an upload in it is exactly where a stray
                 // click outside costs the most.
@@ -100,12 +100,12 @@ final class ImportAction
                 // Two hundred options is a scroll, not a list. Searchable
                 // turns "which one is BC again" into typing it.
                 ->searchable()
-                ->helperText($column->isRequired() ? 'Required' : null);
+                ->helperText($column->isRequired() ? __('panda-panel::actions.import.required') : null);
         }
 
         return FormSchema::make()->schema([
             FileUpload::make('file')
-                ->label('File')
+                ->label(__('panda-panel::actions.import.file'))
                 ->disk($importer::disk())
                 ->directory($importer::directory())
                 ->acceptedTypes(array_merge(
@@ -114,8 +114,8 @@ final class ImportAction
                 ))
                 ->maxSize(20480)
                 ->required(),
-            Section::make('Columns')
-                ->description('Leave a column blank to skip it. Blank columns are guessed from the headings.')
+            Section::make(__('panda-panel::actions.import.columns_section'))
+                ->description(__('panda-panel::actions.import.mapping_hint'))
                 ->columns(2)
                 ->schema($mapping),
         ]);
@@ -195,19 +195,19 @@ final class ImportAction
 
         $owner = $user->getAuthIdentifier();
 
-        abort_unless(is_int($owner) || is_string($owner), 500, 'That user has no key to file an import under.');
+        abort_unless(is_int($owner) || is_string($owner), 500, __('panda-panel::errors.no_import_owner'));
 
         $panel = app(PanelManager::class)->currentPanel();
 
-        abort_if($panel === null, 500, 'No panel is resolved for this request.');
+        abort_if($panel === null, 500, __('panda-panel::errors.no_panel'));
 
         $stored = $data['file'] ?? null;
 
-        abort_unless(is_string($stored) && $stored !== '', 422, 'No file was uploaded.');
+        abort_unless(is_string($stored) && $stored !== '', 422, __('panda-panel::errors.no_file_uploaded'));
 
         $disk = Storage::disk($importer::disk());
 
-        abort_unless($disk->exists($stored), 404, 'That file is no longer there.');
+        abort_unless($disk->exists($stored), 404, __('panda-panel::errors.file_gone'));
 
         // Both readers need a real path: a CSV streams from a handle and an
         // XLSX is a zip opened by name. A remote disk gets a local copy for
@@ -237,7 +237,7 @@ final class ImportAction
 
             Inertia::flash('toast', [
                 'type' => 'info',
-                'message' => 'Your import has started. You will be notified when it finishes.',
+                'message' => __('panda-panel::actions.import.started'),
             ]);
 
             return;
@@ -263,7 +263,7 @@ final class ImportAction
                 ->broadcast(false)
                 ->actions([
                     NotificationAction::make('failed-rows')
-                        ->label('Download failed rows')
+                        ->label(__('panda-panel::actions.import.download_failed_rows'))
                         ->url($url),
                 ])
                 ->send($user);
@@ -273,7 +273,7 @@ final class ImportAction
             'type' => $result['failed'] === 0 ? 'success' : 'warning',
             'message' => $importer::completedMessage($result['imported'], $result['failed']),
             'url' => $url,
-            'urlLabel' => 'Download failed rows',
+            'urlLabel' => __('panda-panel::actions.import.download_failed_rows'),
         ]);
     }
 

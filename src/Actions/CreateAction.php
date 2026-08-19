@@ -30,7 +30,9 @@ final class CreateAction
     public static function make(string $resource): Action
     {
         return Action::make('create')
-            ->label('New '.mb_strtolower($resource::label()))
+            ->label(__('panda-panel::actions.create.label', [
+                'label' => mb_strtolower($resource::label()),
+            ]))
             ->icon('plus')
             ->variant(ActionVariant::Default)
             ->url(static fn (): string => $resource::url('create'))
@@ -50,12 +52,18 @@ final class CreateAction
     public static function modal(string $resource): Action
     {
         return Action::make('create')
-            ->label('New '.mb_strtolower($resource::label()))
+            ->label(__('panda-panel::actions.create.label', [
+                'label' => mb_strtolower($resource::label()),
+            ]))
             ->icon('plus')
             ->variant(ActionVariant::Default)
-            ->modalHeading('New '.mb_strtolower($resource::label()))
-            ->modalSubmitLabel('Create')
-            ->successMessage($resource::label().' created.')
+            ->modalHeading(__('panda-panel::actions.create.modal_heading', [
+                'label' => mb_strtolower($resource::label()),
+            ]))
+            ->modalSubmitLabel(__('panda-panel::actions.create.submit'))
+            ->successMessage(__('panda-panel::actions.create.success', [
+                'label' => $resource::label(),
+            ]))
             ->schema(static fn (): FormSchema => $resource::form(
                 FormSchema::make()->model($resource::getModel())->forPage('create'),
             ))

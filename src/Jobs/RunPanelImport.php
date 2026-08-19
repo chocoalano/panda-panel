@@ -97,7 +97,7 @@ final class RunPanelImport implements ShouldQueue
         if ($result['report'] !== null) {
             $notification->actions([
                 NotificationAction::make('failed-rows')
-                    ->label('Download failed rows')
+                    ->label(__('panda-panel::actions.import.download_failed_rows'))
                     ->url(route($panel->routeName('import-file'), [
                         'file' => $result['report'],
                         'importer' => $importer,
@@ -134,11 +134,11 @@ final class RunPanelImport implements ShouldQueue
         }
 
         Notification::make('import-failed')
-            ->title('Import failed')
+            ->title(__('panda-panel::actions.import.failed_title'))
             // The exception's own message rather than a generic sentence: a
             // reader that says "unsupported file format" or "column count
             // mismatch on row 12" is telling somebody how to fix their file.
-            ->body($exception?->getMessage() ?? 'The file could not be read.')
+            ->body($exception?->getMessage() ?? __('panda-panel::actions.import.failed_body'))
             ->danger()
             ->icon('triangle-alert')
             ->persistent()

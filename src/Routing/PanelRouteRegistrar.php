@@ -18,6 +18,7 @@ use PandaPanel\Http\Controllers\PanelFormOptionsController;
 use PandaPanel\Http\Controllers\PanelFormStateController;
 use PandaPanel\Http\Controllers\PanelImportController;
 use PandaPanel\Http\Controllers\PanelIntegrationController;
+use PandaPanel\Http\Controllers\PanelLocaleController;
 use PandaPanel\Http\Controllers\PanelNotificationController;
 use PandaPanel\Http\Controllers\PanelPageController;
 use PandaPanel\Http\Controllers\PanelRelationController;
@@ -29,6 +30,7 @@ use PandaPanel\Http\Middleware\RequireTwoFactor;
 use PandaPanel\Http\Middleware\ResolvePanel;
 use PandaPanel\Http\Middleware\ResolveParentRecord;
 use PandaPanel\Http\Middleware\ResolveTenant;
+use PandaPanel\Http\Middleware\SetPanelLocale;
 use PandaPanel\Pages\Page;
 use PandaPanel\Resources\Pages\ResourcePage;
 use PandaPanel\Resources\Resource as PanelResource;
@@ -116,6 +118,10 @@ final class PanelRouteRegistrar
             'middleware' => [
                 ...$panel->getMiddleware(),
                 ResolvePanel::class.':'.$panel->getId(),
+                // Before the guards and before every controller: a schema is
+                // built with its labels already resolved, so a controller
+                // that ran first would have built it in the wrong language.
+                SetPanelLocale::class.':'.$panel->getId(),
                 // After the panel is resolved, so it can be asked whether it
                 // demands one. A no-op for a panel that does not.
                 RequireTwoFactor::class.':'.$panel->getId(),
@@ -188,6 +194,11 @@ final class PanelRouteRegistrar
             $this->router
                 ->get('imports/{file}', PanelImportController::class)
                 ->name('import-file');
+
+            // Changing the language, for somebody signed in.
+            $this->router
+                ->post('locale', PanelLocaleController::class)
+                ->name('locale');
 
             // The notification centre. Every route is scoped to the
             // authenticated user's own rows, so the scope is the
@@ -270,10 +281,22 @@ final class PanelRouteRegistrar
             'middleware' => [
                 ...$panel->getBaseMiddleware(),
                 ResolvePanel::class.':'.$panel->getId(),
+                // A login screen is exactly where somebody notices they are
+                // reading the wrong language, and the switcher on it has to
+                // work before there is an account to remember the choice on.
+                SetPanelLocale::class.':'.$panel->getId(),
             ],
         ];
 
         $this->router->group($guest, function () use ($panel): void {
+            // The same controller, reachable before signing in. A reader who
+            // cannot read the login screen cannot sign in to reach the other
+            // one, and the choice is in the session either way — so it
+            // survives the sign-in that follows.
+            $this->router
+                ->post('locale', PanelLocaleController::class)
+                ->name('auth.locale');
+
             $this->router
                 ->get('login', [PanelAuthController::class, 'login'])
                 ->name('auth.login');

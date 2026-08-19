@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace PandaPanel\Support;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 use PandaPanel\Resources\Pages\ManageRelatedRecords;
 use PandaPanel\Resources\Resource as PanelResource;
 
@@ -54,7 +53,7 @@ final class RecordSubNavigation
 
             $items[] = [
                 'key' => $key,
-                'label' => Str::headline($key),
+                'label' => __('panda-panel::pages.record_navigation.'.$key),
                 'href' => $resource::url($key, $record),
                 'icon' => $page['icon'],
                 'active' => $key === $currentPage,

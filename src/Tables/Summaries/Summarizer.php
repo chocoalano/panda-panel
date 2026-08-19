@@ -8,6 +8,8 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Str;
+use PandaPanel\Support\Format;
+use PandaPanel\Support\Label;
 
 /**
  * One figure under a column.
@@ -85,7 +87,11 @@ abstract class Summarizer
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->getName());
+        return $this->label ?? Label::resolve(
+            'fields',
+            $this->getName(),
+            fn (): string => Str::headline($this->getName()),
+        );
     }
 
     /**
@@ -136,8 +142,8 @@ abstract class Summarizer
 
         return match (true) {
             $value === null => '—',
-            is_float($value) => rtrim(rtrim(number_format($value, 2, '.', ','), '0'), '.'),
-            is_int($value) => number_format($value),
+            is_float($value) => Format::trimmedNumber($value),
+            is_int($value) => Format::number($value),
             is_scalar($value) => (string) $value,
             default => '—',
         };

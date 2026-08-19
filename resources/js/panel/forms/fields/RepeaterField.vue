@@ -8,6 +8,9 @@ import type {
     FormValues,
     RepeaterFieldDefinition,
 } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: RepeaterFieldDefinition;
@@ -197,7 +200,7 @@ function toggle(index: number): void {
                             :aria-label="`Remove ${itemLabel(index)}`"
                             @click="remove(index)"
                         >
-                            Remove
+                            {{ t('forms.remove') }}
                         </Button>
                     </div>
                 </div>
@@ -218,7 +221,7 @@ function toggle(index: number): void {
             </div>
 
             <p v-if="items.length === 0" class="text-sm text-muted-foreground">
-                No entries yet.
+                {{ t('forms.no_entries') }}
             </p>
 
             <Button

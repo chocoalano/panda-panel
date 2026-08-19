@@ -58,7 +58,7 @@ final class ResolveTenant
 
         $tenant = $panel->resolveTenant($request, $user);
 
-        abort_if($tenant === null, 404, 'No such tenant.');
+        abort_if($tenant === null, 404, __('panda-panel::errors.no_such_tenant'));
         abort_unless(Tenancy::allows($user, $tenant, $panel), 403);
 
         Tenancy::bind($tenant);

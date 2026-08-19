@@ -212,6 +212,85 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Locales
+    |--------------------------------------------------------------------------
+    |
+    | The languages a reader may switch the panel between, as
+    | `code => name in that language`.
+    |
+    | Empty by default, and empty means no switcher: an application that
+    | serves one language should not grow a language menu in every panel
+    | header because it upgraded. Setting one locale is the same as setting
+    | none — there is nothing to switch to.
+    |
+    |   'locales' => [
+    |       'en' => 'English',
+    |       'id' => 'Bahasa Indonesia',
+    |   ],
+    |
+    | This decides only the *switcher*. The panel already follows
+    | `app()->getLocale()` however that was set, so an application with
+    | `APP_LOCALE=id` and nothing here renders entirely in Indonesian.
+    |
+    | The names are written in their own language rather than translated,
+    | because somebody looking for their language is looking for the word they
+    | would use for it — a reader who cannot read the current locale cannot
+    | read "Indonesian" in it either.
+    |
+    | The package ships `en` and `id`. Any other code needs
+    | `lang/vendor/panda-panel/{code}/` — see the Translations guide. A code
+    | listed here with no files falls back to `fallback_locale` rather than
+    | rendering keys.
+    |
+    | A panel narrows this with `->locales([...])` when one panel serves a
+    | different audience from another.
+    |
+    */
+
+    'locales' => [
+        // 'en' => 'English',
+        // 'id' => 'Bahasa Indonesia',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Derived Labels
+    |--------------------------------------------------------------------------
+    |
+    | Where the panel looks for your words before it derives its own.
+    |
+    | A column named `created_at` renders as "Created At" and a resource for a
+    | `User` model as "User" — `Str::headline()`, and English. Before falling
+    | back to it, the panel asks this file for a translation keyed by the name
+    | it was about to headline:
+    |
+    |   // lang/id/panel.php
+    |   return [
+    |       'fields' => ['created_at' => 'Dibuat pada'],
+    |       'resources' => ['User' => 'Pengguna'],
+    |   ];
+    |
+    | One entry, and every column, field, entry, filter and export column of
+    | that name follows it across every panel. The file is the application's,
+    | because these are the application's words — this package translates only
+    | what this package wrote.
+    |
+    | Nothing is required. With no such file the behaviour is what it always
+    | was: `->label()` where it is set, `Str::headline()` everywhere else.
+    | `->label()` is still checked first, so one table that needs a different
+    | word says so without changing anything here.
+    |
+    | `file` is the name of that file under `lang/{locale}/`, without the
+    | extension. Change it if `panel` is a name your application already uses.
+    |
+    */
+
+    'labels' => [
+        'file' => 'panel',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Frontend
     |--------------------------------------------------------------------------
     |

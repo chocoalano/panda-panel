@@ -13,6 +13,9 @@ import PanelAuthLayout from '@/panel/layouts/PanelAuthLayout.vue';
 import type { PanelDefinition } from '@/panel/types/panel';
 import { store } from '@/routes/login';
 import PanelBlankLayout from '@/panel/layouts/PanelBlankLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelBlankLayout });
 
@@ -39,10 +42,10 @@ defineProps<{
 <template>
     <PanelAuthLayout
         :panel="panel"
-        title="Sign in"
-        :description="`Enter your details to continue to ${panel.brandName}.`"
+        :title="t('auth.sign_in')"
+        :description="t('auth.login_description', { brand: panel.brandName })"
     >
-        <Head :title="`Log in · ${panel.brandName}`" />
+        <Head :title="`${t('auth.log_in')} · ${panel.brandName}`" />
 
         <div
             v-if="status"
@@ -60,7 +63,7 @@ defineProps<{
             class="flex flex-col gap-6"
         >
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email">{{ t('auth.email') }}</Label>
                 <Input
                     id="email"
                     type="email"
@@ -68,20 +71,20 @@ defineProps<{
                     required
                     autofocus
                     autocomplete="email"
-                    placeholder="email@example.com"
+                    :placeholder="t('auth.email_placeholder')"
                 />
                 <InputError :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
                 <div class="flex items-center justify-between">
-                    <Label for="password">Password</Label>
+                    <Label for="password">{{ t('auth.password') }}</Label>
                     <TextLink
                         v-if="canResetPassword"
                         :href="`/${panel.path}/forgot-password`"
                         class="text-sm"
                     >
-                        Forgot your password?
+                        {{ t('auth.forgot_password_link') }}
                     </TextLink>
                 </div>
                 <PasswordInput
@@ -89,27 +92,29 @@ defineProps<{
                     name="password"
                     required
                     autocomplete="current-password"
-                    placeholder="Password"
+                    :placeholder="t('auth.password')"
                 />
                 <InputError :message="errors.password" />
             </div>
 
             <Label for="remember" class="flex items-center space-x-3">
                 <Checkbox id="remember" name="remember" />
-                <span>Remember me</span>
+                <span>{{ t('auth.remember_me') }}</span>
             </Label>
 
             <Button type="submit" class="w-full" :disabled="processing">
                 <Spinner v-if="processing" />
-                Log in
+                {{ t('auth.log_in') }}
             </Button>
 
             <p
                 v-if="canRegister"
                 class="text-center text-sm text-muted-foreground"
             >
-                Don't have an account?
-                <TextLink :href="`/${panel.path}/register`">Sign up</TextLink>
+                {{ t('auth.no_account') }}
+                <TextLink :href="`/${panel.path}/register`">
+                    {{ t('auth.sign_up') }}
+                </TextLink>
             </p>
         </Form>
     </PanelAuthLayout>

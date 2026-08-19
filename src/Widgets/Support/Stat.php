@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PandaPanel\Widgets\Support;
 
+use PandaPanel\Support\Format;
 use PandaPanel\Support\SafeUrl;
 use PandaPanel\Widgets\Enums\StatColor;
 
@@ -123,7 +124,7 @@ final readonly class Stat
             return (string) $this->value;
         }
 
-        $formatted = number_format(
+        $formatted = Format::number(
             (float) $this->value,
             $this->decimals ?? (is_float($this->value) ? 2 : 0),
         );

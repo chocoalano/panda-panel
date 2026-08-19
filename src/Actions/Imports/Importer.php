@@ -97,13 +97,12 @@ abstract class Importer
     public static function completedMessage(int $imported, int $failed): string
     {
         if ($failed === 0) {
-            return sprintf('Imported %d rows.', $imported);
+            return __('panda-panel::actions.import.completed', ['count' => $imported]);
         }
 
-        return sprintf(
-            'Imported %d rows. %d could not be imported — download the report to see why.',
-            $imported,
-            $failed,
-        );
+        return __('panda-panel::actions.import.completed_with_failures', [
+            'count' => $imported,
+            'failed' => $failed,
+        ]);
     }
 }

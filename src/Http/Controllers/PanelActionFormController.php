@@ -65,11 +65,11 @@ final class PanelActionFormController
         $action = $this->resolveAction($resource, (string) $validated['scope'], (string) $validated['action']);
 
         abort_unless($action->isAuthorizedFor($record), 403);
-        abort_unless($action->hasForm(), 400, 'This action has no form.');
+        abort_unless($action->hasForm(), 400, __('panda-panel::errors.action_no_form'));
 
         $schema = $action->resolveSchema($record);
 
-        abort_if($schema === null, 400, 'This action has no form.');
+        abort_if($schema === null, 400, __('panda-panel::errors.action_no_form'));
 
         $modal = $action->getModal();
 
@@ -127,11 +127,11 @@ final class PanelActionFormController
         $action = $this->resolveAction($resource, $scope, (string) $validated['action']);
 
         abort_unless($action->isAuthorizedFor($record), 403);
-        abort_unless($action->hasForm(), 400, 'This action has no form.');
+        abort_unless($action->hasForm(), 400, __('panda-panel::errors.action_no_form'));
 
         $schema = $action->resolveSchema($record);
 
-        abort_if($schema === null, 400, 'This action has no form.');
+        abort_if($schema === null, 400, __('panda-panel::errors.action_no_form'));
 
         $data = $schema->dehydrate(
             $request->validate($schema->validationRules($record)),
@@ -162,14 +162,14 @@ final class PanelActionFormController
         }
 
         if ($record === null) {
-            abort_unless($action->isTableExecutable(), 400, 'This action cannot be executed.');
+            abort_unless($action->isTableExecutable(), 400, __('panda-panel::errors.action_not_executable'));
 
             $action->executeWithoutRecord($data);
 
             return;
         }
 
-        abort_unless($action->isExecutable(), 400, 'This action cannot be executed.');
+        abort_unless($action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
 
         $action->execute($record, $data);
     }
@@ -190,14 +190,14 @@ final class PanelActionFormController
 
         $keys = array_values(array_unique($keys));
 
-        abort_if($keys === [], 422, 'Invalid record keys.');
+        abort_if($keys === [], 422, __('panda-panel::errors.invalid_record_keys'));
 
         $records = $resource::findRecords($keys);
 
         // Keys outside the resource scope disappear in the lookup, so the
         // count check is what turns that into a visible failure rather than
         // a partial run.
-        abort_if($records->count() !== count($keys), 404, 'Some records could not be found.');
+        abort_if($records->count() !== count($keys), 404, __('panda-panel::errors.records_not_found'));
 
         return $records;
     }
@@ -214,7 +214,7 @@ final class PanelActionFormController
             default => $resource::infolist(InfolistSchema::make())->getAction($name),
         };
 
-        abort_if($action === null, 404, 'Unknown action.');
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
 
         return $action;
     }
@@ -228,7 +228,7 @@ final class PanelActionFormController
             return null;
         }
 
-        abort_unless(is_string($key) || is_int($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         // Through the record lookup rather than the list query: an action can
         // legitimately address a record the list hides, a restore being the
@@ -264,7 +264,7 @@ final class PanelActionFormController
         $key = $request->input('parent');
 
         abort_if($parentResource === null, 404);
-        abort_unless(is_string($key) || is_int($key), 422, 'Invalid parent key.');
+        abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_parent_key'));
 
         $parent = ParentRecord::resolve($parentResource, $key);
 
@@ -280,7 +280,7 @@ final class PanelActionFormController
     {
         $resource = $this->manager->resources($panel)->bySlug($slug);
 
-        abort_if($resource === null, 404, 'Unknown resource.');
+        abort_if($resource === null, 404, __('panda-panel::errors.unknown_resource'));
 
         /** @var class-string<PanelResource> $resource */
         return $resource;

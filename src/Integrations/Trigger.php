@@ -53,14 +53,14 @@ enum Trigger: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::BeforeCreate => 'Before create',
-            self::AfterCreate => 'After create',
-            self::BeforeUpdate => 'Before update',
-            self::AfterUpdate => 'After update',
-            self::BeforeDelete => 'Before delete',
-            self::AfterDelete => 'After delete',
-        };
+        return __('panda-panel::integrations.trigger.'.match ($this) {
+            self::BeforeCreate => 'before_create',
+            self::AfterCreate => 'after_create',
+            self::BeforeUpdate => 'before_update',
+            self::AfterUpdate => 'after_update',
+            self::BeforeDelete => 'before_delete',
+            self::AfterDelete => 'after_delete',
+        });
     }
 
     /**

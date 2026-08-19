@@ -24,15 +24,15 @@ final class ForceDeleteAction
     public static function make(string $resource): Action
     {
         return Action::make('forceDelete')
-            ->label('Delete permanently')
+            ->label(__('panda-panel::actions.force_delete.label'))
             ->icon('trash-2')
             ->variant(ActionVariant::Destructive)
             ->requiresConfirmation(
-                heading: 'Delete this record permanently?',
-                description: 'This cannot be undone and the record cannot be restored afterwards.',
-                button: 'Delete permanently',
+                heading: __('panda-panel::actions.force_delete.heading'),
+                description: __('panda-panel::actions.force_delete.description'),
+                button: __('panda-panel::actions.force_delete.button'),
             )
-            ->successMessage('Record permanently deleted.')
+            ->successMessage(__('panda-panel::actions.force_delete.success'))
             ->visible(static fn (?Model $record): bool => $record !== null
                 && TrashedRecord::isTrashed($record))
             ->authorize(static fn (?Model $record): bool => $record !== null

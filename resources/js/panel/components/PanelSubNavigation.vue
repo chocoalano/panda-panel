@@ -7,6 +7,9 @@ import type {
     SubNavigationItem,
     SubNavigationPosition,
 } from '@/panel/types/page';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * The links between one record's pages.
@@ -28,7 +31,7 @@ const isTabs = computed(() => props.position === 'top');
 
 <template>
     <nav
-        aria-label="Record navigation"
+        :aria-label="t('shell.record_navigation')"
         :class="
             isTabs ? 'flex items-center gap-1 border-b' : 'flex flex-col gap-1'
         "

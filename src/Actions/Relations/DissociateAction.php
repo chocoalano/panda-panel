@@ -25,15 +25,15 @@ final class DissociateAction
     public static function make(string $manager, Model $owner): Action
     {
         return Action::make('dissociate')
-            ->label('Dissociate')
+            ->label(__('panda-panel::actions.relations.dissociate.label'))
             ->icon('unlink')
             ->variant(ActionVariant::Ghost)
             ->requiresConfirmation(
-                heading: 'Dissociate this record?',
-                description: 'The record is kept but no longer belongs to this one.',
-                button: 'Dissociate',
+                heading: __('panda-panel::actions.relations.dissociate.heading'),
+                description: __('panda-panel::actions.relations.dissociate.description'),
+                button: __('panda-panel::actions.relations.dissociate.button'),
             )
-            ->successMessage('Record dissociated.')
+            ->successMessage(__('panda-panel::actions.relations.dissociate.success'))
             ->visible(static fn (): bool => $manager::isOneToMany($owner))
             ->authorize(static fn (?Model $record): bool => $record !== null
                 && $manager::canDissociate($owner, $record))

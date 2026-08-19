@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use PandaPanel\Forms\Components\Field;
 use PandaPanel\Forms\Components\FormComponent;
 use PandaPanel\Support\ColumnCount;
+use PandaPanel\Support\Label;
 
 /**
  * Fields belonging to a single related record — a `BelongsTo`, a `HasOne`, or
@@ -272,7 +273,11 @@ final class Relationship extends FormComponent
         return [
             'component' => 'relationship',
             'relation' => $this->relation,
-            'heading' => $this->heading ?? Str::headline($this->relation),
+            'heading' => $this->heading ?? Label::resolve(
+                'relations',
+                $this->relation,
+                fn (): string => Str::headline($this->relation),
+            ),
             'description' => $this->description,
             'columns' => $this->columns,
             'schema' => $this->serializeChildren($related, $page),

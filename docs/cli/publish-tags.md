@@ -1,9 +1,10 @@
 # Publish Tags
 
-Four `vendor:publish` tags, plus one umbrella tag, are everything this package copies into an
-application: the config file, the Vue frontend, the migrations, and the generator stubs. Reach for
-them when you want one of those things on its own — `php artisan panel:install` runs the same
-publishes in the right order and does the rest of the install around them.
+Five `vendor:publish` tags, plus one umbrella tag, are everything this package copies into an
+application: the config file, the Vue frontend, the migrations, the generator stubs, and the
+translations. Reach for them when you want one of those things on its own — `php artisan
+panel:install` runs the same publishes in the right order and does the rest of the install
+around them.
 
 ## A minimal working example
 
@@ -35,6 +36,10 @@ $this->publishes([
     $this->packagePath('stubs/panel') => base_path('stubs/panel'),
 ], 'panda-panel-stubs');
 
+$this->publishes([
+    $this->packagePath('lang') => $this->app->langPath('vendor/panda-panel'),
+], ['panda-panel', 'panda-panel-translations']);
+
 $this->publishes(PublishedAssets::map(), ['panda-panel', 'panda-panel-assets']);
 ```
 
@@ -44,7 +49,8 @@ $this->publishes(PublishedAssets::map(), ['panda-panel', 'panda-panel-assets']);
 | `panda-panel-assets` | the seven frontend sources | `resources/js/**`, `resources/css/panda-panel.css` | yes |
 | `panda-panel-migrations` | `database/migrations` | `database/migrations` | yes |
 | `panda-panel-stubs` | `stubs/panel` | `stubs/panel` | **no** |
-| `panda-panel` | config, migrations and assets together | as above | — |
+| `panda-panel-translations` | `lang/{en,id}` (nine files each) | `lang/vendor/panda-panel` | yes |
+| `panda-panel` | config, migrations, translations and assets together | as above | — |
 
 `registerPublishing()` runs only when `$this->app->runningInConsole()` is true. That is the only
 context `vendor:publish` exists in, but it also means a test that boots the application over HTTP
@@ -205,6 +211,25 @@ does not pass is never filled in.
 `panda-panel-stubs` is deliberately outside the umbrella tag. The stubs are only useful to a project
 that intends to change what it scaffolds, and publishing them by accident means later releases can
 no longer improve the generated code.
+
+## `panda-panel-translations`
+
+```bash
+php artisan vendor:publish --tag=panda-panel-translations
+```
+
+Copies `lang/en` and `lang/id` to `lang/vendor/panda-panel`. Laravel reads that directory *before*
+the package's own, so a published file overrides the package sentence for sentence — a file with
+one key in it changes one string and leaves the rest following the package.
+
+Nothing has to be published for either locale to work. English and Indonesian both ship inside the
+package and are registered by `loadTranslationsFrom()` at boot. This tag is for **rewording**, and
+publishing a whole file has a real cost: a published `lang/vendor/panda-panel/en/actions.php` stops
+following the package, so a key an upgrade adds will not reach your copy and renders as the raw
+key until you add it by hand.
+
+Adding a *third* locale needs no publish at all — write `lang/vendor/panda-panel/fr/` directly.
+See [Translations](../localization/translations.md).
 
 ## `panda-panel`
 
@@ -406,3 +431,4 @@ every file as edited.
 - [Migration Loading](../configuration/migrations.md)
 - [Configuration Reference](../configuration/panda-panel.md)
 - [Plugin Assets](../plugins/assets.md), [Plugin CLI](../plugins/cli.md)
+- [Translations](../localization/translations.md)

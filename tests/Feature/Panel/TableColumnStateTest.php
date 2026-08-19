@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use PandaPanel\Tables\CardLayout;
 use PandaPanel\Tables\Columns\ColorColumn;
 use PandaPanel\Tables\Columns\CustomColumn;
 use PandaPanel\Tables\Columns\IconColumn;
@@ -223,4 +224,65 @@ it('serializes a column definition free of closures', function (): void {
     ]);
 
     expect(json_encode($schema->toArray()))->not->toContain('Closure');
+});
+
+/*
+ * What a hidden column costs
+ */
+
+it('leaves a hidden column out of the row entirely', function (): void {
+    $formatted = 0;
+
+    $schema = TableSchema::make()->columns([
+        TextColumn::make('name'),
+        TextColumn::make('id')->formatUsing(function (mixed $value) use (&$formatted): mixed {
+            $formatted++;
+
+            return $value;
+        }),
+    ]);
+
+    $row = $schema->toRow($this->record, null, ['name']);
+
+    // Not read, not formatted, not sent. Hiding a column used to reduce only
+    // what Vue drew: the value was still read from the record, the closure
+    // still ran, and the cell still travelled.
+    expect($row['cells'])->toBe(['name' => 'Apollo'])
+        ->and($formatted)->toBe(0);
+});
+
+it('leaves the metadata of a hidden column out too', function (): void {
+    $schema = TableSchema::make()->columns([
+        TextColumn::make('name')->tooltip('Shown'),
+        TextColumn::make('id')->tooltip('Hidden'),
+    ]);
+
+    expect($schema->toRow($this->record, null, ['name'])['cellMeta'])
+        ->toBe(['name' => ['tooltip' => 'Shown']]);
+});
+
+it('still serializes every column when there is no arrangement to read', function (): void {
+    $schema = TableSchema::make()->columns([
+        TextColumn::make('name'),
+        TextColumn::make('id'),
+    ]);
+
+    // `null` is every caller with no visibility state to give — a testing
+    // helper, a widget built by hand — and it has to keep meaning "all".
+    expect($schema->toRow($this->record)['cells'])->toHaveKeys(['name', 'id']);
+});
+
+it('keeps a card layout its heading even when the column is hidden', function (): void {
+    $schema = TableSchema::make()
+        ->columns([
+            TextColumn::make('id'),
+            TextColumn::make('name'),
+        ])
+        ->cards(CardLayout::make()->title('name'));
+
+    // A card draws its heading whatever the column manager says, so the cell
+    // behind it has to be there. Dropping it would lose the card's title
+    // rather than one of its rows.
+    expect($schema->toRow($this->record, null, ['id'])['cells'])
+        ->toHaveKeys(['id', 'name']);
 });

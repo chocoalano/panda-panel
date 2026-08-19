@@ -22,7 +22,7 @@ final class ViewAction
     public static function make(string $resource): Action
     {
         return Action::make('view')
-            ->label('View')
+            ->label(__('panda-panel::actions.view.label'))
             ->icon('eye')
             ->url(static fn (Model $record): string => $resource::url('view', $record))
             ->visible(static fn (?Model $record): bool => $record !== null

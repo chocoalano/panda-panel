@@ -15,6 +15,9 @@ import { Spinner } from '@/components/ui/spinner';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import { fetchOptions, useOptionsUrl } from '@/panel/forms/optionsEndpoint';
 import type { SelectFieldDefinition, SelectOption } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: SelectFieldDefinition;
@@ -229,7 +232,7 @@ function toggle(value: string, checked: boolean): void {
                         v-if="options.length === 0"
                         class="text-sm text-muted-foreground"
                     >
-                        Nothing to choose from.
+                        {{ t('forms.select_empty') }}
                     </p>
                 </div>
             </div>
@@ -244,7 +247,9 @@ function toggle(value: string, checked: boolean): void {
             >
                 <SelectTrigger :id="field.name" class="w-full">
                     <SelectValue
-                        :placeholder="field.placeholder ?? 'Select...'"
+                        :placeholder="
+                            field.placeholder ?? t('forms.select_placeholder')
+                        "
                     />
                 </SelectTrigger>
                 <SelectContent>

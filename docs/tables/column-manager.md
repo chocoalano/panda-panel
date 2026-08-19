@@ -151,7 +151,7 @@ The `reference` column is in `visible` because it is not toggleable, and it sits
 
 ## Gotchas
 
-- **Hiding a column does not remove it from the payload.** Rows still carry every declared column's cell; visibility is presentation. A column that is expensive to compute and rarely wanted belongs behind a different table, not behind `visible(false)`.
+- **Hiding a column removes it from the payload.** A hidden column is not read from the record, not passed through `formatUsing()`, `urlUsing()` or `tooltip()`, and not sent — so hiding an expensive column genuinely stops paying for it. This used to be the opposite: every column was serialized and the frontend drew a subset. Two exceptions, both deliberate: a [card layout](card-layout.md) always keeps its image and title columns, because a card draws them whatever the arrangement says, and a caller with no arrangement to read gets every column. See [Query performance](../resources/performance.md).
 - **The manager cannot hide a non-toggleable column**, and the frontend does not show one as a toggle either — `columnManager.toggleable` is the list it renders from.
 - **Order and visibility are one decision each, remembered as a whole.** Sending `columns[visible]` without `columns[order]` leaves the order at its declared value, and vice versa.
 - **TanStack keeps no copy of this.** The server is the single source of truth for which columns are shown; a second copy in the client would be a second answer to the same question.

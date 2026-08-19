@@ -232,7 +232,7 @@ rather than leaving one of them unreachable: parameter names are erased before c
 
 ## Shared props
 
-`SharePanelData` shares seven props through `Inertia::share()`, which merges — the application's own
+`SharePanelData` shares ten props through `Inertia::share()`, which merges — the application's own
 `HandleInertiaRequests` is untouched. Every value is a closure, so a request that never reaches a
 panel pays for none of them, and nothing here is ever cached.
 

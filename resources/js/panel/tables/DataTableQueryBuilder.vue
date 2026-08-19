@@ -15,6 +15,9 @@ import type {
     QueryBuilderFilterDefinition,
     QueryBuilderRule,
 } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * A list of conditions the user composes.
@@ -132,7 +135,7 @@ function removeRule(index: number): void {
                 @update:model-value="(value) => onColumn(index, String(value))"
             >
                 <SelectTrigger class="h-8 w-40">
-                    <SelectValue placeholder="Column" />
+                    <SelectValue :placeholder="t('tables.column')" />
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem
@@ -156,7 +159,7 @@ function removeRule(index: number): void {
                 "
             >
                 <SelectTrigger class="h-8 w-40">
-                    <SelectValue placeholder="Condition" />
+                    <SelectValue :placeholder="t('tables.condition')" />
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem
@@ -193,7 +196,7 @@ function removeRule(index: number): void {
         <div>
             <Button v-if="canAdd" variant="outline" size="sm" @click="addRule">
                 <Plus />
-                Add condition
+                {{ t('tables.add_condition') }}
             </Button>
             <p
                 v-else-if="rules.length > 0"

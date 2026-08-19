@@ -31,7 +31,9 @@ final class AttachAction
     public static function make(string $resource, string $manager, Model $owner): Action
     {
         return Action::make('attach')
-            ->label('Attach '.$manager::title())
+            ->label(__('panda-panel::actions.relations.attach.label', [
+                'title' => $manager::title(),
+            ]))
             ->icon('link')
             ->variant(ActionVariant::Outline)
             ->form(static fn (): string => RelationEndpoints::form(

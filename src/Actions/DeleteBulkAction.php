@@ -26,22 +26,22 @@ final class DeleteBulkAction
     public static function make(string $resource): Action
     {
         return Action::make('delete')
-            ->label('Delete selected')
+            ->label(__('panda-panel::actions.delete_bulk.label'))
             ->icon('trash-2')
             ->variant(ActionVariant::Destructive)
             ->requiresConfirmation(
-                heading: 'Delete the selected records?',
-                description: 'This permanently removes every selected record. This cannot be undone.',
-                button: 'Delete',
+                heading: __('panda-panel::actions.delete_bulk.heading'),
+                description: __('panda-panel::actions.delete_bulk.description'),
+                button: __('panda-panel::actions.delete_bulk.button'),
             )
-            ->successMessage('Selected records deleted.')
+            ->successMessage(__('panda-panel::actions.delete_bulk.success'))
             ->authorize(static fn (?Model $record): bool => $record === null
                 ? $resource::canDeleteAny()
                 : $resource::canDelete($record))
             ->bulkAction(static function (Collection $records) use ($resource): void {
                 foreach ($records as $record) {
                     if (! $resource::canDelete($record)) {
-                        throw new HttpException(403, 'You may not delete every selected record.');
+                        throw new HttpException(403, __('panda-panel::actions.delete_bulk.denied'));
                     }
                 }
 

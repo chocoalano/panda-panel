@@ -28,7 +28,9 @@ final class CreateRelatedAction
     public static function make(string $resource, string $manager, Model $owner): Action
     {
         return Action::make('create')
-            ->label('New '.$manager::title())
+            ->label(__('panda-panel::actions.relations.create.label', [
+                'title' => $manager::title(),
+            ]))
             ->icon('plus')
             ->variant(ActionVariant::Default)
             ->form(static fn (): string => RelationEndpoints::form(

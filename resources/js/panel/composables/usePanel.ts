@@ -4,6 +4,7 @@ import { panelSharedProps } from '@/panel/types/shared';
 import type {
     PanelBroadcasting,
     PanelDefinition,
+    PanelLocales,
     PanelNotificationSettings,
     PanelSearchSettings,
     PanelShellSettings,
@@ -51,6 +52,7 @@ export type UsePanelReturn = {
     shell: ComputedRef<PanelShellSettings>;
     tenancy: ComputedRef<PanelTenancy | null>;
     canSwitchTenants: ComputedRef<boolean>;
+    locales: ComputedRef<PanelLocales | null>;
 };
 
 /**
@@ -103,6 +105,11 @@ export function usePanel(): UsePanelReturn {
                 },
         ),
         tenancy,
+        /**
+         * Null unless the panel offers more than one language — the server
+         * already decided that, so the frontend does not count again.
+         */
+        locales: computed(() => props.value.locales ?? null),
         /**
          * Two conditions, and the second is the one worth stating: a tenant
          * with no URL is a destination the switcher cannot send anybody to,

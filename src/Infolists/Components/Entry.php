@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use PandaPanel\Actions\Action;
 use PandaPanel\Infolists\Enums\EntryType;
+use PandaPanel\Support\Label;
 
 /**
  * Base for every infolist entry.
@@ -68,7 +69,11 @@ abstract class Entry extends InfolistComponent
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline(str_replace('.', ' ', $this->name));
+        return $this->label ?? Label::resolve(
+            'fields',
+            $this->name,
+            fn (): string => Str::headline(str_replace('.', ' ', $this->name)),
+        );
     }
 
     /**

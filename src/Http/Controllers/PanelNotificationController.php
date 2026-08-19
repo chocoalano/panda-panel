@@ -60,7 +60,7 @@ final class PanelNotificationController
         if ($id === null) {
             $user->unreadNotifications()->update(['read_at' => now()]);
         } else {
-            abort_unless(is_string($id), 422, 'Invalid notification.');
+            abort_unless(is_string($id), 422, __('panda-panel::errors.invalid_notification'));
 
             // Scoped to this user's notifications, so an id belonging to
             // somebody else matches nothing rather than 403s — which is the

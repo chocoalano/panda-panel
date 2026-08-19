@@ -53,13 +53,15 @@ Written down so they are not re-argued as bugs:
 | Explicit over magic | More verbose than Filament's conventions in places, for example `getId()` versus a combined accessor |
 | Dependency-free SVG chart | No tooltips, zoom or animation; in exchange no charting library and the widget union stays complete |
 | Panels listed by hand | One edit per new panel; in exchange registration order is visible |
-| No browser test runner | Client-side interaction is covered by types, the build and server-side request tests only |
+| No browser test runner | Client-side interaction is covered by types, the build and server-side request tests only. Pure frontend logic is unit-tested — see `D20`. |
 
 "No browser test runner" is a decision rather than a gap. A proposal to add one is a proposal to reverse a recorded trade-off, and it needs an ADR.
 
+`D20` narrows it rather than reversing it. The row is about *interaction* — a click, a popover, a component under a DOM. A plain function is not that: `npm run test` runs vitest over the frontend's pure modules, with no DOM and no component harness, and `resources/js/**/*.test.ts` is where those live.
+
 ## The decisions table
 
-The ADR ends with eighteen smaller decisions recorded during implementation, `D1` to `D18`. They are the ones that changed an API without changing the architecture:
+The ADR ends with twenty smaller decisions recorded during implementation, `D1` to `D20`. They are the ones that changed an API without changing the architecture:
 
 | # | Decision |
 | --- | --- |
@@ -81,6 +83,8 @@ The ADR ends with eighteen smaller decisions recorded during implementation, `D1
 | D16 | `render`/`handle` routing, with `store` and `update` route names |
 | D17 | Delete hooks live on `Action`, not on the page trait, because the endpoint runs without a page instance |
 | D18 | `Field::dehydrateTo()` maps a field onto a different attribute |
+| D19 | A card grid is a second renderer over one `TableSchema`, not an alternative page class |
+| D20 | Vitest unit-tests the frontend's pure modules; components and interaction stay uncovered by design |
 
 Three of them corrected an earlier mistake rather than choosing between options: D17 replaced two documented hooks that could never have been called, D14 replaced a shell that could never have been reached, and the phase 8 work replaced a `PanelContext` that leaked between requests. A row that records a correction is more useful than a quiet fix, because the next person to have the same idea reads why it did not work.
 

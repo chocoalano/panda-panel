@@ -7,6 +7,7 @@ namespace PandaPanel\Tables\Filters;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
+use PandaPanel\Support\Label;
 use PandaPanel\Tables\Enums\FilterType;
 
 /**
@@ -103,7 +104,11 @@ abstract class Filter
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? Label::resolve(
+            'fields',
+            $this->name,
+            fn (): string => Str::headline($this->name),
+        );
     }
 
     public function getColumn(): string

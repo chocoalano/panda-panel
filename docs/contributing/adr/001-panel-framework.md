@@ -175,7 +175,7 @@ The commands are registered as `optimize` hooks, so a deploy that already runs
 | Explicit over magic | More verbose than Filament's conventions in places, for example `getId()` versus a combined accessor |
 | Dependency-free SVG chart | No tooltips, zoom, or animation; in exchange no charting library and the widget union stays complete |
 | Panels listed by hand | One edit per new panel; in exchange registration order is visible |
-| No browser test runner | Client-side interaction is covered by types, the build, and server-side request tests only |
+| No browser test runner | Client-side *interaction* is covered by types, the build, and server-side request tests only. Pure frontend logic is unit-tested — see `D20`. |
 
 Known gaps, stated rather than implied:
 
@@ -230,6 +230,30 @@ single-path implementation would have been a dead end.
 | D16 | `render`/`handle` routing, with `store` and `update` route names |
 | D17 | Delete hooks live on `Action`, not on the page trait, because the endpoint runs without a page instance |
 | D18 | `Field::dehydrateTo()` maps a field onto a different attribute |
+| D19 | A card grid is a second renderer over one `TableSchema`, not the alternative page class the Future extensions table reserves for Kanban and calendar |
+| D20 | Vitest unit-tests the frontend's pure modules; components and interaction stay uncovered by design |
+
+D20 narrows the "no browser test runner" row rather than reversing it. That row was written about
+*interaction* — a click, a popover, a component under a DOM — and that is still covered by the
+types, the build, and the request tests that assert the payload a component is handed. What it was
+never meant to exclude is a plain function: how a card face resolves against a column arrangement,
+how a filter value becomes a query string, where a run of grouped rows breaks. Each of those decides
+something the server cannot check and the type system cannot state, and each was previously covered
+by reading it. `vitest run` covers those and nothing else; there is no DOM, no component harness,
+and adding one would be a different decision.
+
+D19 is the one that argues with a row above it, so it states its case here.
+The Future extensions table files "alternative presentations" under page
+classes, and that is right for Kanban and for a calendar: each needs its own
+query shape, its own interactions, and its own state. A card grid needs none
+of them. It shows the same records from the same query, narrowed by the same
+filters, ordered by the same whitelist, paged by the same paginator, and
+addressed by the same URL — a page class would have duplicated all five in
+order to change one template. What it did need was a sixth piece of state,
+`?layout=`, validated exactly as `perPage` is. Where the seam genuinely is
+elsewhere the table says so: a reorderable table offers no grid, because
+dragging into a wrapping grid is the different interaction that *would* need
+its own page.
 
 Three of these corrected an earlier mistake rather than choosing between
 options: D17 replaced two documented hooks that could never have been called,

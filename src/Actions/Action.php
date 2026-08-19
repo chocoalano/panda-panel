@@ -15,6 +15,7 @@ use PandaPanel\Actions\Support\Modal;
 use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\FormSchema;
 use PandaPanel\Support\DatabaseTransaction;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\SafeUrl;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -520,7 +521,11 @@ class Action
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? Label::resolve(
+            'actions',
+            $this->name,
+            fn (): string => Str::headline($this->name),
+        );
     }
 
     /**
@@ -655,24 +660,39 @@ class Action
         // write, not discovered halfway through.
         foreach ($records as $record) {
             if (! $this->isAuthorizedForEach($record)) {
-                throw new HttpException(403, sprintf(
-                    'You may not %s every selected record.',
-                    Str::lower($this->getLabel()),
-                ));
+                throw new HttpException(403, __('panda-panel::actions.bulk_denied', [
+                    'action' => Str::lower($this->getLabel()),
+                ]));
             }
         }
 
         $this->affected = $records->count();
 
-        if ($this->handleBulkUsing !== null) {
-            ($this->handleBulkUsing)($records, $data);
+        // One transaction for the selection, not one per record and not none
+        // at all. Both of those were the behaviour, and both surprised: a
+        // `bulkAction()` closure ran unwrapped, and the per-record fallback
+        // gave ten records ten transactions, so a failure on the seventh left
+        // six committed and six rows changed by an operation the user was told
+        // had failed.
+        //
+        // "All or nothing" is what a bulk action reads as, and it is already
+        // what every built-in one guarantees by opening its own transaction.
+        // Doing it here makes those a savepoint — the same outcome — and means
+        // a hand-written bulk action gets the guarantee without knowing to ask.
+        //
+        // Authorization stays outside it: it is a read that ends in a 403, and
+        // there is nothing to roll back when nothing has been written.
+        DatabaseTransaction::run($this->databaseTransaction, function () use ($records, $data): void {
+            if ($this->handleBulkUsing !== null) {
+                ($this->handleBulkUsing)($records, $data);
 
-            return;
-        }
+                return;
+            }
 
-        foreach ($records as $record) {
-            $this->execute($record, $data);
-        }
+            foreach ($records as $record) {
+                $this->execute($record, $data);
+            }
+        });
     }
 
     /**
@@ -716,7 +736,8 @@ class Action
             ))),
             'confirmation' => $this->requiresConfirmation ? [
                 'heading' => $this->confirmationHeading ?? sprintf('%s?', $this->getLabel()),
-                'description' => $this->confirmationDescription ?? 'This cannot be undone.',
+                'description' => $this->confirmationDescription
+                    ?? __('panda-panel::actions.confirmation.description'),
                 'button' => $this->confirmationButton ?? $this->getLabel(),
             ] : null,
         ];

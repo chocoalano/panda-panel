@@ -58,6 +58,22 @@ final class SelectFilter extends Filter
     }
 
     /**
+     * The chip says the option's label, not its key.
+     *
+     * `sanitize()` returns the key, and the inherited `describe()` prints a
+     * scalar as it stands — so a filter offering "Published" in the dropdown
+     * produced a chip reading `Status: published`, or worse `Status: 3` for
+     * an id-keyed option. The key is the query's vocabulary and the label is
+     * the reader's; only this class holds both.
+     */
+    protected function describe(mixed $value): string
+    {
+        $key = is_scalar($value) ? (string) $value : '';
+
+        return $this->options[$key] ?? $key;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function extraArray(): array

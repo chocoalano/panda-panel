@@ -78,18 +78,18 @@ final class PanelTwoFactorController
         // not coming will ask for five more.
         if ($code === null) {
             throw ValidationException::withMessages([
-                'code' => 'Too many codes requested. Try again later.',
+                'code' => __('panda-panel::notifications.two_factor.throttled'),
             ]);
         }
 
         // Emailing the code needs the user model to be `Notifiable`, which is
         // Laravel's own trait and what a starter kit ships. A model without it
         // cannot receive one, and saying so is better than a fatal.
-        abort_unless(method_exists($user, 'notify'), 500, 'The user model is not notifiable.');
+        abort_unless(method_exists($user, 'notify'), 500, __('panda-panel::errors.not_notifiable'));
 
         $user->notify(new TwoFactorCode($code));
 
-        return back()->with('success', 'A new code is on its way.');
+        return back()->with('success', __('panda-panel::notifications.two_factor.sent'));
     }
 
     /**
@@ -107,7 +107,7 @@ final class PanelTwoFactorController
 
         if (! $this->challenge->verify($user, (string) $validated['code'])) {
             throw ValidationException::withMessages([
-                'code' => 'That code is wrong or has expired.',
+                'code' => __('panda-panel::notifications.two_factor.invalid'),
             ]);
         }
 
@@ -139,7 +139,7 @@ final class PanelTwoFactorController
         // something they just proved with their password.
         $request->session()->put(self::SESSION_KEY, now()->timestamp);
 
-        return back()->with('success', 'Email codes are on.');
+        return back()->with('success', __('panda-panel::notifications.two_factor.enabled'));
     }
 
     public function disable(Request $request): RedirectResponse
@@ -153,7 +153,7 @@ final class PanelTwoFactorController
         $this->challenge->forget($user);
         $request->session()->forget(self::SESSION_KEY);
 
-        return back()->with('success', 'Email codes are off.');
+        return back()->with('success', __('panda-panel::notifications.two_factor.disabled'));
     }
 
     /**

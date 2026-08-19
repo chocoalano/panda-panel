@@ -56,7 +56,7 @@ final class PanelRelationController
 
         $operation = RelationOperation::tryFromRequest($request->query('operation'));
 
-        abort_if($operation === null, 404, 'Unknown relation operation.');
+        abort_if($operation === null, 404, __('panda-panel::errors.unknown_relation_operation'));
 
         $related = $this->resolveRelated($request, $manager, $owner, $operation);
 
@@ -110,7 +110,7 @@ final class PanelRelationController
 
         $operation = RelationOperation::tryFromRequest($request->query('operation'));
 
-        abort_if($operation === null, 404, 'Unknown relation operation.');
+        abort_if($operation === null, 404, __('panda-panel::errors.unknown_relation_operation'));
 
         $related = $this->resolveRelated($request, $manager, $owner, $operation);
 
@@ -146,12 +146,12 @@ final class PanelRelationController
 
         $action = RelationTable::actionFor($manager, $owner, (string) $validated['action']);
 
-        abort_if($action === null, 404, 'Unknown action.');
-        abort_unless($action->isExecutable(), 400, 'This action cannot be executed.');
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
+        abort_unless($action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
 
         $key = $validated['related'];
 
-        abort_unless(is_string($key) || is_int($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         $related = $manager::resolveRecord($owner, $key);
 
@@ -181,20 +181,20 @@ final class PanelRelationController
 
         $action = RelationTable::bulkActionFor($manager, $owner, (string) $validated['action']);
 
-        abort_if($action === null, 404, 'Unknown bulk action.');
-        abort_unless($action->isBulkExecutable() || $action->isExecutable(), 400, 'This action cannot be executed.');
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_bulk_action'));
+        abort_unless($action->isBulkExecutable() || $action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
         abort_unless($action->isAuthorizedFor(null), 403);
 
         $keys = $this->scalarKeys($validated['records']);
 
-        abort_if($keys === [], 422, 'Invalid record keys.');
+        abort_if($keys === [], 422, __('panda-panel::errors.invalid_record_keys'));
 
         $records = $manager::query($owner)->whereKey($keys)->get();
 
         // Keys outside the relation silently disappear from the query, so the
         // count check is what turns that into a visible failure rather than a
         // partial operation.
-        abort_if($records->count() !== count($keys), 404, 'Some records could not be found.');
+        abort_if($records->count() !== count($keys), 404, __('panda-panel::errors.records_not_found'));
 
         $action->executeBulk($records);
 
@@ -215,18 +215,18 @@ final class PanelRelationController
         $relationKey = $body['relation'] ?? $request->query('relation');
         $recordKey = $body['record'] ?? $request->query('record');
 
-        abort_unless(is_string($resourceSlug), 422, 'Invalid resource.');
-        abort_unless(is_string($relationKey), 422, 'Invalid relation.');
-        abort_unless(is_string($recordKey) || is_int($recordKey), 422, 'Invalid record key.');
+        abort_unless(is_string($resourceSlug), 422, __('panda-panel::errors.invalid_resource'));
+        abort_unless(is_string($relationKey), 422, __('panda-panel::errors.invalid_relation'));
+        abort_unless(is_string($recordKey) || is_int($recordKey), 422, __('panda-panel::errors.invalid_record_key'));
 
         $resource = $this->manager->resources($panel)->bySlug($resourceSlug);
 
-        abort_if($resource === null, 404, 'Unknown resource.');
+        abort_if($resource === null, 404, __('panda-panel::errors.unknown_resource'));
 
         /** @var class-string<PanelResource> $resource */
         $manager = $resource::relationManager($relationKey);
 
-        abort_if($manager === null, 404, 'Unknown relation.');
+        abort_if($manager === null, 404, __('panda-panel::errors.unknown_relation'));
 
         $owner = $resource::query()->find($recordKey);
 
@@ -256,7 +256,7 @@ final class PanelRelationController
 
         $key = $request->query('related');
 
-        abort_unless(is_string($key), 422, 'Invalid record key.');
+        abort_unless(is_string($key), 422, __('panda-panel::errors.invalid_record_key'));
 
         $related = $manager::resolveRecord($owner, $key);
 
@@ -308,7 +308,7 @@ final class PanelRelationController
         abort_if(
             $manager::query($owner)->whereKey($key)->exists(),
             422,
-            'That record is already in this relation.',
+            __('panda-panel::errors.record_already_related'),
         );
     }
 

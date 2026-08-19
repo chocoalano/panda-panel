@@ -57,18 +57,25 @@ abstract class ListRecords extends ResourcePage
         $query = $scoped();
         $records = $tableQuery->paginate($query);
 
+        // Resolved once: `state()` re-reads the request and re-validates the
+        // arrangement, and four props want the same answer.
+        $state = $tableQuery->state();
+        $visible = $state['columns']['visible'];
+
         return Inertia::render(static::$component, [
             'page' => $this->pageMetadata(),
             'resource' => $this->resourceMetadata(),
             'table' => $schema->toArray(),
-            'state' => $tableQuery->state(),
+            'state' => $state,
             'tabs' => $this->serializeTabs($tab),
             // Scoped to the tab: a widget counts what the user is looking at,
             // not the whole table.
             ...$this->widgetProps(PageContext::forQuery($scoped)),
-            'rows' => $this->rows($schema, $records, $tableQuery->activeGroup()),
+            // Serialize what the arrangement actually shows. A hidden column
+            // costs nothing to read, format, aggregate or send.
+            'rows' => $this->rows($schema, $records, $tableQuery->activeGroup(), $visible),
             'summaries' => $schema->hasSummaries()
-                ? $schema->summaries($query, array_values($records->items()))
+                ? $schema->summaries($query, array_values($records->items()), $visible)
                 : [],
             'groupSummaries' => $tableQuery->activeGroup() === null
                 ? []
@@ -76,6 +83,7 @@ abstract class ListRecords extends ResourcePage
                     $query,
                     array_values($records->items()),
                     $tableQuery->activeGroup(),
+                    $visible,
                 ),
             'pagination' => $this->pagination($records),
             'actionEndpoints' => $this->actionEndpoints(),
@@ -135,7 +143,7 @@ abstract class ListRecords extends ResourcePage
         return [
             ...$this->headingMetadata(),
             'breadcrumbs' => $this->serializeBreadcrumbs([
-                Breadcrumb::make('Dashboard')->url($this->dashboardUrl()),
+                Breadcrumb::make(__('panda-panel::pages.dashboard.title'))->url($this->dashboardUrl()),
                 ...$this->parentBreadcrumbs(),
                 Breadcrumb::make($resource::pluralLabel())->current(),
             ]),
@@ -178,9 +186,10 @@ abstract class ListRecords extends ResourcePage
         TableSchema $schema,
         LengthAwarePaginator $records,
         ?Group $group = null,
+        ?array $visible = null,
     ): array {
         return array_values(array_map(
-            static fn (Model $record): array => $schema->toRow($record, $group),
+            static fn (Model $record): array => $schema->toRow($record, $group, $visible),
             $records->items(),
         ));
     }

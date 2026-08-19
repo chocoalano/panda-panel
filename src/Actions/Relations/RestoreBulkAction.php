@@ -28,17 +28,17 @@ final class RestoreBulkAction
     public static function make(string $manager, Model $owner): Action
     {
         return Action::make('restore')
-            ->label('Restore selected')
+            ->label(__('panda-panel::actions.restore_bulk.label'))
             ->icon('rotate-ccw')
             ->variant(ActionVariant::Outline)
-            ->successMessage('Selected records restored.')
+            ->successMessage(__('panda-panel::actions.restore_bulk.success'))
             ->visible(static fn (): bool => $manager::usesSoftDeletes($owner))
             ->authorize(static fn (?Model $record): bool => $record === null
                 || $manager::canRestore($owner, $record))
             ->bulkAction(static function (Collection $records) use ($manager, $owner): void {
                 foreach ($records as $record) {
                     if (! $manager::canRestore($owner, $record)) {
-                        throw new HttpException(403, 'You may not restore every selected record.');
+                        throw new HttpException(403, __('panda-panel::actions.restore_bulk.denied'));
                     }
                 }
 

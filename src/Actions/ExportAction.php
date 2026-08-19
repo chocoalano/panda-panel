@@ -80,13 +80,13 @@ final class ExportAction
     private static function configure(Action $action, string $exporter): Action
     {
         return $action
-            ->label('Export')
+            ->label(__('panda-panel::actions.export.label'))
             ->icon('download')
             ->variant(ActionVariant::Outline)
-            ->modalHeading('Export records')
-            ->modalSubmitLabel('Export')
+            ->modalHeading(__('panda-panel::actions.export.modal_heading'))
+            ->modalSubmitLabel(__('panda-panel::actions.export.submit'))
             ->modalWidth(ModalWidth::Large)
-            ->successMessage('Your export is ready.')
+            ->successMessage(__('panda-panel::actions.export.success'))
             ->schema(static fn (): FormSchema => self::form($exporter));
     }
 
@@ -121,14 +121,14 @@ final class ExportAction
 
         return FormSchema::make()->schema([
             CheckboxList::make('columns')
-                ->label('Columns')
+                ->label(__('panda-panel::actions.export.columns'))
                 ->options($options)
                 ->columns(2)
                 ->bulkToggleable()
                 ->required()
                 ->default($default),
             Radio::make('format')
-                ->label('Format')
+                ->label(__('panda-panel::actions.export.format'))
                 ->options($formats)
                 ->inline()
                 ->required()
@@ -150,11 +150,11 @@ final class ExportAction
 
         $owner = $user->getAuthIdentifier();
 
-        abort_unless(is_int($owner) || is_string($owner), 500, 'That user has no key to file an export under.');
+        abort_unless(is_int($owner) || is_string($owner), 500, __('panda-panel::errors.no_export_owner'));
 
         $panel = app(PanelManager::class)->currentPanel();
 
-        abort_if($panel === null, 500, 'No panel is resolved for this request.');
+        abort_if($panel === null, 500, __('panda-panel::errors.no_panel'));
 
         $columns = self::columns($exporter, $data);
         $format = SpreadsheetFormat::tryFrom((string) ($data['format'] ?? '')) ?? SpreadsheetFormat::Csv;
@@ -204,7 +204,7 @@ final class ExportAction
             ->persistent()
             ->broadcast(false)
             ->actions([
-                NotificationAction::make('download')->label('Download')->url($url),
+                NotificationAction::make('download')->label(__('panda-panel::actions.export.download'))->url($url),
             ])
             ->send($user);
 
@@ -212,7 +212,7 @@ final class ExportAction
             'type' => 'success',
             'message' => $exporter::completedMessage($result['records']),
             'url' => $url,
-            'urlLabel' => 'Download',
+            'urlLabel' => __('panda-panel::actions.export.download'),
         ]);
     }
 

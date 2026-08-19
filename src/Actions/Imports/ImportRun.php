@@ -177,13 +177,16 @@ final class ImportRun
      */
     public static function missingColumnsMessage(array $missing, array $headings): string
     {
-        return sprintf(
-            'This file has no column for %s, and %s required. Its headings are: %s. Rename the '
-                .'column in the file, or map it by hand before importing.',
-            '['.implode('], [', $missing).']',
-            count($missing) === 1 ? 'it is' : 'they are',
-            $headings === [] ? '(none)' : implode(', ', $headings),
-        );
+        return __('panda-panel::actions.import.missing_columns', [
+            'missing' => '['.implode('], [', $missing).']',
+            // A separate choice string rather than a ternary, because the
+            // number that decides between "it is" and "they are" does not
+            // decide the same thing in every language.
+            'verb' => trans_choice('panda-panel::actions.import.missing_columns_verb', count($missing)),
+            'headings' => $headings === []
+                ? __('panda-panel::actions.import.no_headings')
+                : implode(', ', $headings),
+        ]);
     }
 
     /**
@@ -269,12 +272,12 @@ final class ImportRun
         $temporary = tempnam(sys_get_temp_dir(), 'panel-import-failures-');
 
         if ($temporary === false) {
-            throw new SpreadsheetException('Cannot write the failure report.');
+            throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.report_unwritable'));
         }
 
         $handle = Csv::open($temporary);
 
-        Csv::write($handle, [...self::headings($source), 'Error']);
+        Csv::write($handle, [...self::headings($source), __('panda-panel::actions.import.error_heading')]);
 
         foreach ($failures as $row) {
             Csv::write($handle, $row);
@@ -287,7 +290,7 @@ final class ImportRun
         $stream = fopen($temporary, 'rb');
 
         if ($stream === false) {
-            throw new SpreadsheetException('The failure report could not be read back.');
+            throw new SpreadsheetException(__('panda-panel::errors.spreadsheet.report_unreadable'));
         }
 
         Storage::disk($importer::disk())->put($path, $stream);

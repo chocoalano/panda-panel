@@ -80,16 +80,21 @@ final readonly class RelationTable
         $relation = $manager::relationForTable($this->owner);
         $records = $query->paginateRelation($relation);
 
+        // Resolved once, for the same reason `ListRecords` does: `state()`
+        // re-reads the request, and four props want the same answer.
+        $state = $query->state();
+        $visible = $state['columns']['visible'];
+
         return [
             'key' => $manager::key(),
             'title' => $manager::title(),
             'icon' => $manager::icon(),
             'stateKey' => $namespace,
             'table' => $schema->toArray(),
-            'state' => $query->state(),
-            'rows' => $this->rows($schema, $records, $query->activeGroup()),
+            'state' => $state,
+            'rows' => $this->rows($schema, $records, $query->activeGroup(), $visible),
             'summaries' => $schema->hasSummaries()
-                ? $schema->summaries($relation->getQuery(), array_values($records->items()))
+                ? $schema->summaries($relation->getQuery(), array_values($records->items()), $visible)
                 : [],
             'groupSummaries' => $query->activeGroup() === null
                 ? []
@@ -97,6 +102,7 @@ final readonly class RelationTable
                     $relation->getQuery(),
                     array_values($records->items()),
                     $query->activeGroup(),
+                    $visible,
                 ),
             'pagination' => [
                 'page' => $records->currentPage(),
@@ -151,9 +157,10 @@ final readonly class RelationTable
         TableSchema $schema,
         LengthAwarePaginator $records,
         ?Group $group = null,
+        ?array $visible = null,
     ): array {
         return array_values(array_map(
-            static fn (Model $record): array => $schema->toRow($record, $group),
+            static fn (Model $record): array => $schema->toRow($record, $group, $visible),
             $records->items(),
         ));
     }

@@ -8,6 +8,9 @@ import type { ResourceMeta } from '@/panel/types/table';
 import type { WidgetData, WidgetDefinition } from '@/panel/types/widget';
 import PageWidgets from '@/panel/widgets/PageWidgets.vue';
 import PanelLayout from '@/panel/layouts/PanelLayout.vue';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 defineOptions({ layout: PanelLayout });
 
@@ -59,7 +62,7 @@ const props = withDefaults(
             method="post"
             :submit-label="`Create ${resource.label.toLowerCase()}`"
             :create-another-label="
-                props.canCreateAnother ? 'Create & create another' : undefined
+                props.canCreateAnother ? t('forms.create_another') : undefined
             "
             :cancel-url="resource.indexUrl"
             sticky-actions

@@ -5,6 +5,7 @@ import type { NavigationGroup } from '@/panel/types/navigation';
 import type {
     PanelBroadcasting,
     PanelDefinition,
+    PanelLocales,
     PanelNotificationSettings,
     PanelSearchSettings,
     PanelSummary,
@@ -32,6 +33,15 @@ export interface PanelSharedProps {
      * the check reads `tenancy === null` rather than testing an empty list.
      */
     tenancy: PanelTenancy | null;
+    /** The locale the server resolved this request in. */
+    locale: string;
+    /** Null for a panel with one language or none, like `tenancy`. */
+    locales: PanelLocales | null;
+    /**
+     * `lang/{locale}/frontend.php`, nested as written. Read through
+     * `useTranslator()` rather than directly.
+     */
+    translations: Record<string, unknown>;
 }
 
 /**

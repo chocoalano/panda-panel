@@ -12,6 +12,7 @@ use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\Enums\ConditionOperator;
 use PandaPanel\Forms\Enums\FieldType;
 use PandaPanel\Forms\Support\Condition;
+use PandaPanel\Support\Label;
 
 /**
  * Base for every form field.
@@ -523,7 +524,11 @@ abstract class Field extends FormComponent
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? Label::resolve(
+            'fields',
+            $this->name,
+            fn (): string => Str::headline($this->name),
+        );
     }
 
     public function getDehydrateKey(): string

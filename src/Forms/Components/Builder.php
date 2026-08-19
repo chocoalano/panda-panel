@@ -146,7 +146,7 @@ final class Builder extends Field
             $path = $this->getName().'.'.$index;
 
             if (! is_array($entry) || ! is_string($entry['type'] ?? null)) {
-                $errors[$path.'.type'] = ['This block is not one this field offers.'];
+                $errors[$path.'.type'] = [__('panda-panel::forms.builder.unknown_block')];
 
                 continue;
             }
@@ -154,7 +154,7 @@ final class Builder extends Field
             $block = $this->block($entry['type']);
 
             if ($block === null) {
-                $errors[$path.'.type'] = ['This block is not one this field offers.'];
+                $errors[$path.'.type'] = [__('panda-panel::forms.builder.unknown_block')];
 
                 continue;
             }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use PandaPanel\Forms\Components\Field;
 use PandaPanel\Forms\Components\FormComponent;
+use PandaPanel\Support\Label;
 
 /**
  * One kind of entry a builder can hold.
@@ -67,7 +68,11 @@ final class Block
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline($this->name);
+        return $this->label ?? Label::resolve(
+            'blocks',
+            $this->name,
+            fn (): string => Str::headline($this->name),
+        );
     }
 
     /**

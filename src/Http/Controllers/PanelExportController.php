@@ -41,7 +41,7 @@ final class PanelExportController
         abort_unless(
             is_string($exporter) && is_subclass_of($exporter, Exporter::class),
             404,
-            'Unknown export.',
+            __('panda-panel::errors.unknown_export'),
         );
 
         $disk = Storage::disk($exporter::disk());

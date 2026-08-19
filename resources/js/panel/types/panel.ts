@@ -158,6 +158,32 @@ export interface PanelTenancy {
     available: PanelTenantSummary[];
 }
 
+/**
+ * One language the panel may be read in.
+ *
+ * `name` is written in that language rather than translated: somebody looking
+ * for their own language is looking for the word they would use for it, and a
+ * reader who cannot read the current locale cannot read "Indonesian" in it.
+ */
+export interface PanelLocale {
+    code: string;
+    name: string;
+    current: boolean;
+}
+
+/**
+ * The languages on offer, and where to post a choice.
+ *
+ * Null for a panel offering one language or none — the check is
+ * `locales === null`, so no switcher renders for an application that has
+ * nothing to switch between.
+ */
+export interface PanelLocales {
+    current: string;
+    url: string;
+    available: PanelLocale[];
+}
+
 export interface PanelBroadcasting {
     enabled: boolean;
     /** The private channel this user's panel listens on, or null. */

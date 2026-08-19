@@ -125,6 +125,7 @@ defineOptions({ layout: PanelLayout });
 | `PanelNotifications.vue` | the bell and the notification centre |
 | `PanelSwitcher.vue` | moves between panels; renders nothing when the user may enter only one |
 | `PanelTenantSwitcher.vue` | moves between tenants; needs tenancy, more than one tenant, and a tenant URL |
+| `PanelLocaleSwitcher.vue` | changes the language; renders nothing unless the panel offers more than one |
 | `PanelClusterBar.vue` | a cluster's sub-navigation, as a bar or a column |
 | `PanelSubNavigation.vue` | the links between one record's pages |
 | `PanelRecordLayout.vue` | arranges a record page around that sub-navigation |
@@ -132,6 +133,7 @@ defineOptions({ layout: PanelLayout });
 | `PageHeader.vue` | heading, subheading, and an `actions` slot |
 | `EmptyState.vue`, `LoadingState.vue` | the neutral states |
 | `DashboardGuide.vue` | what a dashboard shows before anything is on it |
+| `PanelDatePicker.vue` | one date, picked from a popover calendar. Mounted by `DateField` and by both bounds of a date filter, so a date is chosen the same way everywhere |
 
 `PanelRenderHook` is the only one of these you are likely to place yourself, and it takes one prop:
 

@@ -10,6 +10,9 @@ import type {
     FormValue,
     FormValues,
 } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: BuilderFieldDefinition;
@@ -202,7 +205,7 @@ function toggle(index: number): void {
                             variant="ghost"
                             size="sm"
                             :disabled="field.disabled || index === 0"
-                            aria-label="Move block up"
+                            :aria-label="t('forms.move_block_up')"
                             @click="move(index, -1)"
                         >
                             ↑
@@ -215,7 +218,7 @@ function toggle(index: number): void {
                             :disabled="
                                 field.disabled || index === entries.length - 1
                             "
-                            aria-label="Move block down"
+                            :aria-label="t('forms.move_block_down')"
                             @click="move(index, 1)"
                         >
                             ↓
@@ -225,10 +228,10 @@ function toggle(index: number): void {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            aria-label="Remove block"
+                            :aria-label="t('forms.remove_block')"
                             @click="remove(index)"
                         >
-                            Remove
+                            {{ t('forms.remove') }}
                         </Button>
                     </div>
                 </div>
@@ -257,7 +260,7 @@ function toggle(index: number): void {
                         />
                     </template>
                     <p v-else class="text-sm text-muted-foreground">
-                        This block type is no longer available.
+                        {{ t('forms.block_unavailable') }}
                     </p>
                 </div>
             </div>
@@ -266,7 +269,7 @@ function toggle(index: number): void {
                 v-if="entries.length === 0"
                 class="text-sm text-muted-foreground"
             >
-                No blocks yet.
+                {{ t('forms.no_blocks') }}
             </p>
 
             <div v-if="canAdd" class="flex flex-col gap-2">

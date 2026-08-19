@@ -215,7 +215,9 @@ TextColumn::make('tags.name')
         : null),
 ```
 
-Reading a relation this way loads it, which is a query per row unless the resource eager-loads it. That is what `Resource::$with` is for — it is applied to every query the resource builds, so serializing a column can never trigger a lazy load per row:
+Reading a relation this way loads it, which would be a query per row. **A relation a column names is eager loaded for you**: the table reads the dotted name, verifies each segment really is a relation, and loads it for the page. `TextColumn::make('author.name')` loads `author`; a name it cannot verify — a JSON column addressed as `meta.total` — is left alone.
+
+`Resource::$with` is still the answer for a relation with no name to read it from:
 
 ```php
 /**
@@ -224,7 +226,9 @@ Reading a relation this way loads it, which is a query per row unless the resour
 protected static array $with = ['author', 'tags'];
 ```
 
-An aggregate needs no `with()` — that is the point of computing it in the select.
+Reach for it when the relation is read by a `formatUsing()` or `urlUsing()` closure, by `recordTitle()`, or by a policy — none of which the derivation can see. See [Query performance](../resources/performance.md).
+
+An aggregate needs neither — that is the point of computing it in the select.
 
 ## Notes
 

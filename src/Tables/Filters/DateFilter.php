@@ -6,11 +6,18 @@ namespace PandaPanel\Tables\Filters;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use PandaPanel\Support\Format;
 use PandaPanel\Tables\Enums\FilterType;
 use Throwable;
 
 final class DateFilter extends Filter
 {
+    /**
+     * How a bound is spelled in the chip. Day-month-year with a short month
+     * name because `01/02` is a different date either side of the Atlantic
+     * and a chip is read at a glance — `formats.date_compact`, so a locale
+     * that writes it differently says so in one place
+     */
     public function type(): FilterType
     {
         return FilterType::Date;
@@ -56,6 +63,33 @@ final class DateFilter extends Filter
         if ($value['to'] instanceof CarbonImmutable) {
             $query->where($column, '<=', $value['to']->endOfDay());
         }
+    }
+
+    /**
+     * The chip says the range in words.
+     *
+     * Without this the inherited `describe()` met an array, found it was not
+     * scalar, and returned an empty string — so the chip read `Created At: `
+     * and named a filter while saying nothing about what it was doing. A
+     * one-sided range is the common case and reads as a bound rather than as
+     * a range with a missing half.
+     */
+    protected function describe(mixed $value): string
+    {
+        $from = is_array($value) && $value['from'] instanceof CarbonImmutable
+            ? $value['from']->format(Format::dateCompact())
+            : null;
+
+        $to = is_array($value) && $value['to'] instanceof CarbonImmutable
+            ? $value['to']->format(Format::dateCompact())
+            : null;
+
+        return match (true) {
+            $from !== null && $to !== null => $from.' – '.$to,
+            $from !== null => 'from '.$from,
+            $to !== null => 'until '.$to,
+            default => '',
+        };
     }
 
     private function parse(mixed $value): ?CarbonImmutable

@@ -130,6 +130,6 @@ abstract class Exporter
      */
     public static function completedMessage(int $records): string
     {
-        return sprintf('Your export of %d records is ready.', $records);
+        return __('panda-panel::actions.export.completed', ['count' => $records]);
     }
 }

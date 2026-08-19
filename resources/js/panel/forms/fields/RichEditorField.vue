@@ -2,6 +2,20 @@
 import { onMounted, ref, watch } from 'vue';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import type { RichEditorFieldDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
+
+/**
+ * A toolbar button's face.
+ *
+ * Most are typographic — `B`, `H2`, `❝` — and mean the same thing in every
+ * language, so they are written literally. The few that are words hold a
+ * translation key instead, recognised by its dot.
+ */
+function toolbarLabel(label: string): string {
+    return label.includes('.') ? t(label) : label;
+}
 
 const props = defineProps<{
     field: RichEditorFieldDefinition;
@@ -40,9 +54,15 @@ const COMMANDS: Record<string, { label: string; run: () => void }> = {
     h2: { label: 'H2', run: () => exec('formatBlock', '<h2>') },
     h3: { label: 'H3', run: () => exec('formatBlock', '<h3>') },
     blockquote: { label: '❝', run: () => exec('formatBlock', '<blockquote>') },
-    bulletList: { label: '• List', run: () => exec('insertUnorderedList') },
-    orderedList: { label: '1. List', run: () => exec('insertOrderedList') },
-    link: { label: 'Link', run: () => link() },
+    bulletList: {
+        label: 'forms.editor_bullet_list',
+        run: () => exec('insertUnorderedList'),
+    },
+    orderedList: {
+        label: 'forms.editor_ordered_list',
+        run: () => exec('insertOrderedList'),
+    },
+    link: { label: 'forms.editor_link', run: () => link() },
     undo: { label: '↶', run: () => exec('undo') },
     redo: { label: '↷', run: () => exec('redo') },
 };
@@ -88,7 +108,7 @@ function exec(command: string, argument?: string): void {
 }
 
 function link(): void {
-    const url = window.prompt('Link URL');
+    const url = window.prompt(t('forms.link_url'));
 
     // A blank answer or a cancelled prompt leaves the selection alone rather
     // than wrapping it in a link to nowhere.
@@ -124,7 +144,7 @@ function link(): void {
                         :aria-label="button"
                         @click="COMMANDS[button].run()"
                     >
-                        {{ COMMANDS[button].label }}
+                        {{ toolbarLabel(COMMANDS[button].label) }}
                     </button>
                 </template>
             </div>

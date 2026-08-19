@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
 use PandaPanel\Exceptions\PanelRegistrationException;
 use PandaPanel\Forms\FormSchema;
+use PandaPanel\Support\Label;
 use PandaPanel\Support\PolicyGate;
 use PandaPanel\Tables\TableSchema;
 
@@ -111,7 +112,11 @@ abstract class RelationManager
 
     public static function title(): string
     {
-        return static::$title ?? Str::headline(static::$relationship);
+        return static::$title ?? Label::resolve(
+            'relations',
+            static::$relationship,
+            static fn (): string => Str::headline(static::$relationship),
+        );
     }
 
     public static function icon(): ?string

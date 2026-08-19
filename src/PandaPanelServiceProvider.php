@@ -34,6 +34,7 @@ use PandaPanel\Http\Middleware\RequireTwoFactor;
 use PandaPanel\Http\Middleware\ResetPanelContext;
 use PandaPanel\Http\Middleware\ResolvePanel;
 use PandaPanel\Http\Middleware\ResolveParentRecord;
+use PandaPanel\Http\Middleware\SetPanelLocale;
 use PandaPanel\Http\Middleware\ShareFlashToast;
 use PandaPanel\Http\Middleware\SharePanelData;
 use PandaPanel\Integrations\IntegrationObserver;
@@ -93,6 +94,7 @@ final class PandaPanelServiceProvider extends ServiceProvider
      */
     private const MIDDLEWARE_ALIASES = [
         'panel' => ResolvePanel::class,
+        'panel.locale' => SetPanelLocale::class,
         'panel.two-factor' => RequireTwoFactor::class,
         'panel.email-code' => RequireEmailCode::class,
         'panel.parent' => ResolveParentRecord::class,
@@ -120,6 +122,7 @@ final class PandaPanelServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->registerTranslations();
         $this->registerPanels();
         $this->registerMiddleware();
         $this->registerGuestRedirect();
@@ -283,6 +286,24 @@ final class PandaPanelServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * The package's own strings, under the `panda-panel` namespace.
+     *
+     * Registered before anything else in `boot()`, because a panel provider
+     * that builds its navigation during boot would otherwise ask for a
+     * translation the translator has not been told where to find, and get the
+     * key back instead of the sentence.
+     *
+     * `loadTranslationsFrom` looks in `lang/vendor/panda-panel` first, so an
+     * application that published the files and edited a line keeps that line
+     * across an upgrade — and one that published nothing follows the
+     * package's own copy, including any locale a later version adds.
+     */
+    private function registerTranslations(): void
+    {
+        $this->loadTranslationsFrom($this->packagePath('lang'), 'panda-panel');
+    }
+
     private function registerMigrations(): void
     {
         if ($this->app->make('config')->get('panda-panel.load_migrations') === true) {
@@ -307,6 +328,14 @@ final class PandaPanelServiceProvider extends ServiceProvider
         $this->publishes([
             $this->packagePath('stubs/panel') => base_path('stubs/panel'),
         ], 'panda-panel-stubs');
+
+        // Publishing is for rewording, not for translating into a locale the
+        // package already ships: a published copy stops following the
+        // package, so an application that publishes to add Indonesian would
+        // freeze English at the version it published.
+        $this->publishes([
+            $this->packagePath('lang') => $this->app->langPath('vendor/panda-panel'),
+        ], ['panda-panel', 'panda-panel-translations']);
 
         // The frontend is published rather than imported from the package: the
         // component registries are `import.meta.glob` allowlists over the

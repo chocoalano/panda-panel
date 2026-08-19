@@ -18,9 +18,18 @@ use PandaPanel\Widgets\Widget;
  */
 class Dashboard extends Page
 {
-    protected static ?string $title = 'Dashboard';
-
     protected static ?string $slug = 'dashboard';
+
+    /*
+     * A method rather than $title, because the translator cannot answer while
+     * a static property is being initialized. A panel that subclasses this
+     * page and assigns $title still overrides it — Page::title() reads the
+     * property first.
+     */
+    public static function title(): string
+    {
+        return static::$title ?? __('panda-panel::pages.dashboard.title');
+    }
 
     protected static string $component = 'panel/Dashboard';
 
@@ -51,7 +60,7 @@ class Dashboard extends Page
     public function breadcrumbs(): array
     {
         return [
-            Breadcrumb::make('Dashboard')->current(),
+            Breadcrumb::make(__('panda-panel::pages.dashboard.title'))->current(),
         ];
     }
 }

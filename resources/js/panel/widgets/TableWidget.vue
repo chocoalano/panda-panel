@@ -20,6 +20,9 @@ import type {
     TableRow as Row,
     TableState,
 } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * A dashboard table, built by the table builder.
@@ -43,6 +46,27 @@ const props = defineProps<{
     namespace: string | null;
     searchable: boolean;
 }>();
+
+/**
+ * The columns this widget actually draws.
+ *
+ * `columns` is every column the schema declares, including any the widget
+ * marked `visible(false)`. The rows only carry the visible ones, so drawing
+ * from the full list put a header over a column of placeholders — a hidden
+ * column read as an empty one rather than as absent.
+ *
+ * A payload written before the widget was paginated has no state, and then
+ * every column is what there is.
+ */
+const visibleColumns = computed(() => {
+    const visible = props.state?.columns.visible;
+
+    if (visible === undefined) {
+        return props.columns;
+    }
+
+    return props.columns.filter((column) => visible.includes(column.name));
+});
 
 const search = ref(props.state?.search ?? '');
 
@@ -126,7 +150,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
     <div class="flex flex-col gap-3">
         <form
             v-if="searchable && namespace"
-            class="flex items-center gap-2"
+            class="flex items-center gap-2 rounded-lg border border-border/70 bg-background/60 p-2"
             @submit.prevent="submitSearch"
         >
             <div class="relative flex-1">
@@ -135,9 +159,9 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                 />
                 <Input
                     v-model="search"
-                    class="pl-8"
-                    placeholder="Search"
-                    aria-label="Search this table"
+                    class="h-9 border-0 bg-transparent pl-8 shadow-none focus-visible:ring-0"
+                    :placeholder="t('widgets.search')"
+                    :aria-label="t('widgets.search_table')"
                     @blur="submitSearch"
                 />
             </div>
@@ -145,15 +169,20 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
 
         <!-- `py-0` and `overflow-hidden`: the rows sit flush inside the card
              and the header row is clipped by its radius. -->
-        <Card class="overflow-hidden rounded-lg py-0 shadow-xs">
+        <Card
+            class="overflow-hidden rounded-lg border-border/70 py-0 shadow-xs"
+        >
             <Table>
                 <TableHeader>
-                    <TableRow>
-                        <TableHead v-for="column in columns" :key="column.name">
+                    <TableRow class="bg-muted/25 hover:bg-muted/25">
+                        <TableHead
+                            v-for="column in visibleColumns"
+                            :key="column.name"
+                        >
                             <button
                                 v-if="column.sortable && namespace"
                                 type="button"
-                                class="flex items-center gap-1"
+                                class="flex items-center gap-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground"
                                 @click="toggleSort(column.name)"
                             >
                                 {{ column.label }}
@@ -169,21 +198,33 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
                                     class="size-3"
                                 />
                             </button>
-                            <template v-else>{{ column.label }}</template>
+                            <template v-else>
+                                <span
+                                    class="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+                                    >{{ column.label }}</span
+                                >
+                            </template>
                         </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     <TableRow v-if="rows.length === 0">
                         <TableCell
-                            :colspan="columns.length"
-                            class="py-8 text-center text-sm text-muted-foreground"
+                            :colspan="visibleColumns.length"
+                            class="h-28 py-8 text-center text-sm text-muted-foreground"
                         >
-                            {{ emptyMessage }}
+                            {{
+                                emptyMessage === ''
+                                    ? t('widgets.empty')
+                                    : emptyMessage
+                            }}
                         </TableCell>
                     </TableRow>
                     <TableRow v-for="row in rows" :key="row.key">
-                        <TableCell v-for="column in columns" :key="column.name">
+                        <TableCell
+                            v-for="column in visibleColumns"
+                            :key="column.name"
+                        >
                             <DataTableCell
                                 :column="column"
                                 :value="row.cells[column.name] ?? null"
@@ -196,7 +237,7 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
 
         <div
             v-if="pagination && lastPage > 1"
-            class="flex items-center justify-between text-xs text-muted-foreground"
+            class="flex items-center justify-between border-t border-border/60 pt-3 text-xs text-muted-foreground"
         >
             <span>
                 {{ pagination.from }}–{{ pagination.to }} of
@@ -204,20 +245,20 @@ const lastPage = computed(() => props.pagination?.lastPage ?? 1);
             </span>
             <div class="flex items-center gap-1">
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     :disabled="page <= 1"
                     @click="go({ page: String(page - 1) })"
                 >
-                    Previous
+                    {{ t('widgets.previous') }}
                 </Button>
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     :disabled="page >= lastPage"
                     @click="go({ page: String(page + 1) })"
                 >
-                    Next
+                    {{ t('widgets.next') }}
                 </Button>
             </div>
         </div>

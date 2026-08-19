@@ -6,11 +6,17 @@ namespace PandaPanel\Tables\Columns;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
+use PandaPanel\Support\Format;
 use PandaPanel\Tables\Enums\ColumnType;
 
 class DateColumn extends Column
 {
-    protected string $format = 'M j, Y';
+    /*
+     * Null rather than a pattern, because the default is a fact about the
+     * locale and a property initializer runs before the translator can be
+     * asked. A column that calls `->format()` is never touched by this.
+     */
+    protected ?string $format = null;
 
     protected bool $relative = false;
 
@@ -24,6 +30,19 @@ class DateColumn extends Column
         $this->format = $format;
 
         return $this;
+    }
+
+    /**
+     * The pattern a column of this type uses when nothing said otherwise.
+     *
+     * A method rather than a property default, because the answer is a fact
+     * about the locale and a property is initialized before the translator
+     * can be asked — and a method is what `DateTimeColumn` overrides to ask
+     * for a different one.
+     */
+    protected function defaultFormat(): string
+    {
+        return Format::date();
     }
 
     /**
@@ -50,7 +69,9 @@ class DateColumn extends Column
         }
 
         return [
-            'display' => $this->relative ? $value->diffForHumans() : $value->format($this->format),
+            'display' => $this->relative
+                ? $value->diffForHumans()
+                : $value->format($this->format ?? $this->defaultFormat()),
             'iso' => $value->toIso8601String(),
         ];
     }

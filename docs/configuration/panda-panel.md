@@ -1,7 +1,7 @@
 # config/panda-panel.php
 
 Every key the package reads, what it decides, and what an invalid value does. This is the
-whole configuration file: eight top-level keys, all of them registration-time switches or
+whole configuration file: ten top-level keys, all of them registration-time switches or
 security bounds. Everything with logic in it — paths, domains, middleware, navigation,
 branding, access — is configured in code on the panel, because a decision with a condition
 in it does not belong in an array.
@@ -47,6 +47,8 @@ most common "the install worked but the URL 404s".
 | `integrations.history.enabled` | `bool` | `true` | `PandaPanel\Integrations\PanelIntegrationDelivery::enabled()` |
 | `integrations.history.keep_per_integration` | `int` | `50` | `PanelIntegrationDelivery::prune()` |
 | `integrations.history.retention_days` | `int` | `30` | `PanelIntegrationDelivery::prune()` |
+| `locales` | `array<string, string>` | `[]` | `Panel::getLocales()` |
+| `labels.file` | `string` | `'panel'` | `PandaPanel\Support\Label` |
 | `frontend.panel_path` | `string` | `'js/panel'` | `PandaPanel\Support\FrontendPaths::panel()` |
 | `frontend.pages_path` | `string` | `'js/pages/Panels'` | `PandaPanel\Support\FrontendPaths::pages()` |
 
@@ -227,6 +229,77 @@ Integrations are off for every resource until one opts in with
 `integrations()->isEnabled(true)`, so an application that configures none of this has nothing to
 turn off. See [Resource API](../resources/api.md).
 
+## `locales`
+
+```php
+'locales' => [
+    'en' => 'English',
+    'id' => 'Bahasa Indonesia',
+],
+```
+
+The languages a reader may switch the panel between, as `code => name in that
+language`. Setting two or more puts a language menu in the panel header and on
+the login screen; the choice goes into the session and survives the sign-in
+between them.
+
+Empty by default, and empty means no switcher — an application that serves one
+language should not grow a language menu in every panel header because it
+upgraded. One locale is the same as none.
+
+This decides only the *switcher*. The panel already follows
+`app()->getLocale()` however that was set, so an application with
+`APP_LOCALE=id` and nothing here renders entirely in Indonesian.
+
+The names are written in their own language rather than translated: somebody
+looking for their language is looking for the word they would use for it. An
+entry that is not a string code and a string name is discarded, so `['en',
+'id']` — the shape people write first — yields no switcher rather than one
+labelled `0` and `1`.
+
+The package ships `en` and `id`. Any other code needs
+`lang/vendor/panda-panel/{code}/`, and a code listed with no files falls back
+to `fallback_locale` rather than rendering keys. A panel narrows this with
+`->locales([...])`.
+
+See [Translations](../localization/translations.md#letting-a-reader-choose).
+
+## `labels`
+
+```php
+'labels' => [
+    'file' => 'panel',
+],
+```
+
+The name of an application lang file — under `lang/{locale}/`, without the extension — that the
+panel reads before deriving a label of its own.
+
+A column named `created_at` renders as "Created At" and a resource for a `User` model as "User".
+Both come from `Str::headline()`, which is English, and a panel running in another locale had no
+way to change them short of `->label()` on every column of every table. Before falling back to
+`Str::headline()`, every derivation now asks this file:
+
+```php
+// lang/id/panel.php
+return [
+    'fields' => ['created_at' => 'Dibuat pada'],
+    'resources' => ['User' => 'Pengguna'],
+];
+```
+
+One entry, and every column, field, entry, filter, summary and export column of that name follows
+it across every panel. `->label()` is still checked first, so one table that needs a different word
+says so without changing anything here.
+
+The file belongs to the application because the names in it are the application's — `created_at`
+is its column and `User` is its model. Nothing is required: with no such file the behaviour is
+exactly what it was. Change `file` only if `panel` is a name your application already uses for
+something else. A value that is not a non-empty string falls back to `panel`.
+
+Every group, and the full list of what reads it, is in
+[Translations](../localization/translations.md#labels-derived-from-your-own-names).
+
 ## `frontend`
 
 ```php
@@ -246,6 +319,8 @@ not a non-empty string falls back to the default. [Frontend Paths](frontend-path
 config('panda-panel.register_routes');            // true
 config('panda-panel.home_redirect.paths');        // ['dashboard']
 config('panda-panel.integrations.allowed_hosts'); // []
+config('panda-panel.labels.file');                // 'panel'
+config('panda-panel.locales');                    // []
 ```
 
 Overriding one in a test is an ordinary `Config::set()`, and takes effect for anything read per
@@ -293,6 +368,7 @@ $this->actingAs($admin)->get('/dashboard')->assertOk();
 - [Home Redirect](home-redirect.md)
 - [Migration Loading](migrations.md)
 - [Frontend Paths](frontend-paths.md)
+- [Translations](../localization/translations.md)
 - [Environment Variables](environment.md)
 - [Service Provider Behavior](service-provider.md)
 - [Publish Tags](../cli/publish-tags.md)

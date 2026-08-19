@@ -8,6 +8,7 @@ import type {
     FilterValue,
     ResourceMeta,
     SortDirection,
+    TableLayout,
     TableState,
 } from '@/panel/types/table';
 
@@ -23,6 +24,7 @@ export type UseResourceReturn = {
     setColumns: (visible: string[], order: string[]) => void;
     resetColumns: () => void;
     setColumnSearch: (name: string, term: string) => void;
+    setLayout: (layout: TableLayout) => void;
     setTab: (key: string) => void;
     clearFilters: () => void;
     nextDirectionFor: (column: string) => SortDirection;
@@ -124,6 +126,22 @@ export function useResource(
                 set(params, 'direction', direction);
                 resetPage(params);
             });
+        },
+
+        /**
+         * Which renderer draws the records.
+         *
+         * Written, never deleted — even for `table`. The server remembers the
+         * layout, and a deleted key reads as "this request is not talking
+         * about layout", which restores the grid the user just left. Same trap
+         * `setSearch` documents.
+         *
+         * No `resetPage()`: the grid and the table show the same page of the
+         * same query, so being thrown back to page one for changing how those
+         * rows are drawn would be a bug rather than insurance.
+         */
+        setLayout(layout: TableLayout): void {
+            visit((params) => params.set('layout', layout));
         },
 
         setTab(key: string): void {

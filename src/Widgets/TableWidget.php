@@ -31,7 +31,14 @@ abstract class TableWidget extends Widget
 {
     protected static int|string|array $columnSpan = ['default' => 1, 'md' => 2, 'lg' => 2, 'xl' => 2];
 
-    protected static string $emptyMessage = 'Nothing to show yet.';
+    /*
+     * Empty rather than the sentence itself: a static property is initialized
+     * before the translator can answer, so what "unset" means is decided
+     * where it is read. Still typed `string` and not `?string`, because a
+     * widget that already declares `protected static string $emptyMessage`
+     * would fatal on a redeclaration that widened the type.
+     */
+    protected static string $emptyMessage = '';
 
     /**
      * Rows per page. A dashboard table is read at a glance, so the default is
@@ -69,14 +76,17 @@ abstract class TableWidget extends Widget
         $query = new TableQuery($schema, request(), static::stateNamespace());
 
         $records = $query->paginate($this->query());
+        $visible = $query->state()['columns']['visible'];
 
         return [
             'columns' => $schema->toArray()['columns'],
             'rows' => array_values(array_map(
-                static fn (Model $record): array => $schema->toRow($record),
+                static fn (Model $record): array => $schema->toRow($record, null, $visible),
                 $records->items(),
             )),
-            'emptyMessage' => static::$emptyMessage,
+            'emptyMessage' => static::$emptyMessage === ''
+                ? __('panda-panel::pages.widgets.table_empty')
+                : static::$emptyMessage,
             // The same shapes the resource index sends, so the renderer is the
             // same component rather than a second one that drifts.
             'state' => $query->state(),

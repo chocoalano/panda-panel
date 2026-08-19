@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import ActionButton from '@/panel/actions/ActionButton.vue';
 import ActionModal from '@/panel/actions/ActionModal.vue';
 import PageHeader from '@/panel/components/PageHeader.vue';
@@ -9,6 +9,8 @@ import { useResource } from '@/panel/composables/useResource';
 import DataTable from '@/panel/tables/DataTable.vue';
 import DataTableBulkActions from '@/panel/tables/DataTableBulkActions.vue';
 import DataTableColumnManager from '@/panel/tables/DataTableColumnManager.vue';
+import DataTableGrid from '@/panel/tables/DataTableGrid.vue';
+import DataTableLayoutToggle from '@/panel/tables/DataTableLayoutToggle.vue';
 import DataTablePagination from '@/panel/tables/DataTablePagination.vue';
 import DataTableTabs from '@/panel/tables/DataTableTabs.vue';
 import DataTableToolbar from '@/panel/tables/DataTableToolbar.vue';
@@ -76,6 +78,7 @@ const {
     setColumnSearch,
     setColumns,
     resetColumns,
+    setLayout,
     setTab,
     clearFilters,
 } = useResource(
@@ -102,7 +105,18 @@ const {
 );
 
 const selected = ref<Array<string | number>>([]);
-const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
+
+/**
+ * Either renderer, held through one ref.
+ *
+ * Both expose `clearSelection` and `clearColumnSearches` — the grid's second
+ * one deliberately doing nothing — so everything below stays unaware of which
+ * layout is mounted. The union is written out because that is what makes
+ * TypeScript check the pair rather than infer one of them.
+ */
+const tableRef = ref<
+    InstanceType<typeof DataTable> | InstanceType<typeof DataTableGrid> | null
+>(null);
 
 function onSelectionChange(keys: Array<string | number>): void {
     selected.value = keys;
@@ -125,6 +139,22 @@ function clearTableFilters(): void {
     tableRef.value?.clearColumnSearches();
     clearFilters();
 }
+
+/**
+ * Switching layout drops the selection.
+ *
+ * `useResource` visits with `preserveState`, so this page is *not* remounted
+ * when the layout changes — but the renderer under it is destroyed and rebuilt
+ * with an empty selection model. Without this, `selected` survives the switch
+ * and the bulk action bar claims N records are selected while nothing on
+ * screen is ticked.
+ */
+watch(
+    () => props.state.layout,
+    () => {
+        selected.value = [];
+    },
+);
 
 /**
  * The page's own header actions plus whatever the table declared. Both are
@@ -178,9 +208,15 @@ const headerActions = computed(() => [
                     @filter="setFilter"
                     @filters="setFilters"
                     @run-action="runTable"
+                    @sort="setSort"
                     @clear="clearTableFilters"
                 >
                     <template #actions>
+                        <DataTableLayoutToggle
+                            :layouts="table.layouts"
+                            :layout="state.layout"
+                            @select="setLayout"
+                        />
                         <DataTableColumnManager
                             :table="table"
                             :visible="state.columns.visible"
@@ -192,8 +228,16 @@ const headerActions = computed(() => [
                 </DataTableToolbar>
             </div>
 
-            <!-- Borderless: the surface around it is already the frame. -->
+            <!--
+                One schema, two renderers. Which one is drawn is the server's
+                answer in `state.layout`, already checked against the layouts
+                the table offers — so a table that declared no card face never
+                reaches the grid however the URL is written.
+
+                Borderless: the surface around it is already the frame.
+            -->
             <DataTable
+                v-if="state.layout === 'table'"
                 ref="tableRef"
                 :table="table"
                 :rows="rows"
@@ -208,6 +252,21 @@ const headerActions = computed(() => [
                 @edit-cell="editCell"
                 @run-table-action="runTable"
                 @reorder="reorder"
+            />
+
+            <DataTableGrid
+                v-else
+                ref="tableRef"
+                class="p-3"
+                :table="table"
+                :rows="rows"
+                :state="state"
+                :summaries="summaries"
+                :group-summaries="groupSummaries"
+                @selection-change="onSelectionChange"
+                @run-action="onRunAction"
+                @edit-cell="editCell"
+                @run-table-action="runTable"
             />
 
             <!--

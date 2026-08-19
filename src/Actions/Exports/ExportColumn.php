@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use PandaPanel\Exceptions\PanelSchemaException;
+use PandaPanel\Support\Label;
 
 /**
  * One column of an export.
@@ -77,7 +78,11 @@ final class ExportColumn
 
     public function getLabel(): string
     {
-        return $this->label ?? Str::headline(str_replace('.', ' ', $this->name));
+        return $this->label ?? Label::resolve(
+            'fields',
+            $this->name,
+            fn (): string => Str::headline(str_replace('.', ' ', $this->name)),
+        );
     }
 
     public function isEnabledByDefault(): bool

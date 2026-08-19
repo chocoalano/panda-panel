@@ -15,6 +15,9 @@ import { useAppearance } from '@/composables/useAppearance';
 import { usePanel } from '@/panel/composables/usePanel';
 import { themedPanelIcon } from '@/panel/composables/usePanelBranding';
 import { resolveIcon } from '@/panel/icons/registry';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * Moves between the panels the signed-in user may enter.
@@ -45,17 +48,26 @@ const entries = computed(() =>
 <template>
     <Sheet v-if="canSwitchPanels" v-model:open="open">
         <SheetTrigger as-child>
-            <Button variant="ghost" size="icon-sm" aria-label="Switch panel">
+            <Button
+                variant="ghost"
+                size="icon-sm"
+                :aria-label="t('shell.switch_panel')"
+            >
                 <LayoutGrid />
             </Button>
         </SheetTrigger>
 
         <SheetContent side="right" class="gap-0">
             <SheetHeader>
-                <SheetTitle>Switch panel</SheetTitle>
+                <SheetTitle>{{ t('shell.switch_panel') }}</SheetTitle>
                 <SheetDescription>
-                    The panels you have access to. You are in
-                    {{ panels.find((entry) => entry.current)?.name ?? 'none' }}.
+                    {{
+                        t('shell.switch_panel_description', {
+                            panel:
+                                panels.find((entry) => entry.current)?.name ??
+                                t('shell.none'),
+                        })
+                    }}
                 </SheetDescription>
             </SheetHeader>
 

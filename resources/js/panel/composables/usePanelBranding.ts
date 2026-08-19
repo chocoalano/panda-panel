@@ -35,7 +35,9 @@ export function themedPanelLogo(
     source: PanelBrandSource | null | undefined,
     appearance: ResolvedAppearance,
 ): string | null {
-    return safeUrl(themedValue(source?.brandLogo, source?.darkBrandLogo, appearance));
+    return safeUrl(
+        themedValue(source?.brandLogo, source?.darkBrandLogo, appearance),
+    );
 }
 
 export function usePanelBranding(
@@ -47,6 +49,8 @@ export function usePanelBranding(
         iconName: computed(() =>
             themedPanelIcon(source(), resolvedAppearance.value),
         ),
-        logo: computed(() => themedPanelLogo(source(), resolvedAppearance.value)),
+        logo: computed(() =>
+            themedPanelLogo(source(), resolvedAppearance.value),
+        ),
     };
 }

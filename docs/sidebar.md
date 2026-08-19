@@ -62,6 +62,7 @@ For **every** page at once, see [the documentation index](index.md).
 - [Notifications and Broadcasting](notifications/toast.md)
 - [Search](search/overview.md)
 - [Import and Export](import-export/export-action.md)
+- [Localization](localization/translations.md)
 
 ## Customization and Extension
 

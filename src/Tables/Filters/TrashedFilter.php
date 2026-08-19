@@ -36,7 +36,7 @@ final class TrashedFilter extends Filter
 
     public function getLabel(): string
     {
-        return $this->label ?? 'Deleted records';
+        return $this->label ?? __('panda-panel::tables.trashed_filter.label');
     }
 
     public function sanitize(mixed $value): ?string
@@ -71,17 +71,54 @@ final class TrashedFilter extends Filter
     }
 
     /**
+     * The three states, and what each is called on screen.
+     *
+     * One map rather than a list built in `extraArray()` and a second reading
+     * of it elsewhere: the dropdown and the chip have to agree about what
+     * `only` is called, and they can only be relied on to agree if there is
+     * one place that says so.
+     *
+     * A method rather than a constant, because the names are translated and
+     * a constant is built before the translator can answer.
+     *
+     * @return array<string, string>
+     */
+    private static function labels(): array
+    {
+        return [
+            self::WITHOUT => __('panda-panel::tables.trashed_filter.without'),
+            self::WITH => __('panda-panel::tables.trashed_filter.with'),
+            self::ONLY => __('panda-panel::tables.trashed_filter.only'),
+        ];
+    }
+
+    /**
+     * The chip says the state's name, not its key: `only` is "Only deleted".
+     */
+    protected function describe(mixed $value): string
+    {
+        $key = is_string($value) ? $value : '';
+
+        return self::labels()[$key] ?? $key;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function extraArray(): array
     {
+        $labels = self::labels();
+
         return [
-            'options' => [
-                ['value' => self::WITHOUT, 'label' => 'Hidden'],
-                ['value' => self::WITH, 'label' => 'Included'],
-                ['value' => self::ONLY, 'label' => 'Only deleted'],
-            ],
-            'placeholder' => 'Hidden',
+            'options' => array_map(
+                static fn (string $value, string $label): array => [
+                    'value' => $value,
+                    'label' => $label,
+                ],
+                array_keys($labels),
+                array_values($labels),
+            ),
+            'placeholder' => $labels[self::WITHOUT],
         ];
     }
 }

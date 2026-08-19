@@ -45,8 +45,270 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `page` is an allowlist rather than "edit, or else create". An unrecognised value used to become
   the create form, which is the one branch that needs no record.
 
+### Added
+
+- **A reader can choose the language, and numbers and dates follow it.** The first three phases
+  made the panel translatable; this one makes it switchable, and fixes the half that stayed
+  English however the locale was set.
+
+  Name the languages and a switcher appears in the panel header and on the login screen:
+
+  ```php
+  // config/panda-panel.php
+  'locales' => ['en' => 'English', 'id' => 'Bahasa Indonesia'],
+  ```
+
+  Empty by default, and empty means no switcher — an application that serves one language should
+  not grow a language menu in every panel header because it upgraded, and one locale is the same
+  as none. This decides only the switcher: a panel already follows `app()->getLocale()` however
+  that was set. `Panel::locales()` narrows it for a panel serving a different audience. Names are
+  written in their own language, because somebody looking for their language is looking for the
+  word they would use for it.
+
+  The choice lives in the session, not in a column on your `users` table: a package that required
+  a migration to render a dropdown is asking for a schema change to draw a menu. `SetPanelLocale`
+  runs directly after `ResolvePanel` in both route groups — before every controller, because a
+  schema is built with its labels already resolved. There are two routes rather than one, because
+  a login screen is exactly where somebody notices they are reading the wrong language and cannot
+  sign in to reach the other one. Both check the submitted code against the panel's own list:
+  `app()->setLocale()` accepts any string, and an unchecked one would let a request write a
+  directory traversal into the session for the translator to try to load.
+
+  **`number_format($value, 2, '.', ',')` was English in every panel.** Grouping is the one place a
+  half-translated interface is not merely awkward — `1,234.56` shown to a reader for whom that
+  means one and a bit is a number misread without anybody noticing. A new
+  `lang/{locale}/formats.php` holds the separators and the default date patterns, and
+  `PandaPanel\Support\Format` is what `Summarizer`, `NumberColumn`, `Stat`, `DateColumn`,
+  `DateTimeColumn`, `DateTimeEntry` and the date filter's chips all go through. `DateColumn` gained
+  a `defaultFormat()` seam so `DateTimeColumn` can ask for a different pattern; a column that calls
+  `->format()` is never touched.
+
+  Deliberately **not** `Illuminate\Support\Number`, which would do this properly through ICU and
+  calls `ensureIntlExtensionIsInstalled()` — this package requires only `ext-json` and `ext-zip`,
+  and making `ext-intl` a hard requirement of an admin panel is a real install barrier on shared
+  hosting. English separators are the fallback for a locale that ships no table: `1234.56` grouped
+  with nothing is still readable, `1234 56` is not.
+
+  `Calendar` now receives the panel's locale from `PanelDatePicker`, so the month and weekday names
+  in a date picker are the reader's — the vendored shadcn component already took a `locale` prop
+  and was simply never given one. Carbon's `diffForHumans()` needed nothing: its locale already
+  follows `app()->setLocale()`.
+
+- **The Vue components speak the locale too, without `vue-i18n`.** Phase one and two translated
+  what the server renders; a panel in Indonesian still had an English "Rows per page", "Close",
+  "Nothing found." and a fully English login screen, because those strings live in the components.
+
+  `lang/{locale}/frontend.php` is a new group — 232 keys across ten sections — and the only one
+  that leaves the server: `SharePanelData` puts it on every page as `translations`, beside a
+  `locale` string, and `resources/js/composables/useTranslator.ts` reads it. 258 call sites across
+  71 components now go through `t('tables.rows_per_page')`, with Laravel's own `:name` placeholder
+  syntax so a line reads the same whether it is rendered on the server or in the browser.
+
+  **No `vue-i18n`.** These components are *published* into an application, so a runtime dependency
+  here is a line every application has to add to its own `package.json` and keep in step with this
+  package's — for a lookup that is thirty lines. The cost of the dependency is larger than the
+  thing it replaces.
+
+  It is a closure like every other shared prop, so Inertia leaves it out of a partial reload:
+  sorting a table or turning a page carries none of the ~9 KB. Only `frontend` crosses the wire —
+  the abort messages and the mail lines are read in PHP and would be a hundred sentences in the
+  page source of every screen. Schema labels are not in it either: a column header arrives inside
+  the payload already translated, because that is where the schema lives.
+
+  A missing key renders as English rather than as a key — `t('tables.rows_per_page')` with nothing
+  behind it reads "Rows per page", not `tables.rows_per_page`, so a gap degrades to approximately
+  the source language instead of to something that looks broken. That is the runtime behaviour,
+  not the plan: two tests read every `t('…')` call and every frontend key held in a component
+  constant and assert each resolves in **both** locales, so a missing key fails CI.
+
+  Ten files under `resources/js/components/ui/**` now call `t()`, for the screen-reader labels on
+  dialogs, sheets, the sidebar and the spinner. That directory is vendored from shadcn-vue and
+  deliberately kept in its formatting, so those lines will conflict on the next upstream pull. It
+  was taken deliberately: leaving them English means a screen-reader user in Indonesian hears
+  "Close" on every dialog in the panel, which is worse than a ten-line merge.
+
+  Two things fixed on the way past. `PanelDatePicker` built its `DateFormatter` with a hardcoded
+  `'en'`, so a picked date read "Jan 5, 2026" in every locale; it now follows `locale` and is
+  rebuilt when that changes. And `StatsWidget`'s trend badge carried a `label` on its class table
+  that nothing rendered — the arrow and the percentage had no accessible name at all — so it is
+  now the badge's `aria-label`.
+
+- **Labels derived from your own names follow the locale too.** Translating what the package wrote
+  was only half a translation: a column named `created_at` still rendered as "Created At" in every
+  locale, because that string is `Str::headline()` and `Str::headline()` knows English. The only
+  fix was `->label()` on every column of every table, which is most of the value of a table builder
+  handed back.
+
+  Every one of the 23 places that derived a label now asks the application first, through the new
+  `PandaPanel\Support\Label`. Write `lang/id/panel.php` with `'fields' => ['created_at' => 'Dibuat
+  pada']` and every column, form field, infolist entry, filter, summary and export column of that
+  name follows it, in every table, in every panel. Twelve groups — `fields`, `relations`,
+  `resources`, `resources_plural`, `pages`, `clusters`, `actions`, `notifications`, `tabs`,
+  `blocks`, `values`, `panels` — cover every derivation but one.
+
+  The file is the application's rather than the package's, because the names in it are the
+  application's: `created_at` is its column and `User` is its model. Its name comes from the new
+  `panda-panel.labels.file` config key and defaults to `panel`. Nothing is required — an
+  application with no such file behaves exactly as it did, and `->label()` is still checked before
+  the file is ever read, so one table that needs a different word says so without changing
+  anything.
+
+  Two details the obvious implementation gets wrong. `Str::plural()` knows English, so a resource
+  whose singular is translated and whose plural is not keeps the singular unchanged rather than
+  becoming "Penggunas" — say the plural in `resources_plural` to get a different word. And a
+  relation attribute *is* named `user.name`, so the lookup reads the group and indexes it by the
+  exact name rather than walking Laravel's dots; `'user' => 'Pengguna'` and `'user.name' => 'Nama
+  pemilik'` can both be present, which nesting would not allow. Nesting still works for an
+  application that prefers it.
+
+  `RecordSubNavigation`'s `view` and `edit` tabs moved the other way — into the package's own
+  `pages.record_navigation`, because those two words are the package's, not yours. The one
+  derivation left in English is `Plugin::metadata()`, whose name is read by `panel:plugins` and the
+  plugin list, both developer surfaces.
+
+- **The panel speaks Indonesian, and English is now a translation like any other.** The package
+  ships `lang/en` and `lang/id` under the `panda-panel` namespace, registered by
+  `loadTranslationsFrom()` before anything else in `boot()`. Set `app()->setLocale('id')` and every
+  built-in action label, confirmation, success message, empty state, filter chrome, error
+  notification, abort message and the two-factor email follows it. Nothing has to be published,
+  and a locale the package does not ship falls back to English rather than rendering raw keys.
+
+  Seven groups, 196 keys, key-for-key identical between the two locales. `actions` covers every
+  built-in action including import and export; `tables`, `forms`, `notifications`, `errors`,
+  `pages` and `integrations` cover the rest. A new `panda-panel-translations` publish tag copies
+  them to `lang/vendor/panda-panel` for **rewording** — a third locale needs no publish at all,
+  because Laravel reads that directory first either way.
+
+  What is *not* translated is the more interesting half. Everything in `PandaPanel\Exceptions`,
+  everything in `PandaPanel\Testing`, and every console command stay in English: their reader is a
+  developer holding a stack trace or a terminal, and a translated message is one that cannot be
+  pasted into a search box. Labels derived from your own code — `Str::headline('created_at')`,
+  a resource label from a model class name — stay yours to translate with `->label()`.
+
+  Several places had to stop holding a sentence, because a `const` and a static property default
+  are both evaluated before the translator can answer: `Panel::DEFAULT_ERROR_NOTIFICATIONS` became
+  `defaultErrorNotifications()`, `TrashedFilter::LABELS` became `labels()`, and
+  `TableSchema::$emptyStateHeading`, `TableWidget::$emptyMessage`, `Page::$subheading` and
+  `Page::$navigationGroup` are now resolved where they are read rather than where they are
+  declared. `Page::subheading()` and `Page::navigationGroup()` are new method seams over the
+  existing properties — a page that assigns either still behaves exactly as it did.
+  `TableWidget::$emptyMessage` stayed typed `string` rather than becoming `?string` for the same
+  reason: a widget already declaring `protected static string $emptyMessage` would fatal on a
+  redeclaration that widened the type.
+
+  `panel:cache` was already safe and needed no change — `PanelManifest` stores class names and
+  nothing else, so a cached panel is not frozen into the locale it was cached in.
+
+  Guarded by six tests rather than by remembering: one asserts the two locales hold identical keys,
+  one reads every `__('panda-panel::…')` call in `src` and asserts each key resolves in **both**
+  locales, and the rest assert the behaviour end to end. `Negative/DistributionTest` asserts `lang`
+  reaches the Composer archive — a package that shipped without it would boot and then render
+  `panda-panel::actions.delete.label` on the delete button.
+
+- **A table can be drawn as a grid of cards.** `TableSchema::cards()` declares a card face and the
+  toolbar grows a layout toggle; `?layout=grid` is whitelisted against the layouts the table offers,
+  echoed in `state()['layout']`, and remembered by `persistColumnsInSession()`. It is a second
+  renderer over one schema rather than a second page — the query, the filters, the search, the tabs
+  and the pagination are the identical ones the row table uses, which is why almost none of them
+  needed changing.
+
+  A card face arranges the columns the table **already declares** — five slots holding column
+  *names*, not a parallel set of card components. A `BadgeColumn` on a card renders through the same
+  cell renderer it uses in a row, from the same definition, so a column changed once changes
+  everywhere it is drawn. `cards()` takes no required argument: called bare, the face is inferred —
+  the first image column is the picture, the first non-editable column is the heading, badge/boolean/
+  icon columns become chips, and the next four become value rows. A description is deliberately never
+  inferred, because there is no rule for "which column is the subtitle" that is right more often than
+  it is wrong.
+
+  Two things the grid does not do, both decided rather than missed. **A reorderable table offers no
+  grid at all**: an order arranged by dragging is linear, and dragging a card into place in a grid
+  that wraps is a different interaction needing a different affordance — this is enforced on the
+  server, so the toggle simply does not render. And **frozen columns, column widths and per-column
+  search are inert**, because each of them means "a column of a table" and there is no header here
+  to apply them to. Summaries do survive, as strips rather than footer rows — table figures under
+  the grid and a band's own closing the run of cards it heads. A total that vanished because
+  somebody changed how the list is drawn would be a real loss on a ledger.
+
+  Sorting needed new work. The row table's only sort control is its column headers, so grid layout
+  puts a menu of every `sortable()` column in the toolbar. It emits the same event into the same
+  handler, so a different column sorts ascending and the active column reverses, with no second copy
+  of the rule that decides it.
+
+### Changed
+
+- **A relation a column names is eager loaded without being asked.** `TextColumn::make('author.name')`
+  reads its value through `data_get()`, which loads the relation once per record — the N+1 whose only
+  defence was remembering `$with`. Measured on twenty rows with one dotted column: **22 queries before,
+  3 after.** The same derivation runs for exports, from the columns actually being written, which is
+  the one N+1 with no page size to bound it: an export walks the whole result set, and an exporter may
+  write columns the table never shows, so a `$with` sized for the list never covered them.
+
+  Derivation is best effort and never fatal. Each segment of a dotted name is verified against the
+  model before it is claimed, and anything unverifiable is dropped rather than guessed at — a JSON
+  column addressed as `meta.total` is not a relation and must not become `with('meta')`. Adding an
+  eager load can only reduce queries, but getting one wrong must not be able to break a page that
+  works.
+
+  `$with` is unchanged and still needed for every relation with no name to read it from: one reached
+  by a `formatUsing()` closure, by `recordTitle()`, or by a policy. See
+  [Query performance](docs/resources/performance.md), a new page covering what is derived, what is
+  not, why every read is `select *`, and how `Model::preventLazyLoading()` turns a missed eager load
+  from a slow page into an exception.
+- **A hidden column costs nothing.** `toRow()` serializes the columns the current arrangement shows,
+  so a column turned off in the column manager is no longer read from the record, passed through its
+  closures, or sent to the frontend. Hiding a column previously reduced only what Vue drew — the value
+  was still read, `formatUsing()` and `urlUsing()` still ran, and for a dotted column a relation was
+  loaded to be discarded. Two exceptions, both deliberate: a card layout keeps its image and title
+  columns whatever the arrangement says, because a card draws them regardless; and a caller with no
+  arrangement to read still gets every column.
+- **A bulk action is one transaction.** `Action::executeBulk()` now wraps the whole selection on the
+  same three-level rule as every other write. It used to be neither one transaction nor none: a
+  `bulkAction()` closure ran unwrapped, and the per-record fallback opened one transaction per record
+  — so a failure on the seventh of ten left six committed and six rows changed by an operation the
+  user was told had failed. Every built-in bulk action already opened its own `DB::transaction()` to
+  avoid exactly that, which is the clearest sign it was the wrong default; theirs is now a savepoint
+  inside it, with the same outcome. An action that genuinely wants partial application says
+  `->databaseTransaction(false)`, the same switch every other write has.
+
+- **A date is now picked from a calendar, not from the browser's own control.**
+  `DatePicker` and both bounds of a `DateFilter` mount
+  `resources/js/panel/components/PanelDatePicker.vue` — a
+  [shadcn-vue date picker](https://www.shadcn-vue.com/docs/components/date-picker) built from the
+  `Popover` and `Calendar` components this package already publishes. `<input type="date">` is the
+  *browser's* widget: Chrome, Firefox and Safari each draw a different one, none of them themeable,
+  and their clear affordances differ — Firefox has none at all. A field a panel cannot style is a
+  field that will not match the branding the panel was given.
+
+  Nothing behind it moved. The control emits an ISO `Y-m-d` string or `null`, exactly as the native
+  input did, so `minDate()`, `maxDate()`, `required()`, `disabled()` and every validation rule mean
+  what they meant, and no PHP changed. The two calendars of a range now bound each other, which is a
+  convenience rather than the rule — `DateFilter::sanitize()` still swaps a reversed range arriving
+  from a hand-edited URL, because a control cannot be what enforces that. The picker carries its own
+  clear button, since a popover has no equivalent of the native input's; it is hidden on a
+  `required()` field, where there is no empty state to return to.
+
+  `DateTimePicker` and `TimePicker` are deliberately still native. shadcn-vue's date picker covers a
+  date; a time and a date-time need a different control, and changing them on the same reasoning is
+  a separate decision rather than an implied one.
+
 ### Fixed
 
+- **Four filter chips named their filter and then said nothing useful.** Indicators are built on the
+  server precisely because only a filter knows what its value means — the rule the code states is
+  that `1` is "Verified", not "1" — and four of the seven filters never used that knowledge.
+  `Filter::describe()`, the inherited one, casts a scalar and returns `''` for anything else, so
+  `SelectFilter` printed the option *key* (`Status: published`), `BooleanFilter` printed the boolean
+  (`Verified: 1`, the exact thing the rule forbids), `TrashedFilter` printed `Deleted records: only`,
+  and `DateFilter` — whose value is an array — printed `Created At: ` with nothing after the colon
+  at all. A chip that cannot say what it is doing is a chip that reads as broken. Each of the four
+  now describes its value the way its own control spelled it, and `TrashedFilter`'s option labels
+  moved to one constant so the dropdown and the chip cannot disagree about what `only` is called.
+- **Closing a filter chip on a deferred table no longer discards what you were composing.** The
+  chip's `×` applied immediately — correctly, since a chip shows what the server is *already*
+  narrowing by — but it emitted on its own, and the server's answer resets the pending map. Filters
+  set but not yet applied vanished without a word. The removal now travels in the same visit as
+  whatever is staged.
 - **A schema that cannot mean what it says is now refused, loudly.** Six declaration mistakes were
   silent, and all six produced wrong behaviour rather than no behaviour. `PanelSchemaException`
   covers them, and every message names the offending name and the fix:
