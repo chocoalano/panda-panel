@@ -271,7 +271,7 @@ const MAX_WIDTH_CLASSES = {
     '6xl': 'max-w-6xl',
     '5xl': 'max-w-5xl',
     '4xl': 'max-w-4xl',
-    '3xl': 'max-w-3xl',
+    '3xl': 'max-w-full',
 } as const;
 ```
 
@@ -317,19 +317,28 @@ Three consequences, in the order they bite:
 The two palettes it switches between are plain custom-property blocks in the same stylesheet —
 `:root` for light and `.dark` for dark — including every `--sidebar-*` token the shell reads.
 
-## 8. The frozen-column seam is missing
+## 8. Pinned columns show the table through them, or have no seam
 
-**Symptom.** A table with pinned columns scrolls and the unpinned columns slide under the frozen
-group with no visible edge.
+**Symptom.** One or both of:
 
-**Cause.** `.panel-table-frozen-edge` is a component class in `panda-panel.css`, and an application
-that kept its own `app.css` without copying that block has the class in the markup and no rule
-behind it.
+- a table with pinned columns scrolls and the unpinned columns slide under the frozen group with no
+  visible edge;
+- the scrolling cells are *visible through* the pinned ones, which reads as "pinning is not
+  working" rather than as a colour problem.
+
+**Cause.** Both are component classes in `panda-panel.css`, and an application that kept its own
+`app.css` without copying that block has the classes in the markup and no rules behind them.
 
 ```css
 @layer components {
-    .panel-table-frozen-edge {
-        position: relative;
+    /* Opaque under the row's own colour, so nothing scrolls through. */
+    .panel-table-frozen-cell::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background-color: var(--background);
+        pointer-events: none;
     }
 
     .panel-table-frozen-edge::after {
@@ -341,25 +350,46 @@ behind it.
         pointer-events: none;
     }
 
-    /* Pinned left: the seam sits on the right of the cell. */
-    .panel-table-frozen-edge:not([style*='right'])::after {
+    /* Pinned to the leading edge: the seam sits on the right of the cell. */
+    .panel-table-frozen-edge-start::after {
         left: 100%;
         border-left: 1px solid var(--border);
         background: linear-gradient(to right, rgb(0 0 0 / 0.06), transparent);
     }
 
-    /* Pinned right: mirrored. */
-    .panel-table-frozen-edge[style*='right']::after {
+    /* Pinned to the trailing edge: mirrored. */
+    .panel-table-frozen-edge-end::after {
         right: 100%;
         border-right: 1px solid var(--border);
         background: linear-gradient(to left, rgb(0 0 0 / 0.06), transparent);
     }
+
+    .panel-table-frozen-cell,
+    .panel-table-frozen-edge {
+        position: relative;
+    }
 }
 ```
 
-It is a pseudo-element rather than a border because a border would move the cell's content by a
-pixel the moment a table starts scrolling — and the whole point of the marker is that nothing else
+The seam is a pseudo-element rather than a border because a border would move the cell's content by
+a pixel the moment a table starts scrolling — and the whole point of the marker is that nothing else
 appears to move.
+
+Three things to keep if you edit this block:
+
+- **The side comes from `-start` / `-end`,** written by the renderer. An earlier version keyed off
+  `[style*='right']` in the style attribute, which a column that also declared a `width()` could
+  defeat. A stylesheet that infers what a component already knows has two sources of truth for one
+  fact.
+- **`z-index: -1` on the plate is inside the cell's own stacking context,** which the sticky cell's
+  `z-index` creates. It sits under the cell's content and above everything scrolling past.
+- **The cell itself is `bg-inherit` and the row is `bg-background`,** so a pinned cell still takes
+  the row's hover and selected colour. Making the cell opaque on its own account gives you the one
+  cell in the row that never highlights.
+
+A version of this file older than the fix has `.panel-table-frozen-edge:not([style*='right'])` and
+no `.panel-table-frozen-cell` at all. `php artisan panel:assets` reports it; see
+[After a package upgrade](#after-a-package-upgrade).
 
 ## What is in the stylesheet
 
@@ -371,7 +401,7 @@ Five parts, in file order. All of it is published, so all of it is yours to edit
 | The dark variant | `@custom-variant dark (&:is(.dark *))` |
 | The theme mapping | `@theme inline { … }` — the token-to-utility map |
 | The palettes | `:root { … }` and `.dark { … }`, plus a `@layer base` border-colour compatibility block and a `@layer utilities` font block |
-| Component layer | `.panel-table-frozen-edge` |
+| Component layer | `.panel-table-frozen-cell`, `.panel-table-frozen-edge` and its two side variants |
 
 The mapped families: `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`,
 `accent`, `destructive`, `border`, `input`, `ring`, `chart-1` through `chart-5`, and the eight

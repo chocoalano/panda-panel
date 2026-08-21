@@ -252,8 +252,8 @@ means changing that glob too.
 `resources/css/panda-panel.css` is a complete Tailwind 4 stylesheet, not a fragment: it opens with
 `@import 'tailwindcss'` and `@import 'tw-animate-css'`, declares the dark variant, the `@theme
 inline` token map, the light and dark custom property sets including every `--sidebar-*` token the
-shell reads, and the `.panel-table-frozen-edge` component class that draws the seam beside a
-frozen column.
+shell reads, and the `.panel-table-frozen-cell` and `.panel-table-frozen-edge` component classes
+that keep a pinned cell opaque and draw the seam beside a frozen column.
 
 A Laravel Vue starter kit ships an `app.css` that is nearly identical — the panel-specific parts
 are the sidebar tokens and the frozen-column seam. So there are two sensible arrangements:

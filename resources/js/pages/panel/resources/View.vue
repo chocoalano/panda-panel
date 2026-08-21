@@ -68,7 +68,7 @@ const { pending, processing, formUrl, formContext, run, confirm, cancel } =
         reads better narrow. The layout is the same either way.
     -->
     <PanelRecordLayout
-        :class="relations.length > 0 ? 'max-w-5xl' : 'max-w-3xl'"
+        :class="relations.length > 0 ? 'max-w-5xl' : 'max-w-full'"
         :sub-navigation="page.subNavigation"
     >
         <template #header>

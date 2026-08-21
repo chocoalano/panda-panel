@@ -25,7 +25,7 @@ const MAX_WIDTH_CLASSES = {
     '6xl': 'max-w-6xl',
     '5xl': 'max-w-5xl',
     '4xl': 'max-w-4xl',
-    '3xl': 'max-w-3xl',
+    '3xl': 'max-w-full',
 } as const;
 
 type MaxContentWidth = keyof typeof MAX_WIDTH_CLASSES;

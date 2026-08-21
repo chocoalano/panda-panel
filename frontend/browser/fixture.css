@@ -1,0 +1,15 @@
+/*
+ * The published stylesheet, told where this fixture's markup comes from.
+ *
+ * Tailwind 4 detects sources from the project it is compiled in, and this
+ * fixture is compiled with `frontend/browser` as its root — so the classes
+ * the panel's components are written with are in a directory it would never
+ * scan. In an application the published `panda-panel.css` sits at the root
+ * and the same detection finds `resources/js` on its own.
+ *
+ * One import and one `@source`, nothing else: the fixture must prove what the
+ * shipped stylesheet says, so it may not add a rule of its own.
+ */
+@import '../../resources/css/panda-panel.css';
+
+@source '../../resources/js';

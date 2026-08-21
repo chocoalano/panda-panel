@@ -249,6 +249,23 @@ it('declares a layout on every published panel page', function (): void {
 
 `IconRegistryTest` is the other one of this kind: it walks panel icons, navigation items, resource navigation icons and every record and bulk action, and asserts each name exists in `resources/js/panel/icons/registry.ts`. An unregistered icon renders nothing at all, with no error. Use `Action::getIcon()` there rather than `toArray()` — `toArray(null)` returns null whenever the action is hidden or unauthorized for the absent record, so collecting icons through it gathers nothing and passes for the wrong reason.
 
+## The one thing a PHP test cannot see
+
+`tests/browser/frozen-columns.mjs` is a script, not a runner. ADR 001 records that this package ships no browser test runner and that stands — nothing installs, nothing is added to `npm run ci`, and the suite is unaffected.
+
+What it exists for is the one behaviour that is decided entirely by a layout engine: frozen columns are offset by widths the browser measured, and on a narrow screen a side unpins itself when it would swallow the scroll lane. No amount of string assertion over `useFrozenColumns.ts` can say whether Chrome agrees.
+
+```bash
+npm run test:browser        # builds frontend/browser, drives a local Chrome at 360×800
+PANDA_CHROME=/path/to/chromium npm run test:browser
+```
+
+It builds the fixture in `frontend/browser` — the real `DataTable`, the real stylesheet, and a stand-in for `@inertiajs/vue3` so mounting it needs no Inertia application — serves it over a throwaway HTTP server, and drives whatever Chrome is on the machine at 360×800 over the DevTools protocol using Node's own WebSocket client. It asserts that the table overflows, that the pinned headers report `position: sticky`, that they hold their x position while the lane scrolls under them, that a pinned cell is not `rgba(0, 0, 0, 0)`, that the last pinned column carries its `::after` seam, and that Vue logged no recursive-update warning.
+
+The fixture is deliberately anonymous: generic column names, no resource, no panel. A fixture named after one application's table would be a test of that application.
+
+Everything about freezing that is arithmetic rather than layout — which offset, which side drops, which cell is the edge — is a vitest unit test in `resources/js/panel/tables/useFrozenColumns.test.ts`, and the invariants both halves depend on are asserted about the source in `tests/Feature/Panel/TableFrozenColumnTest.php`.
+
 ## Gotchas
 
 - **`Event::fake()` with no arguments breaks the panel.** It silences the model events resources rely on. `fakePanelNotifications()` fakes exactly one event class for this reason.

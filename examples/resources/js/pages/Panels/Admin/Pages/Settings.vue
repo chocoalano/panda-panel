@@ -17,7 +17,7 @@ defineProps<{
 <template>
     <Head :title="page.title" />
 
-    <div class="flex max-w-3xl flex-col gap-6">
+    <div class="flex max-w-full flex-col gap-6">
         <PageHeader :heading="page.heading" :subheading="page.subheading" />
 
         <dl class="divide-y rounded-lg border">

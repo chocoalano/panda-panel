@@ -220,6 +220,26 @@ const visibleColumns = computed(() => [
     ...orderedColumns.value.filter((column) => column.frozen === 'end'),
 ]);
 
+const hasRowActions = computed(() =>
+    props.rows.some((row) => row.actions.length > 0),
+);
+
+/**
+ * A separate actions column exists unless the buttons live in the last cell.
+ * `after_cells` is for a table narrow enough that a column of its own would
+ * be most of it.
+ *
+ * Declared before the frozen set rather than after it, and that is load
+ * bearing: `useFrozenColumns` watches the set, Vue evaluates a watch source
+ * once to find out what it depends on, and a `const` read during that first
+ * evaluation but declared further down the file is a `ReferenceError` in the
+ * temporal dead zone — which took the whole table down with it, at setup,
+ * before a single row was drawn.
+ */
+const hasActionsColumn = computed(
+    () => hasRowActions.value && actionsPosition.value !== 'after_cells',
+);
+
 /*
  * Freezing, and the cells that take part in it.
  *
@@ -271,7 +291,7 @@ const frozenColumns = computed<FrozenColumn[]>(() => {
     return frozen;
 });
 
-const { measure, styleFor, isEdge } = useFrozenColumns(
+const { measure, styleFor, isEdge, sideOf } = useFrozenColumns(
     frozenColumns,
     tableRoot,
 );
@@ -282,33 +302,37 @@ const { measure, styleFor, isEdge } = useFrozenColumns(
  * `bg-inherit` rather than a colour of its own: the row owns the hover and
  * selected background, and a frozen cell painted `bg-background` would be the
  * one cell in the row that never highlights. Opaque it must be — a
- * transparent sticky cell has the scrolling content pass under it.
+ * transparent sticky cell has the scrolling content pass under it — which is
+ * why every row that can hold one carries `bg-background`, and why
+ * `panel-table-frozen-cell` paints an opaque plate under the inherited
+ * colour: a row tinted `bg-muted/30` inherits a colour you can see through,
+ * and half-visible scrolling text under a pinned column is the same bug in a
+ * politer form.
  *
  * The divider marks where the frozen group ends, so the seam is something the
- * eye can find rather than a place where columns appear to teleport.
+ * eye can find rather than a place where columns appear to teleport. It is
+ * drawn on the side the column is pinned to, from a class rather than from
+ * the inline offset, because which edge a cell owns is something this already
+ * knows.
  */
 function frozenClass(key: string): string[] {
-    if (!frozenColumns.value.some((column) => column.key === key)) {
+    const side = sideOf(key);
+
+    if (side === null) {
         return [];
     }
 
-    return ['bg-inherit', isEdge(key) ? 'panel-table-frozen-edge' : ''].filter(
-        (value) => value !== '',
-    );
+    const classes = ['panel-table-frozen-cell', 'bg-inherit'];
+
+    if (isEdge(key)) {
+        classes.push(
+            'panel-table-frozen-edge',
+            `panel-table-frozen-edge-${side}`,
+        );
+    }
+
+    return classes;
 }
-
-const hasRowActions = computed(() =>
-    props.rows.some((row) => row.actions.length > 0),
-);
-
-/**
- * A separate actions column exists unless the buttons live in the last cell.
- * `after_cells` is for a table narrow enough that a column of its own would
- * be most of it.
- */
-const hasActionsColumn = computed(
-    () => hasRowActions.value && actionsPosition.value !== 'after_cells',
-);
 
 defineExpose({ tableInstance, clearSelection, clearColumnSearches });
 
@@ -322,7 +346,7 @@ const { hook } = usePanelStyling();
     >
         <Table>
             <TableHeader>
-                <TableRow>
+                <TableRow class="bg-background hover:bg-background">
                     <TableHead
                         v-if="table.reorderable"
                         :ref="measure(REORDER_KEY)"
@@ -427,7 +451,10 @@ const { hook } = usePanelStyling();
                     labels: a per-column search narrows what the table-wide one
                     already found, and reads as a separate act.
                 -->
-                <TableRow v-if="hasColumnSearch">
+                <TableRow
+                    v-if="hasColumnSearch"
+                    class="bg-background hover:bg-background"
+                >
                     <TableHead
                         v-if="table.reorderable"
                         class="w-10"
@@ -533,6 +560,7 @@ const { hook } = usePanelStyling();
                         "
                         :draggable="table.reorderable && dragging === row.key"
                         :class="[
+                            'bg-background hover:bg-muted',
                             hook('table-row'),
                             dragging === row.key ? 'opacity-60' : undefined,
                         ]"
@@ -685,6 +713,8 @@ const { hook } = usePanelStyling();
                                 actionsPosition === 'after_columns'
                             "
                             class="w-12 text-right"
+                            :class="frozenClass(ACTIONS_KEY)"
+                            :style="styleFor(ACTIONS_KEY)"
                         >
                             <ActionGroup
                                 :actions="row.actions"
@@ -764,7 +794,7 @@ const { hook } = usePanelStyling();
                 <TableRow
                     v-for="(_, index) in summaryRowCount"
                     :key="index"
-                    class="bg-transparent"
+                    class="bg-background hover:bg-background"
                 >
                     <TableCell
                         v-if="table.reorderable"

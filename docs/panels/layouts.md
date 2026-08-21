@@ -121,7 +121,7 @@ The value is a **token**, mapped on the frontend to a literal Tailwind class, be
 | `6xl` | `max-w-6xl` |
 | `5xl` | `max-w-5xl` |
 | `4xl` | `max-w-4xl` |
-| `3xl` | `max-w-3xl` |
+| `3xl` | `max-w-full` |
 
 ```php
 $panel->maxContentWidth('5xl');

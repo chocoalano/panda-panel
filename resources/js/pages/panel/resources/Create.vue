@@ -47,7 +47,7 @@ const props = withDefaults(
 <template>
     <Head :title="page.title" />
 
-    <div class="flex max-w-3xl flex-col gap-4">
+    <div class="flex max-w-full flex-col gap-4">
         <PageHeader :heading="page.heading" :subheading="page.subheading" />
 
         <PageWidgets :widgets="headerWidgets" :widget-data="widgetData" />

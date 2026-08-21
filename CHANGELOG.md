@@ -294,6 +294,49 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Pinned columns work, and no longer take the table down with them.** Four faults, all in the
+  browser half of freezing, and each one alone was enough to make `frozen()` read as broken.
+
+  **The table threw at setup.** `useFrozenColumns` watches the frozen set, Vue evaluates a watch
+  source once to discover what it depends on, and that evaluation read `hasActionsColumn` — a
+  `const` declared further down `DataTable.vue`. A `ReferenceError` in the temporal dead zone,
+  before a single row was drawn. The two computed values now precede the frozen set, and a test
+  asserts the order rather than the symptom.
+
+  **Measuring looped back into the render that measured.** `measure(key)` returned a fresh closure
+  per render, which Vue treats as a new template ref and re-invokes on every patch — including the
+  patch the last invocation caused — and every invocation assigned a new widths object whether or
+  not a width had changed. Vue's "Maximum recursive updates exceeded", with nothing in the stack
+  naming the table. The ref callback is now stable per column key, does nothing when handed the
+  element it already holds, writes only when a width moved by at least half a pixel, measures in a
+  `requestAnimationFrame` rather than inside the ref callback, and cancels that frame on teardown.
+
+  **A pinned cell was see-through.** `bg-inherit` can only inherit what the row has, and the rows
+  had nothing — the summary footer was explicitly `bg-transparent` — so the scrolling columns
+  passed straight under the pinned ones. `TableRow` now defaults to an opaque `bg-background`, so
+  any table drawn with these primitives starts opaque, and the panel's own body rows add an opaque
+  hover on top of it, and `.panel-table-frozen-cell::before` paints a plate under the inherited colour for rows
+  that are legitimately tinted, such as a group band. The seam's own rules moved off
+  `[style*='right']` — which a column that declared a `width()` could defeat — onto
+  `panel-table-frozen-edge-start` / `-end` classes the renderer writes. All of it lives in the
+  published `panda-panel.css`, which the package build imports, so the shipped stylesheet is the
+  one that carries it.
+
+  **Pinning switched itself off on a phone for the wrong reason.** The guard summed the frozen
+  columns on *both* edges and compared the total to the visible width, so a pinned actions column
+  at the trailing edge unpinned the two identity columns at the leading edge — the columns that
+  make a narrow table readable at all. The sides are now evaluated separately, against the table's
+  scroll lane rather than the container around it, at 85% per side: a side that has all but
+  swallowed the lane still lets go, and it lets go alone. The lane is resolved through the same
+  `$el` unwrapping the cell refs use, because a ref that holds a *component* yields an undefined
+  `clientWidth` and a threshold that can never trigger. On a 360×800 viewport two identity columns
+  stay `position: sticky` through a horizontal scroll.
+
+  `resources/js/panel/tables/useFrozenColumns.test.ts` covers the arithmetic and the two
+  anti-regressions — a stable ref callback per key, and no state write for identical widths.
+  `npm run test:browser` drives a local Chrome at 360×800 against a fixture built from the real
+  component and the real stylesheet; it installs nothing, is not part of `npm run ci`, and is not a
+  browser test runner. See [Frozen and pinned columns](docs/tables/pinned-columns.md).
 - **Four filter chips named their filter and then said nothing useful.** Indicators are built on the
   server precisely because only a filter knows what its value means — the rule the code states is
   that `1` is "Verified", not "1" — and four of the seven filters never used that knowledge.

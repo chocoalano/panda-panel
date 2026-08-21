@@ -172,20 +172,42 @@
 }
 
 /*
- * The seam where a frozen column group ends.
+ * Frozen columns.
  *
- * A hairline plus a short gradient, drawn on the cell rather than as a border:
- * a border would move the cell's content by a pixel when a table starts
- * scrolling, and the whole point of the marker is that nothing else appears
- * to move. Without it, columns slide under the frozen group and look as
- * though they have teleported.
+ * Two rules, and both of them are a visible bug when they are missing.
  *
- * Both directions, because a column can be pinned to either edge and the
- * shadow has to fall away from the frozen side.
+ * The plate: a sticky cell paints above the cells that scroll under it, so it
+ * has to be opaque or the scrolling text shows straight through the pinned
+ * column. `bg-inherit` on the cell takes the row's own hover and selected
+ * colour — which is what keeps a pinned cell from being the one cell in the
+ * row that never highlights — but a row tinted `bg-muted/30` inherits a
+ * colour you can see through. The `::before` is that missing opacity: an
+ * opaque plate under the inherited tint, inside the cell's own stacking
+ * context so it still sits above everything scrolling past.
+ *
+ * The seam: a hairline plus a short gradient, drawn on the cell rather than
+ * as a border, because a border would move the cell's content by a pixel when
+ * the table starts scrolling and the whole point of the marker is that
+ * nothing else appears to move. Without it, columns slide under the frozen
+ * group and look as though they have teleported.
+ *
+ * Both are keyed off classes the renderer writes, not off the inline offset
+ * it also writes. Matching `[style*='right']` worked until a column declared
+ * a width — and a stylesheet that reads the style attribute to find out what
+ * a component already knows has two sources of truth for one fact.
+ *
+ * These live here, in the stylesheet that is published and built, rather than
+ * in a panel-only file: a rule in a CSS file no entrypoint imports is a rule
+ * that does not exist.
  */
 @layer components {
-    .panel-table-frozen-edge {
-        position: relative;
+    .panel-table-frozen-cell::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background-color: var(--background);
+        pointer-events: none;
     }
 
     .panel-table-frozen-edge::after {
@@ -197,17 +219,27 @@
         pointer-events: none;
     }
 
-    /* Pinned left: the seam sits on the right of the cell. */
-    .panel-table-frozen-edge:not([style*='right'])::after {
+    /* Pinned to the leading edge: the seam sits on the right of the cell. */
+    .panel-table-frozen-edge-start::after {
         left: 100%;
         border-left: 1px solid var(--border);
         background: linear-gradient(to right, rgb(0 0 0 / 0.06), transparent);
     }
 
-    /* Pinned right: mirrored. */
-    .panel-table-frozen-edge[style*='right']::after {
+    /* Pinned to the trailing edge: mirrored. */
+    .panel-table-frozen-edge-end::after {
         right: 100%;
         border-right: 1px solid var(--border);
         background: linear-gradient(to left, rgb(0 0 0 / 0.06), transparent);
+    }
+
+    /*
+     * A frozen cell whose side has been dropped on a narrow screen is an
+     * ordinary cell again, and `position: static` would leave both
+     * pseudo-elements positioned against the page instead of the cell.
+     */
+    .panel-table-frozen-cell,
+    .panel-table-frozen-edge {
+        position: relative;
     }
 }

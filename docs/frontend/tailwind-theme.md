@@ -100,7 +100,7 @@ Editing these changes the whole application. A panel that wants its own palette 
 }
 ```
 
-Plus one component class the panel needs and Tailwind cannot express: `.panel-table-frozen-edge`, the seam where a frozen column group ends. It is drawn with a pseudo-element rather than a border, because a border would move the cell's content by a pixel the moment a table starts scrolling — and the whole point of the marker is that nothing else appears to move.
+Plus the two component classes the panel needs and Tailwind cannot express, both for frozen columns. `.panel-table-frozen-cell` paints an opaque plate under a pinned cell, because a `position: sticky` cell that is see-through has the scrolling columns pass underneath it. `.panel-table-frozen-edge` — with a `-start` or `-end` variant for the side — draws the seam where a frozen group ends, as a pseudo-element rather than a border: a border would move the cell's content by a pixel the moment a table starts scrolling, and the whole point of the marker is that nothing else appears to move. Both are covered in [Frozen and pinned columns](../tables/pinned-columns.md).
 
 ## Panel colours
 
@@ -277,7 +277,7 @@ const MAX_WIDTH_CLASSES = {
     '6xl': 'max-w-6xl',
     '5xl': 'max-w-5xl',
     '4xl': 'max-w-4xl',
-    '3xl': 'max-w-3xl',
+    '3xl': 'max-w-full',
 } as const;
 ```
 
