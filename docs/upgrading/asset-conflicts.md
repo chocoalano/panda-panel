@@ -158,7 +158,7 @@ protected $signature = 'panel:assets
 | Invocation | Writes | Rewrites `.panel-assets.json` |
 | --- | --- | --- |
 | `php artisan panel:assets` | nothing | never |
-| `php artisan panel:assets --update` | `new`, `stale` | if it wrote at least one file |
+| `php artisan panel:assets --update` | `new`, `stale` | always, even when it wrote nothing |
 | `php artisan panel:assets --force` | those, plus `modified` and `conflict` | same |
 
 `--force` implies writing — it does not need `--update` beside it — and it extends the writable set
@@ -360,9 +360,9 @@ A file you never edited is a file `--update` can always write, which is the whol
 - **`npm run build` is part of the resolution, not an optimisation.** Published components are
   sources; the registries are `import.meta.glob` calls evaluated at build time. A file written on
   disk is not in the bundle until the build runs.
-- **The manifest is only rewritten when at least one file was written.** A run that resolves
-  nothing leaves the record exactly as it was, which is why route 2 uses `panel:install` — it
-  writes the manifest unconditionally.
+- **Any `--update` or `--force` run rewrites the manifest**, including one that resolved nothing.
+  That is how an application that published by tag rather than through `panel:install` gets its
+  first record, and until it has one, an edit it makes is an edit the next release overwrites.
 - **A bare `panel:assets` never writes anything**, including the manifest. Recording hashes as a
   side effect of asking a question would make the next run's answer depend on having asked.
 - **Line endings are not an edit.** Hashes normalise `\r\n` to `\n` before hashing, because a report

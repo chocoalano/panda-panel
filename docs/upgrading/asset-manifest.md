@@ -256,15 +256,18 @@ never reported as out of date.
 
 | Method | Signature | Returns |
 | --- | --- | --- |
-| `map` | `public static function map(): array<string, string>` | absolute **source => destination**, what `vendor:publish` is given |
-| `files` | `public static function files(): array<string, string>` | absolute **destination => source**, one entry per file |
+| `map` | `public static function map(): array<string, string>` | absolute **source => destination**, what the assets tag is given |
+| `translations` | `public static function translations(): array<string, string>` | the same, for the translations tag |
+| `files` | `public static function files(): array<string, string>` | absolute **destination => source**, one entry per file, both maps together |
+| `translationFiles` | `public static function translationFiles(): array<string, string>` | the published translations alone, `[]` until there are any |
 | `relative` | `public static function relative(string $path): string` | that destination as it reads in a report |
 
 ```php
 use PandaPanel\Support\Installer\PublishedAssets;
 
-count(PublishedAssets::map());     // 7 — six directories and one stylesheet
-count(PublishedAssets::files());   // every file inside them
+count(PublishedAssets::map());              // 7 — six directories and one stylesheet
+count(PublishedAssets::files());            // every file inside them, plus any published translations
+count(PublishedAssets::translationFiles()); // 0 until lang/vendor/panda-panel exists
 
 PublishedAssets::relative('/var/www/app/resources/js/panel/tables/DataTable.vue');
 // 'resources/js/panel/tables/DataTable.vue'
@@ -284,6 +287,16 @@ edited is neither changed nor unchanged.
 | `resources/js/pages` | `resources/js/pages` |
 | `resources/js/types` | `resources/js/types` |
 | `resources/css/panda-panel.css` | `resources/css/panda-panel.css` |
+| `lang` | `lang/vendor/panda-panel` — **only once the application has published them** |
+
+The translations are the one conditional entry, and the condition is the difference between them and
+the frontend. A panel cannot run without the published components; it runs perfectly well without
+published strings, because `loadTranslationsFrom()` reads the package's own `lang/` and an
+application that publishes nothing is never behind. So they are tracked from the moment
+`lang/vendor/panda-panel` exists and never before it: an application that never published is not
+told about files it did not ask for, and one that did gets its reworded copies compared against the
+package exactly the way a component is — reported when the package moves ahead, written by
+`--update` where it never touched them, and left alone where it did.
 
 The map is built per call rather than held in a constant because two destinations are configurable,
 and reading config at class-definition time would freeze whatever it happened to be during package
@@ -308,8 +321,14 @@ Wayfinder's generated `resources/js/routes` and `resources/js/actions`, and `app
 | --- | --- |
 | `php artisan panel:install` | Always, right after publishing the config and the assets |
 | `php artisan panel:assets` | Never — a bare run is a question |
-| `php artisan panel:assets --update` | Only if it wrote at least one file |
+| `php artisan panel:assets --update` | Always, including when it wrote nothing |
 | `php artisan panel:assets --force` | Same |
+| `php artisan vendor:publish --tag=…` | Never. Follow a publish by tag with `panel:assets --update` |
+
+An `--update` that wrote nothing still records, and that is not a detail: it is the only way an
+application that published by tag — the translations, most often — gets a common ancestor before it
+starts editing. Without one, its first edit is indistinguishable from a file a later release added,
+and the next update overwrites it.
 
 ```php
 // PandaPanel\Console\Commands\PanelAssetsCommand::handle()
@@ -339,11 +358,11 @@ rather than `new`, so an application with 340 identical files is not sent off to
 that are already right.
 
 ```bash
-php artisan panel:assets --update    # writes the manifest, if it wrote at least one file
+php artisan panel:assets --update    # writes the manifest, whether or not it wrote a file
 ```
 
-If everything was already identical, nothing is written and no manifest appears. Create one
-unconditionally with the installer's checks instead:
+That is the shortest route, and it is also what to run straight after any `vendor:publish` by tag.
+The installer's checks write one too, and re-run the frontend seam checks while they are at it:
 
 ```bash
 php artisan panel:install --no-panel --no-user --no-interaction

@@ -26,3 +26,9 @@ composer.lock
 # is test output: this repository is its own test application, so a suite that
 # exercises `panel:assets` writes one at the root.
 /.panel-assets.json
+
+# Where an application's published translations land. Here that is inside the
+# package's own `lang/`, because the base path during a test run is this
+# repository — so the suite that exercises publishing them writes here, and
+# nothing under it is the package's.
+/lang/vendor

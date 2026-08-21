@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use PandaPanel\Support\FrontendPaths;
 use PandaPanel\Support\Installer\AssetManifest;
 use PandaPanel\Support\Installer\PublishedAssets;
 
@@ -191,6 +192,27 @@ it('reads every real shipped file as current in this repository', function (): v
     $statuses = array_unique(array_column(AssetManifest::compare(), 'status'));
 
     expect($statuses)->toBe([AssetManifest::CURRENT]);
+});
+
+it('expands every directory in the publish map, source and destination alike', function (): void {
+    // A count rather than a spot check, because the way this breaks is
+    // silently: a file list that quietly shrinks reports the files it stopped
+    // listing as `no longer shipped` and everything else as current, which
+    // reads exactly like a healthy tree.
+    //
+    // The trap is this repository. Source and destination are the same path
+    // here, so a rule about a destination nested inside its source — which is
+    // what the published translations are — matches every frontend file too
+    // unless it insists on *strictly* nested.
+    $expected = 0;
+
+    foreach (PublishedAssets::map() as $source => $destination) {
+        $expected += File::isDirectory($source) ? count(File::allFiles($source)) : 1;
+    }
+
+    expect($expected)->toBeGreaterThan(100)
+        ->and(PublishedAssets::files())->toHaveCount($expected)
+        ->and(PublishedAssets::files())->toHaveKey(FrontendPaths::panel('palette.ts'));
 });
 
 it('records a hash for every file it ships', function (): void {

@@ -59,6 +59,7 @@ PublishedAssets::relative('/app/resources/js/panel/layouts/PanelLayout.vue');
 php artisan vendor:publish --tag=panda-panel-config
 php artisan vendor:publish --tag=panda-panel-assets
 php artisan vendor:publish --tag=panda-panel-migrations
+php artisan vendor:publish --tag=panda-panel-translations
 php artisan vendor:publish --tag=panda-panel-stubs
 php artisan vendor:publish --tag=panda-panel
 ```
@@ -68,10 +69,13 @@ php artisan vendor:publish --tag=panda-panel
 | `panda-panel-config` | `config/panda-panel.php` |
 | `panda-panel-assets` | everything in the publish map above |
 | `panda-panel-migrations` | the notifications table, the two-factor email column, and the integrations tables |
+| `panda-panel-translations` | `lang/en` and `lang/id` into `lang/vendor/panda-panel`, for rewording |
 | `panda-panel-stubs` | the generator stubs into `stubs/panel` |
-| `panda-panel` | config, migrations and assets together |
+| `panda-panel` | config, migrations, translations and assets together |
 
 `panda-panel-stubs` is deliberately not part of the umbrella tag: the stubs are only useful to a project that intends to edit what the generators write.
+
+`panda-panel-translations` is in the umbrella but is not part of `panel:install`, and is the one tag nothing needs. The strings are read from the package unless they are published, so publish it only to reword a sentence — and follow the publish with `php artisan panel:assets --update`, which records what you got so a later release can tell your rewording from a copy that has simply fallen behind.
 
 ## What each directory holds
 

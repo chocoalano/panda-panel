@@ -47,6 +47,37 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Published translations stop being frozen at the release they were published from.** An
+  application reaches for `vendor:publish --tag=panda-panel-translations` for one reason — to reword
+  a sentence the package chose — and until now that reword was permanent in both directions: its
+  copy of `lang/vendor/panda-panel` won forever, so every string the package improved afterwards
+  stopped at the vendor directory with nothing to say so. The tag existed; the way back did not.
+
+  They are tracked in `.panel-assets.json` alongside the frontend now, and the same three-way
+  comparison applies: `panel:assets` reports a published file the package has since changed,
+  `--update` writes back the ones this application never touched, `--force` takes the rest, and a
+  file edited on both sides is reported as a `CONFLICT` and never resolved by guessing. A locale a
+  later release adds lands in the same directory as `new`.
+
+  Tracked only once the choice has been made — `PublishedAssets::files()` includes a translation
+  from the moment `lang/vendor/panda-panel` exists and never before it. An application that
+  published nothing is not told about files it did not ask for, and cannot fall behind in the first
+  place: it reads the package's own `lang/`, which is also why publishing to *add* a locale is the
+  one thing not to do. That directory is consulted whether or not anything was published into it.
+
+  `panel:assets --update` now writes the manifest even when it wrote no files, which is the other
+  half of this. `vendor:publish` cannot write `.panel-assets.json`, so a file published and then
+  edited with no record in between has no common ancestor — indistinguishable from one a later
+  release added, and overwritten by the next update. Publish, run `--update` to record what you
+  got, then reword. The command also stops telling you to run `npm run build` after a run that only
+  wrote PHP.
+
+  Two things this uncovered. `PublishedAssets::map()` and `translations()` are now the single
+  source for both publish tags rather than the provider spelling the lang path out itself, and the
+  archive listing in the packaging guide was missing `lang/` and `package.json` — the second is
+  read at runtime from inside `vendor/`, and `vitest.config.ts` is export-ignored alongside the
+  rest of the toolchain now that the list has been checked.
+
 - **A reader can choose the language, and numbers and dates follow it.** The first three phases
   made the panel translatable; this one makes it switchable, and fixes the half that stayed
   English however the locale was set.

@@ -75,7 +75,7 @@ The split is not optional, because `@inertiajs/vite` only globs `resources/js/pa
 | `registerRoutes()` | one route group per panel, unless `register_routes` is false |
 | `registerIntegrations()` | wires model events for every resource that enabled integrations |
 | `registerMigrations()` | loads the package migrations unless `load_migrations` is false |
-| `registerPublishing()` | the four publish tags, in console only |
+| `registerPublishing()` | the five publish tags, in console only |
 | `registerCommands()` | the thirteen commands, plus the `optimize` hooks for `panel:cache` / `panel:clear` |
 
 Container bindings:

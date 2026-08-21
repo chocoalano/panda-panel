@@ -102,7 +102,7 @@ protected $signature = 'panel:assets
 | Option | Effect |
 | --- | --- |
 | *(none)* | Report only. Writes no files and does not create or touch `.panel-assets.json`. |
-| `--update` | Writes `new` and `stale`. Rewrites the manifest afterwards, if it wrote at least one file. |
+| `--update` | Writes `new` and `stale`. Rewrites the manifest afterwards, whether or not it wrote a file. |
 | `--force` | Implies writing. Extends `--update` to `modified` and `conflict`, and to nothing else. |
 
 The exit code is always 0. A conflict is not a failure of the command — it ran correctly and found
@@ -254,7 +254,7 @@ class-definition time would freeze whatever it happened to be during package dis
 
 ## What is in the report, and what is not
 
-The report covers exactly the publish map:
+The report covers the publish map, plus the translations once an application has published any:
 
 | Package source | Application destination |
 | --- | --- |
@@ -265,6 +265,13 @@ The report covers exactly the publish map:
 | `resources/js/pages` | `resources/js/pages` |
 | `resources/js/types` | `resources/js/types` |
 | `resources/css/panda-panel.css` | `resources/css/panda-panel.css` |
+| `lang` | `lang/vendor/panda-panel` — only once `vendor:publish --tag=panda-panel-translations` has run |
+
+Published strings are yours in exactly the way a published component is, and they used to be yours
+*permanently*: a confirmation you reworded stayed at the release you published it from, and every
+sentence the package improved afterwards stopped at the vendor directory. They are compared here
+now. An application that never published them has nothing in the report and nothing to do — it
+reads the package's own `lang/`, so `composer update` is the whole of its upgrade.
 
 Two destinations move with config, which is why `PublishedAssets::map()` is the only place the
 map is written down:
@@ -293,7 +300,11 @@ Not in the report, and never written by `panel:assets`:
   `files()` and is never compared.
 - **`config/panda-panel.php`, the migrations, the generator stubs.** Separate publish tags —
   `panda-panel-config`, `panda-panel-migrations`, `panda-panel-stubs`. Re-publish those yourself
-  and diff by hand.
+  and diff by hand. The fourth separate tag, `panda-panel-translations`, is the exception: what it
+  writes *is* compared, once it has been run.
+- **Translations you never published.** Nothing under `lang/vendor/panda-panel` is tracked until
+  that directory exists, and a third locale you added there yourself is a file the package does not
+  ship, so it is never compared or written.
 - **Wayfinder's output.** `resources/js/routes` and `resources/js/actions` are generated from your
   route table and are not in the map. See [Wayfinder routes](wayfinder.md).
 - **`resources/js/app.ts`, `vite.config.ts`, `resources/views/app.blade.php`.** Yours entirely.
@@ -312,6 +323,11 @@ php artisan panel:icons             # the icon registry is a published file
 npm run build
 ```
 
+That covers the published translations too, if there are any. `--update` takes the ones this
+application never edited; a sentence it reworded reads as `yours` and is left alone, and one both
+sides changed reads as `CONFLICT` and waits for a person. `--force` takes everything, reworded
+strings included.
+
 `npm run build` is not optional. Every component registry is an `import.meta.glob` evaluated at
 build time, so a file that changed on disk is not in the bundle until the build runs.
 
@@ -327,10 +343,10 @@ application that published before the manifest existed.
 
 ## Gotchas
 
-- **`--update` writes the manifest only when it wrote at least one file.** An application whose
-  files are all identical to the package reads as `current`, nothing is written, and no manifest
-  appears — despite the warning suggesting one would. Run
-  `php artisan panel:install --no-panel --no-user` to write it.
+- **`--update` writes the manifest even when it wrote no files.** That is what makes it the right
+  thing to run straight after a `vendor:publish` by tag: it records what you just got, so the edit
+  you make next has a common ancestor. Edit first and that edit reads as `new` on the following
+  release, and `--update` overwrites it.
 - **A bare `panel:assets` never writes the manifest.** Recording hashes as a side effect of asking
   a question would make the next run's answer depend on having asked.
 - **A file you deleted comes back.** `deleted` is never written by `--update`, but the next

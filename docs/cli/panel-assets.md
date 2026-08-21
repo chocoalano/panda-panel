@@ -1,8 +1,11 @@
 # `panel:assets`
 
-Reports which published panel assets are behind the package, which ones this
+Reports which published panel files are behind the package, which ones this
 application has edited, and which are both — and writes the ones that are safe
 to write. Reach for it after every `composer update` of this package.
+
+It covers the published frontend always, and the published translations from
+the moment an application has any: see [Translations](#translations).
 
 ```bash
 php artisan panel:assets
@@ -44,6 +47,51 @@ package's copy" is equally true of a stale file and an edited one.
 `.panel-assets.json` records what each file looked like *when it was published*.
 That third value is the common ancestor, and it turns an ambiguous two-way
 comparison into an unambiguous three-way one — the move `git merge-base` makes.
+
+## Translations
+
+An application that ran `vendor:publish --tag=panda-panel-translations` owns
+`lang/vendor/panda-panel/{locale}/*.php` the same way it owns the frontend, and
+had the same problem before this command reached them: the copy was frozen at
+the release it was published from, and every sentence the package improved
+afterwards stopped at the vendor directory with nothing to say so.
+
+They join the report the moment that directory exists, with the same seven
+statuses and the same two rules about what may be written:
+
+```text
+  out of date ......................................................... 2
+  yours ............................................................... 1
+  current ........................................................... 361
+
+  lang/vendor/panda-panel/id/actions.php ........................ written
+  lang/vendor/panda-panel/en/notifications.php .................. written
+
+INFO  Wrote 2 file(s).
+```
+
+No `npm run build` on that line, because nothing written was a Vue file. A run
+that touched both says it.
+
+An application that published nothing has nothing here to report, and that is
+the good case rather than a gap: it reads the package's own `lang/` directory,
+so it is current by definition and picks up a new locale or a reworded sentence
+on `composer update` alone.
+
+**Publish, then record, then reword — in that order.** `vendor:publish` cannot
+write `.panel-assets.json`, and a file published and then edited with no record
+in between has no common ancestor. It is indistinguishable from a file a later
+release added, reads as `new`, and an update writes over it:
+
+```bash
+php artisan vendor:publish --tag=panda-panel-translations
+php artisan panel:assets --update      # records what you just published
+# now reword lang/vendor/panda-panel/en/actions.php
+```
+
+A run with `--update` writes the manifest even when it had nothing else to
+write, which is what makes that second line worth typing on an already-current
+tree.
 
 ## Signature
 
@@ -116,8 +164,9 @@ reads.
 
 ```json
 {
-    "_": "Written by php artisan panel:install / panel:assets. Commit this file: it is the record of which version of the panel frontend this application published, and without it an upgrade cannot tell your edits from a stale copy.",
+    "_": "Written by php artisan panel:install / panel:assets. Commit this file: it is the record of which version of the panel frontend and translations this application published, and without it an upgrade cannot tell your edits from a stale copy.",
     "files": {
+        "lang/vendor/panda-panel/en/actions.php": "…",
         "resources/js/panel/components/PanelSidebar.vue": "…",
         "resources/js/panel/icons/registry.ts": "…"
     }
@@ -140,9 +189,10 @@ WARN  No .panel-assets.json, so there is no record of what this application publ
       as new. Run --update to write one.
 ```
 
-It is written by `panel:install`, and rewritten after every run that wrote
-files — from disk rather than from what was intended, so it records what the
-application actually has.
+It is written by `panel:install`, and rewritten by every `--update` or
+`--force` run — including one that wrote no files at all, because recording the
+state is half of what an update is for. Always from disk rather than from what
+was intended, so it records what the application actually has.
 
 ## The API behind it
 
@@ -173,21 +223,29 @@ symptom would be a file that publishes but is never reported as out of date.
 
 | Method | Signature |
 | --- | --- |
-| `map` | `static map(): array<string, string>` — source directory => destination, what `vendor:publish` is given |
-| `files` | `static files(): array<string, string>` — absolute destination => absolute source, one entry per file |
+| `map` | `static map(): array<string, string>` — source directory => destination, what `vendor:publish --tag=panda-panel-assets` is given |
+| `translations` | `static translations(): array<string, string>` — what `vendor:publish --tag=panda-panel-translations` is given |
+| `files` | `static files(): array<string, string>` — absolute destination => absolute source, one entry per file, both maps together |
+| `translationFiles` | `static translationFiles(): array<string, string>` — the translations alone, and empty until they are published |
 | `relative` | `static relative(string $path): string` |
 
 What is published:
 
-| Package path | Application path |
-| --- | --- |
-| `resources/js/panel` | `FrontendPaths::panel()`, `resources/js/panel` by default |
-| `resources/js/components` | `resources/js/components` |
-| `resources/js/composables` | `resources/js/composables` |
-| `resources/js/lib` | `resources/js/lib` |
-| `resources/js/pages` | `resources/js/pages` |
-| `resources/js/types` | `resources/js/types` |
-| `resources/css/panda-panel.css` | `resources/css/panda-panel.css` |
+| Package path | Application path | Tracked |
+| --- | --- | --- |
+| `resources/js/panel` | `FrontendPaths::panel()`, `resources/js/panel` by default | always |
+| `resources/js/components` | `resources/js/components` | always |
+| `resources/js/composables` | `resources/js/composables` | always |
+| `resources/js/lib` | `resources/js/lib` | always |
+| `resources/js/pages` | `resources/js/pages` | always |
+| `resources/js/types` | `resources/js/types` | always |
+| `resources/css/panda-panel.css` | `resources/css/panda-panel.css` | always |
+| `lang` | `lang/vendor/panda-panel` | once published |
+
+`files()` includes a translation from the moment `lang/vendor/panda-panel`
+exists and never before it. An application that never published is never told
+about files it did not ask for; one that did gets them treated exactly like the
+frontend from then on.
 
 ## Exit code
 
@@ -202,8 +260,10 @@ small script of your own.
 
 - **Nothing is written without `--update` or `--force`.** The bare command is a
   report.
-- **Run `npm run build` after an update.** Written files are Vue and TypeScript
-  sources; nothing changes in the browser until they are compiled.
+- **Run `npm run build` after an update that wrote frontend files.** The
+  command says so on the line that counts them, and stays quiet when everything
+  it wrote was a translation — those are PHP and take effect on the next
+  request.
 - **`--force` overwrites your edits with no backup.** Commit first. There is no
   merge step and no `.orig` file.
 - **A file you deleted stays deleted.** That is a decision the command respects,
@@ -215,6 +275,9 @@ small script of your own.
 - **Deleting the manifest is recoverable but lossy.** Everything identical to the
   package reads as `current` and everything else as `new`, so your edits become
   files the next `--update` will overwrite.
+- **Record a translations publish before you reword it.** `vendor:publish`
+  cannot write the manifest, so one `panel:assets --update` between publishing
+  and editing is what gives your rewording an ancestor to be compared against.
 
 ## See also
 

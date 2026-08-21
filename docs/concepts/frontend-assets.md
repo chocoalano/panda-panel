@@ -22,7 +22,7 @@ php artisan vendor:publish --tag=panda-panel-config
 php artisan vendor:publish --tag=panda-panel-assets
 php artisan vendor:publish --tag=panda-panel-migrations
 php artisan vendor:publish --tag=panda-panel-stubs
-php artisan vendor:publish --tag=panda-panel          # config + migrations + assets
+php artisan vendor:publish --tag=panda-panel          # config + migrations + translations + assets
 
 npm install && npm run build
 ```

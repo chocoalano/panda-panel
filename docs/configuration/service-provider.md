@@ -1,7 +1,7 @@
 # Service Provider Behavior
 
 `PandaPanel\PandaPanelServiceProvider` is everything the package does to an application at boot:
-seven bindings, eight boot steps, four publish groups, thirteen commands. It is auto-discovered by
+seven bindings, eight boot steps, five publish groups, thirteen commands. It is auto-discovered by
 Composer, so nothing has to be registered by hand. Reach for this page when you need to know what
 runs in what order, what a config key actually switches off, or how to boot the framework yourself
 in a harness that is not a Laravel application.
@@ -162,16 +162,17 @@ and then asks `ServiceProvider::publishableGroups()` sees nothing.
 | `panda-panel-config` | `config/panda-panel.php` | `config_path('panda-panel.php')` |
 | `panda-panel-migrations` | `database/migrations` | `database_path('migrations')` |
 | `panda-panel-stubs` | `stubs/panel` | `base_path('stubs/panel')` |
+| `panda-panel-translations` | `PublishedAssets::translations()` | `lang/vendor/panda-panel` |
 | `panda-panel-assets` | `PublishedAssets::map()` | `resources/js/**`, `resources/css/panda-panel.css` |
 
-The first, second and fourth are also members of the umbrella tag `panda-panel`. The stubs tag
+Every one but the stubs is also a member of the umbrella tag `panda-panel`. The stubs tag
 deliberately is not: publishing stubs changes what every future generator writes, which is not
 something an umbrella publish should do by accident.
 
-The asset map comes from `PandaPanel\Support\Installer\PublishedAssets` rather than being written
-out here, so `vendor:publish` and `panel:assets` read one list. Two copies would drift the first
-time a directory was added, and the symptom would be a file that publishes but is never reported
-as out of date.
+Both maps come from `PandaPanel\Support\Installer\PublishedAssets` rather than being written out
+here, so `vendor:publish` and `panel:assets` read one list. Two copies would drift the first time a
+directory was added, and the symptom would be a file that publishes but is never reported as out of
+date.
 
 ### `registerCommands()`
 

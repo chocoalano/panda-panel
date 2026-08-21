@@ -1,9 +1,9 @@
 # Publish Tags
 
-Four `vendor:publish` tags, plus one umbrella tag, are everything this package copies into an
-application: the config file, the Vue frontend, the migrations, and the generator stubs. Reach for
-them when you want one of those things on its own — `php artisan panel:install` runs the same
-publishes in the right order and does the rest of the install around them.
+Five `vendor:publish` tags, plus one umbrella tag, are everything this package copies into an
+application: the config file, the Vue frontend, the migrations, the translations, and the generator
+stubs. Reach for them when you want one of those things on its own — `php artisan panel:install`
+runs the same publishes in the right order and does the rest of the install around them.
 
 ## A minimal working example
 
@@ -35,6 +35,8 @@ $this->publishes([
     $this->packagePath('stubs/panel') => base_path('stubs/panel'),
 ], 'panda-panel-stubs');
 
+$this->publishes(PublishedAssets::translations(), ['panda-panel', 'panda-panel-translations']);
+
 $this->publishes(PublishedAssets::map(), ['panda-panel', 'panda-panel-assets']);
 ```
 
@@ -43,8 +45,9 @@ $this->publishes(PublishedAssets::map(), ['panda-panel', 'panda-panel-assets']);
 | `panda-panel-config` | `config/panda-panel.php` | `config/panda-panel.php` | yes |
 | `panda-panel-assets` | the seven frontend sources | `resources/js/**`, `resources/css/panda-panel.css` | yes |
 | `panda-panel-migrations` | `database/migrations` | `database/migrations` | yes |
+| `panda-panel-translations` | `lang` | `lang/vendor/panda-panel` | yes |
 | `panda-panel-stubs` | `stubs/panel` | `stubs/panel` | **no** |
-| `panda-panel` | config, migrations and assets together | as above | — |
+| `panda-panel` | config, migrations, translations and assets together | as above | — |
 
 `registerPublishing()` runs only when `$this->app->runningInConsole()` is true. That is the only
 context `vendor:publish` exists in, but it also means a test that boots the application over HTTP
@@ -158,6 +161,56 @@ whether some *other* migration claims it, and a re-dated copy would read as a ri
 Each `up()` checks before it touches anything, so an application that already has the
 `notifications` table or the `users` column is left alone.
 
+## `panda-panel-translations`
+
+```bash
+php artisan vendor:publish --tag=panda-panel-translations
+php artisan panel:assets --update
+```
+
+Copies `lang/en` and `lang/id` — every locale the package ships — into
+`lang/vendor/panda-panel`, which is where Laravel's file loader looks for an override of a
+namespaced translation.
+
+**Publishing is for rewording, and only for rewording.** Neither of the other two reasons somebody
+reaches for it holds:
+
+- *Adding a locale the package does not ship* needs no publish at all. Create
+  `lang/vendor/panda-panel/de/actions.php` and it is read; the directory is consulted whether or not
+  anything was published into it.
+- *Getting the strings at all* needs no publish either. `loadTranslationsFrom()` points at the
+  package's own `lang/`, so an unpublished application already speaks every locale the package has,
+  including one a later release adds.
+
+The override is merged key by key rather than file by file, which is what makes a published copy
+survivable: a file missing a key added in a later release still gets that key from the package. What
+it does *not* survive on its own is a sentence the package rewrites — the published copy wins, and
+wins forever.
+
+That is what `panel:assets` is for. A published translation is tracked in `.panel-assets.json`
+alongside the frontend from the moment `lang/vendor/panda-panel` exists:
+
+```bash
+php artisan panel:assets            # report only
+php artisan panel:assets --update   # write the ones this application never touched
+php artisan panel:assets --force    # also overwrite the ones it reworded
+```
+
+| On disk | In package | Reported as | `--update` |
+| --- | --- | --- | --- |
+| unchanged | changed | out of date | written |
+| reworded | unchanged | yours | left alone |
+| reworded | changed | CONFLICT | never written |
+| absent | ships a new locale | new | written |
+
+Run the `--update` **immediately after publishing**, before rewording anything. `vendor:publish`
+cannot write the manifest, and a file published and then edited with no record in between has no
+common ancestor — it is indistinguishable from a file a later release added, reads as `new`, and the
+next update writes over it. A `--update` run records the state even when it has nothing to write,
+which is what makes that second command worth typing on a tree that is already current.
+
+An application that publishes nothing skips all of this and is never behind.
+
 ## `panda-panel-stubs`
 
 ```bash
@@ -212,9 +265,10 @@ no longer improve the generated code.
 php artisan vendor:publish --tag=panda-panel
 ```
 
-Config, migrations and assets in one command. Convenient for a scripted install that wants the
-migrations owned by the application; otherwise prefer the individual tags, because this one publishes
-the migrations you may not want to own.
+Config, migrations, translations and assets in one command. Convenient for a scripted install that
+wants all four owned by the application; otherwise prefer the individual tags, because this one
+publishes the migrations you may not want to own and the translations you have no reason to own
+until you want to reword one.
 
 ## Options `vendor:publish` accepts
 
@@ -255,6 +309,10 @@ order:
 1. `panda-panel-config`
 2. `panda-panel-assets`
 3. `panda-panel-migrations`, and only after an interactive confirm that defaults to no
+
+The translations are deliberately not among them. A fresh install already reads every locale the
+package ships, so publishing them would hand the application files it has no reason to own and
+freeze sentences it never asked to change.
 
 Between steps 2 and 3 it writes `.panel-assets.json`:
 
@@ -318,8 +376,10 @@ use PandaPanel\Support\FrontendPaths;
 use PandaPanel\Support\Installer\AssetManifest;
 use PandaPanel\Support\Installer\PublishedAssets;
 
-PublishedAssets::map();                     // what vendor:publish is given
-PublishedAssets::files();                   // the same map, expanded file by file
+PublishedAssets::map();                     // what the assets tag is given
+PublishedAssets::translations();            // what the translations tag is given
+PublishedAssets::files();                   // both maps, expanded file by file
+PublishedAssets::translationFiles();        // the translations alone; empty until published
 PublishedAssets::relative(base_path('resources/js/panel/palette.ts'));
 // 'resources/js/panel/palette.ts'
 
@@ -336,8 +396,10 @@ AssetManifest::write(AssetManifest::read());
 
 | Method | Signature | Returns |
 | --- | --- | --- |
-| `PublishedAssets::map` | `static map(): array` | `array<string, string>` — absolute source => absolute destination |
-| `PublishedAssets::files` | `static files(): array` | `array<string, string>` — destination => source, one entry per file |
+| `PublishedAssets::map` | `static map(): array` | `array<string, string>` — absolute source => absolute destination, the frontend |
+| `PublishedAssets::translations` | `static translations(): array` | `array<string, string>` — the package's `lang` => `lang/vendor/panda-panel` |
+| `PublishedAssets::files` | `static files(): array` | `array<string, string>` — destination => source, one entry per file, the frontend plus any published translations |
+| `PublishedAssets::translationFiles` | `static translationFiles(): array` | `array<string, string>` — the published translations alone, `[]` until `lang/vendor/panda-panel` exists |
 | `PublishedAssets::relative` | `static relative(string $path): string` | the path with `base_path()` stripped |
 | `FrontendPaths::panel` | `static panel(string $path = ''): string` | absolute path, `panda-panel.frontend.panel_path`, default `js/panel` |
 | `FrontendPaths::pages` | `static pages(string $path = ''): string` | absolute path, `panda-panel.frontend.pages_path`, default `js/pages/Panels` |
@@ -376,10 +438,10 @@ every file as edited.
 - **The stubs are not in the umbrella tag.** `--tag=panda-panel` gives you config, migrations and
   assets. Publishing the stubs is a separate, deliberate command.
 - **`vendor:publish` does not write `.panel-assets.json`.** Only `panel:install` and a
-  `panel:assets --update`/`--force` run that actually wrote a file do. After a manual assets publish
-  the manifest is absent, every identical file reads as `current`, and `--update` therefore writes
-  nothing and records nothing. Run `panel:install` on a fresh application, or call
-  `PandaPanel\Support\Installer\AssetManifest::write()` yourself, to get the first record.
+  `panel:assets --update`/`--force` run do. After a manual publish the manifest is absent and every
+  identical file reads as `current`, so follow any publish by tag with `panel:assets --update` —
+  it records the state even when it has nothing to write, and until it has run, an edit you make is
+  an edit the next release will overwrite.
 - **Commit `.panel-assets.json`.** It is a record of a decision the project made, the same way
   `composer.lock` is. Without it an upgrade cannot tell your edits from a stale copy.
 - **`--force` on the assets tag is where real damage happens.** It writes over
@@ -390,7 +452,11 @@ every file as edited.
   intent of publishing is ownership and half of it is the config change.
 - **`frontend.panel_path` is read when the map is built.** Change the config before publishing the
   assets, not after.
-- **Publishing does not build.** Every published file is Vue or CSS. Run `npm run build`.
+- **Publishing does not build.** Every published *frontend* file is Vue or CSS. Run `npm run build`.
+  The translations are PHP and take effect on the next request.
+- **Publishing the translations to add a locale is the one mistake worth naming.** A locale the
+  package does not ship is read from `lang/vendor/panda-panel` whether or not anything was published
+  there, so publishing to add German means owning English and Indonesian for no reason.
 
 ## See also
 

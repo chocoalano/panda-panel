@@ -329,13 +329,20 @@ final class PandaPanelServiceProvider extends ServiceProvider
             $this->packagePath('stubs/panel') => base_path('stubs/panel'),
         ], 'panda-panel-stubs');
 
-        // Publishing is for rewording, not for translating into a locale the
-        // package already ships: a published copy stops following the
-        // package, so an application that publishes to add Indonesian would
-        // freeze English at the version it published.
-        $this->publishes([
-            $this->packagePath('lang') => $this->app->langPath('vendor/panda-panel'),
-        ], ['panda-panel', 'panda-panel-translations']);
+        // Publishing is for rewording. A locale the package does not ship
+        // needs no publish at all — Laravel reads `lang/vendor/panda-panel`
+        // first either way — and the strings work untouched, which is why
+        // this is not part of the umbrella install.
+        //
+        // A published copy used to stop following the package: the file was
+        // frozen at the version it was published, and a sentence improved
+        // three releases later never arrived. It is tracked in
+        // `.panel-assets.json` alongside the frontend now, so `panel:assets`
+        // reports a published file the package has since changed, `--update`
+        // writes back the ones this application never touched, and `--force`
+        // takes the rest. Through `PublishedAssets` so the tag and the
+        // upgrade path cannot name two different directories.
+        $this->publishes(PublishedAssets::translations(), ['panda-panel', 'panda-panel-translations']);
 
         // The frontend is published rather than imported from the package: the
         // component registries are `import.meta.glob` allowlists over the

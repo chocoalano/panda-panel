@@ -186,6 +186,8 @@ README.md
 composer.json
 config
 database
+lang
+package.json
 resources
 src
 stubs
@@ -210,20 +212,26 @@ That is what a `composer require chocoalano/panel` unpacks. Everything else is `
 /phpstan.neon       export-ignore
 /phpunit.xml        export-ignore
 /pint.json          export-ignore
-/package.json       export-ignore
 /package-lock.json  export-ignore
 /tsconfig.json      export-ignore
 /vite.config.ts     export-ignore
+/vitest.config.ts   export-ignore
 /eslint.config.js   export-ignore
 /.prettierrc.json   export-ignore
 /.prettierignore    export-ignore
 ```
 
+`lang` and `package.json` are the two entries worth checking by name rather than by eye. Neither is
+published on install and neither is imported by anything, so both fail silently when absent: a
+missing `lang` renders every string as its own key, and a missing `package.json` makes
+`panel:install` report no missing npm dependencies because `FrontendRequirements` could not look.
+
 Three questions to ask of that listing, in order.
 
-**Is everything the runtime reads still there?** The four directories an application depends on are
-`src`, `config`, `database` and `resources`, plus `stubs` for the generators — the `make:panel*`
-commands read the package's own stubs and fall back to the application's published copies:
+**Is everything the runtime reads still there?** The five directories an application depends on are
+`src`, `config`, `database`, `lang` and `resources`, plus `stubs` for the generators — the
+`make:panel*` commands read the package's own stubs and fall back to the application's published
+copies:
 
 ```bash
 git archive HEAD | tar -t | grep -c '^src/'
@@ -247,12 +255,12 @@ if (! File::exists($manifest)) {
 }
 ```
 
-`/package.json` is `export-ignore`d, so in an application installed from the archive that file is
-not there, `npmPackages()` answers `[]`, and `panel:install` therefore reports no missing npm
-packages — the same output as an application that has them all. An install made with
-`--prefer-source`, which clones the repository, does have the file and does report. Whether that
-trade is the intended one is a release decision; `git archive HEAD | tar -t` is how you find out it
-is a decision at all.
+`/package.json` used to be `export-ignore`d, so in an application installed from the archive that
+file was not there, `npmPackages()` answered `[]`, and `panel:install` therefore reported no missing
+npm packages — the same output as an application that has them all. It ships now, and
+`Negative/DistributionTest` asserts the attribute so the rule cannot be reintroduced by tidying.
+The general shape is what to carry forward: `git archive HEAD | tar -t` is how you find out that
+what a file is read from is a release decision at all.
 
 ```bash
 grep -rn "dirname(__DIR__" src/ | grep -v 'src/Support/Installer/PublishedAssets.php'

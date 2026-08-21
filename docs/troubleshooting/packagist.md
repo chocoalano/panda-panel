@@ -131,6 +131,8 @@ README.md
 composer.json
 config/
 database/
+lang/
+package.json
 resources/
 src/
 stubs/
@@ -141,13 +143,20 @@ stubs/
 | `src/` | the framework, including `src/Testing` — the testing helpers are autoloaded through `composer.json`'s `files` |
 | `config/panda-panel.php` | merged at register time and published by `--tag=panda-panel-config` |
 | `database/migrations` | loaded from the package unless `load_migrations` is false |
+| `lang/en`, `lang/id` | read by `loadTranslationsFrom()` on every request; published by `--tag=panda-panel-translations` only to reword |
 | `resources/js`, `resources/css` | published by `--tag=panda-panel-assets` |
 | `stubs/panel` | what every generator reads, published by `--tag=panda-panel-stubs` |
+| `package.json` | read at runtime from inside `vendor/` so `panel:install` can name the npm dependencies the components import |
+
+A missing `lang/` is the same class of fault as a missing `package.json`, and just as quiet: the
+panel boots — `loadTranslationsFrom()` does not check that the path exists — and then renders every
+string as its own key, `panda-panel::actions.delete.label` on the delete button.
+`Negative/DistributionTest` asserts both archive attributes directly.
 
 `export-ignore`d, and therefore absent: `/docs`, `/tests`, `/examples`, `/frontend`, `/.github`,
 `CHANGELOG.md`, `phpstan.neon`, `phpunit.xml`, `pint.json`, `tsconfig.json`, `vite.config.ts`,
-`eslint.config.js`, the Prettier configs — and `package.json` with `package-lock.json`, which is
-the one to look at closely.
+`vitest.config.ts`, `eslint.config.js`, the Prettier configs — and `package-lock.json`, which an
+application resolves for itself.
 
 ## 5. `panel:install` reports no npm dependencies to install
 
@@ -269,7 +278,7 @@ PublishedAssets::files();      // absolute destination => absolute source, per f
 | `panda-panel-assets` | the seven frontend sources |
 | `panda-panel-migrations` | `database/migrations` |
 | `panda-panel-stubs` | `stubs/panel` |
-| `panda-panel` | config, migrations and assets together — **not** the stubs |
+| `panda-panel` | config, migrations, translations and assets together — **not** the stubs |
 
 The second most common cause is not the archive at all: `vendor:publish` skips any file that
 already exists. After the first install, use [`panel:assets`](../cli/panel-assets.md), which knows

@@ -225,9 +225,18 @@ Numbers and dates follow too — `1.234,56` and `5 Jan 2026` in Indonesian, from
 
 Nothing has to be published or configured. Buttons, confirmations, empty states, error toasts and
 the two-factor email all follow, and a locale the package does not ship falls back to English
-rather than rendering raw keys. Reword a sentence with
-`php artisan vendor:publish --tag=panda-panel-translations`, or add a third locale under
-`lang/vendor/panda-panel/`.
+rather than rendering raw keys. Add a third locale under `lang/vendor/panda-panel/` — that
+directory is read whether or not anything was published into it — or reword one of the package's
+own sentences:
+
+```bash
+php artisan vendor:publish --tag=panda-panel-translations
+php artisan panel:assets --update   # records what you just published
+```
+
+Published strings are tracked the way the published frontend is, so rewording one is not a decision
+to stop receiving improvements to that file: `panel:assets` reports the ones a later release has
+changed, `--update` writes back the ones you never touched, and your rewording is left alone.
 
 Your own names follow too. A column named `created_at` renders as "Created At" through
 `Str::headline()` — English, in every locale. Name it once and every table, form, infolist,

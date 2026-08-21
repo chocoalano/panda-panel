@@ -7,10 +7,11 @@ namespace PandaPanel\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use PandaPanel\Support\Installer\AssetManifest;
+use PandaPanel\Support\Installer\PublishedAssets;
 
 /**
- * Tells an application which published frontend files are behind, which it has
- * edited, and which of the two are both.
+ * Tells an application which published files are behind, which it has edited,
+ * and which of the two are both.
  *
  * ## The problem
  *
@@ -40,6 +41,20 @@ use PandaPanel\Support\Installer\AssetManifest;
  * and one it has never touched. A file edited on both sides is reported with
  * its path and left exactly as it is, because resolving that by guessing is
  * how an upgrade eats somebody's work.
+ *
+ * ## Translations too, once they are published
+ *
+ * The frontend is most of what this reports on, but not all of it. An
+ * application that published `lang/vendor/panda-panel` to reword a
+ * confirmation owns those files the same way, and had the same problem: the
+ * copy was frozen at the release it was published from, and every sentence
+ * the package improved afterwards stopped at the vendor directory.
+ *
+ * `PublishedAssets::files()` includes them from the moment that directory
+ * exists, so they arrive here with the same seven statuses and the same two
+ * rules about which ones may be written. An application that never published
+ * them has nothing to report: it reads the package's own copies and is
+ * already current by definition.
  */
 final class PanelAssetsCommand extends Command
 {
@@ -81,20 +96,40 @@ final class PanelAssetsCommand extends Command
 
         $this->summary($counts);
 
-        $written = $this->option('update') || $this->option('force')
-            ? $this->update($report)
-            : 0;
+        $updating = $this->option('update') || $this->option('force');
+        $written = $updating ? $this->update($report) : [];
 
         $this->detail($report);
 
-        if ($written > 0) {
+        if ($updating) {
             // Re-read from disk: the manifest records what the application
             // *has*, so it has to be written after the files, not from what
             // we intended to write.
+            //
+            // Written even when nothing was, because recording the state is
+            // half of what an update is for. `vendor:publish` cannot write
+            // this file, so an application that published by tag and then
+            // edited a line has an unrecorded edit — and an unrecorded edit
+            // reads as `new` on the next release and is overwritten. One
+            // `--update` on a tree that is already current is what turns
+            // those into `modified`, which is a file this command will not
+            // touch.
             AssetManifest::write(AssetManifest::read());
+        }
 
+        if ($written !== []) {
             $this->newLine();
-            $this->components->info(sprintf('Wrote %d file(s). Run `npm run build`.', $written));
+            $this->components->info(sprintf(
+                'Wrote %d file(s).%s',
+                count($written),
+                $this->needsRebuild($written) ? ' Run `npm run build`.' : '',
+            ));
+        } elseif ($updating) {
+            $this->newLine();
+            $this->components->info(sprintf(
+                'Nothing to write. Recorded the current state in %s.',
+                PublishedAssets::relative(AssetManifest::path()),
+            ));
         }
 
         if (! $this->option('update') && ! $this->option('force') && $this->writable($counts) > 0) {
@@ -110,10 +145,11 @@ final class PanelAssetsCommand extends Command
 
     /**
      * @param  array<string, array{status: string, destination: string, source: string|null}>  $report
+     * @return list<string> the application-relative paths written
      */
-    private function update(array $report): int
+    private function update(array $report): array
     {
-        $written = 0;
+        $written = [];
 
         foreach ($report as $relative => $entry) {
             $writes = self::STATUSES[$entry['status']]['writes'] ?? false;
@@ -138,10 +174,29 @@ final class PanelAssetsCommand extends Command
 
             $this->components->twoColumnDetail($relative, '<fg=green>written</>');
 
-            $written++;
+            $written[] = $relative;
         }
 
         return $written;
+    }
+
+    /**
+     * Whether any of what was written is something Vite has to compile.
+     *
+     * A run that only refreshed `lang/vendor/panda-panel` needs no build, and
+     * telling somebody to run one anyway is how a command's advice stops
+     * being read.
+     *
+     * @param  list<string>  $written
+     */
+    private function needsRebuild(array $written): bool
+    {
+        $translations = array_map(
+            static fn (string $destination): string => PublishedAssets::relative($destination),
+            array_keys(PublishedAssets::translationFiles()),
+        );
+
+        return array_diff($written, $translations) !== [];
     }
 
     /**

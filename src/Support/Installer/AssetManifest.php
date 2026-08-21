@@ -53,6 +53,19 @@ use Illuminate\Support\Facades\File;
  * the same way `composer.lock` is. Under `bootstrap/cache` it would be
  * regenerated and useless; under `storage` it would be gitignored and lost on
  * the first deploy.
+ *
+ * ## What it covers
+ *
+ * Everything `PublishedAssets::files()` lists: the frontend always, and the
+ * translations from the moment an application publishes them to
+ * `lang/vendor/panda-panel`. Both are files the application owns once they
+ * are on disk, and both had the same failure without a record — a reworded
+ * confirmation frozen at the release it was published from is the same bug as
+ * a stale component, and reads exactly as "the package never fixed that".
+ *
+ * A translation that was never published is not tracked and does not need to
+ * be: the package's own copy is what the translator reads, so it cannot fall
+ * behind.
  */
 final class AssetManifest
 {
@@ -150,8 +163,9 @@ final class AssetManifest
 
         File::put(self::path(), json_encode([
             '_' => 'Written by php artisan panel:install / panel:assets. Commit this file: '
-                .'it is the record of which version of the panel frontend this application '
-                .'published, and without it an upgrade cannot tell your edits from a stale copy.',
+                .'it is the record of which version of the panel frontend and translations this '
+                .'application published, and without it an upgrade cannot tell your edits from a '
+                .'stale copy.',
             'files' => $files,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
     }

@@ -212,14 +212,20 @@ php artisan panel:publish    # copy a plugin's assets into the application
 php artisan vendor:publish --tag=panda-panel-config
 php artisan vendor:publish --tag=panda-panel-assets
 php artisan vendor:publish --tag=panda-panel-migrations
+php artisan vendor:publish --tag=panda-panel-translations
 php artisan vendor:publish --tag=panda-panel-stubs
-php artisan vendor:publish --tag=panda-panel        # config + migrations + assets
+php artisan vendor:publish --tag=panda-panel        # everything but the stubs
 ```
 
 The frontend is published rather than imported from the package, because every component registry is
 an `import.meta.glob` allowlist over the application's own tree — a component the build never saw
 cannot resolve. That makes the panel's Vue files yours: in your repository, in your build, and
 editable. `panel:assets` is what keeps them current afterwards.
+
+The translations are the opposite case: nothing needs publishing for the panel to speak English or
+Indonesian, or for a locale you add yourself to be read. Publish them only to reword a sentence the
+package chose — and `panel:assets` keeps those current too, so a rewording is no longer a decision
+to stop receiving improvements to that file.
 
 ## Requirements in one line
 

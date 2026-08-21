@@ -25,7 +25,7 @@ itself reads when a plugin declares a constraint.
 The format follows Keep a Changelog, and this project adheres to Semantic Versioning.
 ```
 
-The published tags so far are `v0.1.0`, `v0.1.1`, `v0.1.2` and `v0.1.4`, so the package is in its
+The published tags so far run from `v0.1.0` to `v0.1.8` and then `v0.2.0`, so the package is in its
 `0.x` series. (`v0.1.3` was never tagged — a gap in the sequence means a version that does not
 exist, not one you failed to find.) `git tag` in a checkout is the authoritative list; the one
 here is a snapshot. Semantic versioning treats `0.x` as the one range where the usual promise does not hold:
@@ -39,12 +39,16 @@ composer show chocoalano/panel | grep versions
 
 | Constraint | Resolves to | Breaking changes possible |
 | --- | --- | --- |
-| `^0.1` | `>=0.1.0 <0.2.0` | within `0.1.x`: no |
-| `^0.1.2` | `>=0.1.2 <0.2.0` | within `0.1.x`: no |
-| `~0.1.2` | `>=0.1.2 <0.2.0` | same as the caret, at `0.x` |
-| `0.1.*` | `>=0.1.0 <0.2.0` | same |
+| `^0.2` | `>=0.2.0 <0.3.0` | within `0.2.x`: no |
+| `^0.2.0` | `>=0.2.0 <0.3.0` | within `0.2.x`: no |
+| `~0.2.0` | `>=0.2.0 <0.3.0` | same as the caret, at `0.x` |
+| `0.2.*` | `>=0.2.0 <0.3.0` | same |
+| `^0.1` | `>=0.1.0 <0.2.0` | pinned to the previous series — `0.2.0` is **not** picked up |
 | `>=0.1` | anything newer, including `1.x` | yes, silently |
 | `dev-main` | whatever `main` is today | yes, on every `composer update` |
+
+At `0.x` the caret stops at the next *minor*, which is the one thing to know before an upgrade: an
+application on `^0.1` stays on `0.1.x` forever and needs its constraint edited to reach `0.2.0`.
 
 The caret is the right default and it is what `composer require chocoalano/panel` writes. `>=` and
 `dev-main` are the two to avoid: the first opts an application into every future breaking change
@@ -65,13 +69,13 @@ absent from the installed package, so it cannot be part of any promise about it:
 /tests              export-ignore
 /frontend           export-ignore
 /CHANGELOG.md       export-ignore
-/package.json       export-ignore
 /vite.config.ts     export-ignore
 /phpstan.neon       export-ignore
 /pint.json          export-ignore
 ```
 
-What is left — `src`, `config`, `database`, `stubs`, `resources` — is the shipped surface. Within
+What is left — `src`, `config`, `database`, `lang`, `stubs`, `resources`, and `package.json` — is
+the shipped surface. Within
 it:
 
 | Covered by the version number | Why |
