@@ -16,6 +16,9 @@ panel:install
     {--panel=Admin : The name of the first panel to scaffold}
     {--no-panel : Publish and configure without scaffolding a panel}
     {--no-user : Skip the offer to create a signing-in account}
+    {--no-scaffold : Do not write any of the application files a panel needs}
+    {--npm : Install the npm dependencies without asking}
+    {--no-npm : Never run npm}
     {--force : Overwrite files that already exist}
 ```
 
@@ -24,6 +27,9 @@ panel:install
 | `--panel=` | `Admin` | The name passed to `make:panel`. Studly-cased there, so `admin` and `Admin` mean the same panel. |
 | `--no-panel` | off | Publishes and configures, scaffolds nothing. Right for a second install into an application that already has its panels. |
 | `--no-user` | off | Skips the account prompt entirely, prompt and all. |
+| `--no-scaffold` | off | Writes none of the application files. What is missing is reported instead. |
+| `--npm` | off | Runs `npm install` and `npm run build` without prompting, `--no-interaction` included. |
+| `--no-npm` | off | Never runs a package manager; reports the exact line instead. |
 | `--force` | off | Passed through to both `vendor:publish` and `make:panel`: existing files are overwritten. |
 
 The command always returns `0`. Things it could not do are reported as outstanding work, not as a
@@ -37,7 +43,7 @@ php artisan panel:install --panel=Admin --no-user --no-interaction
 php artisan panel:install --force
 ```
 
-## The six steps
+## The nine steps
 
 ### 1. Publish
 
@@ -69,7 +75,35 @@ Publish the migrations into database/migrations? (yes/no) [no]
 Offered, because a published copy and a package copy of the same migration is a schema applied
 twice. In a non-interactive run the answer is no.
 
-### 2. Scaffold the panel
+### 2. Give the application what it needs
+
+The step that makes `panel:install` work on a blank `laravel new` rather than finishing with a
+list of homework. Only files that are **not there** are written — an application that already has
+an entrypoint has made a decision, and an installer that replaced it would be destroying work to
+save a step.
+
+| File | Why |
+| --- | --- |
+| `resources/views/app.blade.php` | Inertia needs a root view with `@inertia` |
+| `resources/js/app.ts` | The entrypoint that mounts the panel's pages |
+| `resources/css/app.css` | Imports the published `panda-panel.css` |
+| `vite.config.ts` | The Vue plugin and the `@` alias every published component imports through |
+
+Inertia's middleware is published with `inertia:middleware` and added to the `web` group in
+`bootstrap/app.php`. A `vite.config.js` that cannot build a Vue application — which is what
+`laravel new` ships — is moved to `.bak` rather than edited, and only after asking.
+
+Skipped entirely under `--no-scaffold`. Full detail, including every outcome the bootstrap edit
+can report, is in [CLI: panel:install](../cli/panel-install.md#2-give-the-application-what-it-needs).
+
+### 3. Fill the host seam
+
+`wayfinder:generate` where Wayfinder is installed, because `@/routes/*` and `@/actions/*` are
+generated from your own routes. A minimal stand-in for whatever is still missing, copied out of
+the package's `frontend/host/` — never over a module you already have, however it is spelled on
+disk. See [Host modules](../frontend/host-modules.md).
+
+### 4. Scaffold the panel
 
 ```php
 $this->call('make:panel', ['name' => $panel, '--force' => (bool) $this->option('force')]);
@@ -78,7 +112,7 @@ $this->call('make:panel', ['name' => $panel, '--force' => (bool) $this->option('
 Skipped entirely under `--no-panel`, in which case steps 3 and 6 have no panel to work with —
 nothing is registered, and `panel:user` is called without a `--panel` to check against.
 
-### 3. Register it in config
+### 5. Register it in config
 
 This is the step that makes the panel's URL answer. It is a textual edit to
 `config/panda-panel.php` — the same line you would write, in the same place — because the file is
@@ -121,21 +155,33 @@ Three details worth knowing:
 - **A restructured config is never guessed at.** A `panels` key built from a variable is a config
   somebody is managing themselves.
 
-### 4. Report the home redirect
+### 6. Report the redirects
 
 ```text
+Signing in at a panel now lands in that panel rather than on fortify.home. Set login_redirect
+to false in config/panda-panel.php to keep your own.
 Signed-in visitors to /dashboard now land in the panel. Set home_redirect.enabled to false
 in config/panda-panel.php to keep your own.
 ```
 
-Printed, not asked: it is the one thing installing this package changes about a screen the
-application already had, and a redirect nobody was told about is a bug report. Silent when
-`home_redirect.enabled` is false or the path list is empty.
+Printed, not asked: these are the two things installing this package changes about screens the
+application already had, and a redirect nobody was told about is a bug report. Each line is
+silent when its own config key is off.
 
-### 5. Check the frontend
+### 7. Install the npm dependencies
+
+The packages the components import, plus `@vitejs/plugin-vue` for the scaffolded Vite config. The
+exact command is shown before it runs, and answering yes offers `npm run build` after it. Declined,
+forced off with `--no-npm`, or unable to run, it reports the literal line instead — a failed
+`npm install` never fails the install.
+
+Under `--no-interaction` nothing reaches the network unless `--npm` says so.
+
+### 8. Check what is left
 
 Six checks, in this order. Each failure is added to the outstanding list rather than printed
-where it happens.
+where it happens. Most of what they used to report is written by steps 2, 3 and 7 now, so on a
+blank application this list is short and on a starter kit it is usually empty.
 
 | Check | Method | Outstanding message |
 | --- | --- | --- |
@@ -164,7 +210,7 @@ Missing host modules are reported as a list rather than a count, deliberately: *
 missing says what to do. All of `@/routes/*` and `@/actions/*` means Wayfinder has not run; a
 handful of components means this is not a starter kit application.
 
-### 6. Offer a user
+### 9. Offer a user
 
 ```text
 Create a user who can sign in? (yes/no) [no]
@@ -186,14 +232,12 @@ Done. Nothing is left to do by hand.
 or
 
 ```text
-WARN  3 thing(s) this package cannot do for your application:
+WARN  2 thing(s) this package cannot do for your application:
 
-  1. Install the npm dependencies the components import, then rebuild:
+  1. Wayfinder is not installed, so `@/routes/*` and `@/actions/*` are stand-ins rather
+     than generated from your own routes:
      …
   2. resources/js/app.ts line 12 overwrites the layout every panel page declares:
-     …
-  3. The published components import these modules, which belong to your application
-     and are not there yet:
      …
 ```
 
@@ -204,11 +248,12 @@ successes with three warnings is an install whose warnings are read as noise.
 
 | | Why |
 | --- | --- |
-| `npm install` / `npm run build` | It tells you the exact line. Running a package manager inside an artisan command is a side effect nobody asked for. |
-| `php artisan wayfinder:generate` | Wayfinder is the application's tool, run against the application's routes. The installer names it when the generated modules are missing. |
+| `composer require` anything | It changes the autoloader underneath the process using it. Wayfinder is named, not installed. |
 | `php artisan migrate` | Standard Laravel; run it when you are ready. |
-| Register the guest redirect | Already done, by the service provider. `register_guest_redirect => false` hands it back. |
-| Edit `resources/js/app.ts` | It reports the one shape that is wrong and leaves the file alone. |
+| Overwrite a file you already have | Every write goes to a path where there was nothing. The two exceptions ask first: `app.css` gains one `@import`, and a `vite.config.js` that cannot build Vue is moved to `.bak`. |
+| Edit `resources/js/app.ts` | If it wrote the file, it wrote a correct one. If you wrote it, it reports the one shape that is wrong and leaves it alone. |
+| Register the guest or login redirect | Already done, by the service provider. `register_guest_redirect => false` and `login_redirect => false` hand them back. |
+| `npm install` without asking | Unless `--npm`. It writes to `node_modules`, touches the lockfile, and reaches the network. |
 
 ## Re-running it
 
@@ -222,8 +267,9 @@ published file, including ones you have edited. After the first install, use
 ## Notes
 
 - **Exit code is always `0`.** Test the output, not the status, if you script around it.
-- **`--no-interaction` changes two answers, not the outcome.** Migrations are not published and no
-  user is offered; everything else runs identically.
+- **`--no-interaction` takes the safe answer per step.** Files that are not there are written and
+  Inertia's middleware is published; the migrations are not published, no user is offered, no
+  `vite.config.js` is moved aside, and nothing reaches the network unless `--npm` says so.
 - **The npm list is read from the package's `package.json`.** It cannot go stale relative to what
   the components import, because there is no second copy of it.
 - **The installer writes `.panel-assets.json` even when nothing was published** — it records what
@@ -232,8 +278,8 @@ published file, including ones you have edited. After the first install, use
 ## See also
 
 - [Installation](installation.md) — the same steps, done by hand
-- [Frontend requirements](frontend-requirements.md) — every check in step 5, in full
-- [Creating the first user](first-user.md) — the command step 6 calls
+- [Frontend requirements](frontend-requirements.md) — every check in step 8, in full
+- [Creating the first user](first-user.md) — the command step 9 calls
 - [Opening your first panel](first-panel.md) — what to do once it finishes
 - [Common install problems](common-install-problems.md)
 - [CLI: panel:install](../cli/panel-install.md), [CLI: panel:assets](../cli/panel-assets.md)

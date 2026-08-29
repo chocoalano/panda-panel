@@ -69,7 +69,7 @@ php artisan vendor:publish --tag=panda-panel
 | `panda-panel-config` | `config/panda-panel.php` |
 | `panda-panel-assets` | everything in the publish map above |
 | `panda-panel-migrations` | the notifications table, the two-factor email column, and the integrations tables |
-| `panda-panel-translations` | `lang/en` and `lang/id` into `lang/vendor/panda-panel`, for rewording |
+| `panda-panel-translations` | `lang/en` and `lang/id` into your own `lang/en` and `lang/id`, for rewording |
 | `panda-panel-stubs` | the generator stubs into `stubs/panel` |
 | `panda-panel` | config, migrations, translations and assets together |
 
@@ -190,7 +190,7 @@ The file records the hash each published file had *at publish time*, which is th
 - **`pages_path` and the registry globs are two separate edits.** Moving one without the other means every custom component resolves to nothing, silently, with a development-only console warning as the only clue.
 - **A published component is yours.** `composer update` cannot improve it. That is the price of the `import.meta.glob` allowlist, and `panel:assets` exists to pay it.
 - **`panel:install` is safe to re-run.** It publishes, records, scaffolds, checks the frontend, and prints what is still outstanding once at the end. Only `--force` overwrites.
-- **Nothing under `frontend/host` reaches your application.** It resolves only inside this repository's own type-check and build. Your application supplies the real modules.
+- **`frontend/host` is not in any publish map.** It resolves inside this repository's own type-check and build, and `panel:install` copies a stand-in for each module your application has none of — never over one it has. Your application supplies the real modules; those are a floor, not a design.
 
 ## See also
 

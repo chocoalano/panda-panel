@@ -153,7 +153,7 @@ page.default.layout = page.default.layout || AppLayout;
 
 ## The stand-ins in `frontend/host`
 
-This repository holds a minimal stand-in for each of the nineteen, used **only** when type-checking and building the package on its own. Nothing there is published, exported by Composer, or reachable from an application.
+This repository holds a minimal stand-in for each of the nineteen. Its first job is type-checking and building the package on its own; its second is a blank application, where `panel:install` copies the ones your `resources/js` has no module of its own for. Nothing there is in a publish map, and nothing there ever overwrites a module you already have.
 
 ```text
 frontend/host/
@@ -187,12 +187,12 @@ That fall-through is what makes `npm run typecheck` possible at all. Without it,
 A stand-in that drifted from what the starter kit really exports would let a real breakage type-check clean. Two things guard against it:
 
 - Each stub declares the **exact** props, emits and exports the panel's own components use — no `any` escape hatches on the surface that matters — so removing a prop from a stub breaks the build here.
-- `panel:install` checks a real application for every one of these paths, so the seam is verified where it is real rather than only where it is simulated.
+- `panel:install` checks a real application for every one of these paths, so the seam is verified where it is real rather than only where it is simulated — and fills the ones it finds missing, so a stand-in that does not work is a stand-in somebody's blank install trips over immediately.
 - `FrontendContractTest` scans every published file for `@/…` imports the package does not satisfy and asserts that each one is in the declared list. A module that reached the imports without reaching the list is one the installer would report as fine and the host's build would then fail on.
 
 ## Writing your own
 
-If the application is not a starter kit, the components have to exist. The stubs in `frontend/host/` are the specification of what each must export. Two examples of the surface actually used:
+If the application is not a starter kit, the components have to exist. `panel:install` writes the stand-ins so the build works on day one; they are a floor rather than a design, and `components/*` in particular are worth replacing — `UserMenuContent` is where your project's own account links belong. The stubs in `frontend/host/` are the specification of what each must export. Two examples of the surface actually used:
 
 ```ts
 // resources/js/types/ui.ts — the flash toast the panel's middleware writes
@@ -233,7 +233,7 @@ Match the surface, not the styling — the styling is yours.
 - **Wayfinder output is not committed in most projects.** A fresh clone or a CI job needs `php artisan wayfinder:generate` before `npm run build`, or every `@/routes/*` import fails.
 - **A directory is not a module.** `resources/js/types/` existing does not satisfy `@/types`; a `.ts`, `.d.ts` or index file inside it does.
 - **`missingNpmPackages()` reads `package.json`, not `node_modules`.** A package installed but not declared still reports as missing, on purpose.
-- **Nothing in `frontend/host` ships.** It is not in the publish map, and `@/…` in a published file resolves against the application's own `resources/js`.
+- **`frontend/host` is not in the publish map.** `@/…` in a published file resolves against the application's own `resources/js`. `panel:install` copies a stand-in into `resources/js` for each module that is missing there — so what your build reads is always your application's file, whether you wrote it or the installer did.
 - **The account menu entries are yours to render.** `panel.shell.userMenuItems` crosses the wire; `UserMenuContent.vue` is the host's component, so nothing shipped with the package draws them.
 
 ## See also

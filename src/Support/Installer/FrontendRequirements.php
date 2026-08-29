@@ -139,21 +139,24 @@ final class FrontendRequirements
     }
 
     /**
-     * The npm packages the application does not already have.
+     * What the application's own `package.json` declares, name => range.
      *
-     * Read from its `package.json` rather than from `node_modules`, because
-     * what matters is whether the project has *declared* the dependency — a
+     * Read from `package.json` rather than from `node_modules`, because what
+     * matters is whether the project has *declared* the dependency — a
      * transitive copy on disk today is one somebody else's upgrade removes
      * tomorrow.
      *
-     * @return list<string> the same `name@range` pairs, filtered
+     * Both sections, because which one a project put a build tool in is its
+     * business and either satisfies an import.
+     *
+     * @return array<string, mixed>
      */
-    public static function missingNpmPackages(): array
+    public static function declaredNpmPackages(): array
     {
         $path = base_path('package.json');
 
         if (! File::exists($path)) {
-            return self::npmPackages();
+            return [];
         }
 
         $decoded = json_decode(File::get($path), associative: true);
@@ -166,6 +169,22 @@ final class FrontendRequirements
                 }
             }
         }
+
+        return $declared;
+    }
+
+    /**
+     * The npm packages the application does not already have.
+     *
+     * @return list<string> the same `name@range` pairs, filtered
+     */
+    public static function missingNpmPackages(): array
+    {
+        if (! File::exists(base_path('package.json'))) {
+            return self::npmPackages();
+        }
+
+        $declared = self::declaredNpmPackages();
 
         return array_values(array_filter(
             self::npmPackages(),

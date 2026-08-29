@@ -162,7 +162,7 @@ and then asks `ServiceProvider::publishableGroups()` sees nothing.
 | `panda-panel-config` | `config/panda-panel.php` | `config_path('panda-panel.php')` |
 | `panda-panel-migrations` | `database/migrations` | `database_path('migrations')` |
 | `panda-panel-stubs` | `stubs/panel` | `base_path('stubs/panel')` |
-| `panda-panel-translations` | `PublishedAssets::translations()` | `lang/vendor/panda-panel` |
+| `panda-panel-translations` | `PublishedAssets::translations()` | `lang/` — the locale directories land beside your own strings |
 | `panda-panel-assets` | `PublishedAssets::map()` | `resources/js/**`, `resources/css/panda-panel.css` |
 
 Every one but the stubs is also a member of the umbrella tag `panda-panel`. The stubs tag

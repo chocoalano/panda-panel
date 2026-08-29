@@ -11,6 +11,7 @@ use Laravel\Fortify\Features;
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
 use PandaPanel\Exceptions\PanelRegistrationException;
+use PandaPanel\Support\PanelPostLogin;
 use PandaPanel\Support\PasswordRules;
 
 /**
@@ -31,6 +32,12 @@ final class PanelAuthController
 
     public function login(Request $request): Response
     {
+        // Which panel this sign-in started at. Fortify answers the POST, and
+        // `/login` is not a panel URL — without this the response has nothing
+        // to resolve a panel from and falls back to `fortify.home`. See
+        // `PanelPostLogin`.
+        PanelPostLogin::remember($request, $this->panel());
+
         return Inertia::render('panel/auth/Login', [
             'panel' => $this->panel()->toSharedArray(),
             'canResetPassword' => Features::enabled(Features::resetPasswords())
@@ -41,9 +48,11 @@ final class PanelAuthController
         ]);
     }
 
-    public function register(): Response
+    public function register(Request $request): Response
     {
         abort_unless($this->panel()->hasRegistration(), 404);
+
+        PanelPostLogin::remember($request, $this->panel());
 
         return Inertia::render('panel/auth/Register', [
             'panel' => $this->panel()->toSharedArray(),
@@ -55,6 +64,8 @@ final class PanelAuthController
     {
         abort_unless($this->panel()->hasPasswordReset(), 404);
 
+        PanelPostLogin::remember($request, $this->panel());
+
         return Inertia::render('panel/auth/ForgotPassword', [
             'panel' => $this->panel()->toSharedArray(),
             'status' => $request->session()->get('status'),
@@ -64,6 +75,8 @@ final class PanelAuthController
     public function resetPassword(Request $request): Response
     {
         abort_unless($this->panel()->hasPasswordReset(), 404);
+
+        PanelPostLogin::remember($request, $this->panel());
 
         return Inertia::render('panel/auth/ResetPassword', [
             'panel' => $this->panel()->toSharedArray(),

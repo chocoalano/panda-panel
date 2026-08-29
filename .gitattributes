@@ -27,7 +27,14 @@
 /examples           export-ignore
 /integration        export-ignore
 /tests              export-ignore
-/frontend           export-ignore
+# `frontend/browser` and `frontend/entry.ts` are how this repository builds and
+# browser-tests itself. `frontend/host` is not: it is the minimal stand-in for
+# each of the nineteen modules the published components import and do not ship,
+# and `panel:install` copies the ones a blank application has none of. It used
+# to be export-ignored with the rest, which meant an application with no starter
+# kit got a build error and a list of nineteen files to write by hand.
+/frontend/browser   export-ignore
+/frontend/entry.ts  export-ignore
 /.editorconfig      export-ignore
 /.gitattributes     export-ignore
 /.gitignore         export-ignore

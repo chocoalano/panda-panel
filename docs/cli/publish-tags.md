@@ -45,7 +45,7 @@ $this->publishes(PublishedAssets::map(), ['panda-panel', 'panda-panel-assets']);
 | `panda-panel-config` | `config/panda-panel.php` | `config/panda-panel.php` | yes |
 | `panda-panel-assets` | the seven frontend sources | `resources/js/**`, `resources/css/panda-panel.css` | yes |
 | `panda-panel-migrations` | `database/migrations` | `database/migrations` | yes |
-| `panda-panel-translations` | `lang` | `lang/vendor/panda-panel` | yes |
+| `panda-panel-translations` | `lang` | `lang/{locale}` | yes |
 | `panda-panel-stubs` | `stubs/panel` | `stubs/panel` | **no** |
 | `panda-panel` | config, migrations, translations and assets together | as above | — |
 
@@ -168,16 +168,26 @@ php artisan vendor:publish --tag=panda-panel-translations
 php artisan panel:assets --update
 ```
 
-Copies `lang/en` and `lang/id` — every locale the package ships — into
-`lang/vendor/panda-panel`, which is where Laravel's file loader looks for an override of a
-namespaced translation.
+Copies `lang/en` and `lang/id` — every locale the package ships — into your application's own
+`lang/en` and `lang/id`, beside the strings you have written yourself.
+
+Laravel looks for a namespaced override in exactly one place, `lang/vendor/{namespace}/{locale}`,
+and nowhere else. The package wraps the translation loader so that `lang/{locale}` is read too —
+see [`PanelTranslationLoader`](../configuration/panda-panel.md#translations). Set
+`translations.publish_to_lang_root` to `false` to go back to Laravel's own convention, which needs
+no wrapper.
+
+The flat layout has one cost worth knowing about: `lang/en/actions.php` may already be yours, and
+then one file holds both the panel's `panda-panel::actions.*` keys and your own `actions.*` keys.
+Nothing is overwritten either way — the merge only ever adds to what the package shipped, and your
+own non-namespaced lookups are untouched.
 
 **Publishing is for rewording, and only for rewording.** Neither of the other two reasons somebody
 reaches for it holds:
 
 - *Adding a locale the package does not ship* needs no publish at all. Create
-  `lang/vendor/panda-panel/de/actions.php` and it is read; the directory is consulted whether or not
-  anything was published into it.
+  `lang/de/actions.php` and it is read; the directory is consulted whether or not anything was
+  published into it.
 - *Getting the strings at all* needs no publish either. `loadTranslationsFrom()` points at the
   package's own `lang/`, so an unpublished application already speaks every locale the package has,
   including one a later release adds.
@@ -188,7 +198,7 @@ it does *not* survive on its own is a sentence the package rewrites — the publ
 wins forever.
 
 That is what `panel:assets` is for. A published translation is tracked in `.panel-assets.json`
-alongside the frontend from the moment `lang/vendor/panda-panel` exists:
+alongside the frontend from the moment one of its files is on disk:
 
 ```bash
 php artisan panel:assets            # report only
@@ -397,9 +407,9 @@ AssetManifest::write(AssetManifest::read());
 | Method | Signature | Returns |
 | --- | --- | --- |
 | `PublishedAssets::map` | `static map(): array` | `array<string, string>` — absolute source => absolute destination, the frontend |
-| `PublishedAssets::translations` | `static translations(): array` | `array<string, string>` — the package's `lang` => `lang/vendor/panda-panel` |
+| `PublishedAssets::translations` | `static translations(): array` | `array<string, string>` — the package's `lang` => `lang_path()`, or `lang/vendor/panda-panel` when `translations.publish_to_lang_root` is off |
 | `PublishedAssets::files` | `static files(): array` | `array<string, string>` — destination => source, one entry per file, the frontend plus any published translations |
-| `PublishedAssets::translationFiles` | `static translationFiles(): array` | `array<string, string>` — the published translations alone, `[]` until `lang/vendor/panda-panel` exists |
+| `PublishedAssets::translationFiles` | `static translationFiles(): array` | `array<string, string>` — the published translations alone, `[]` until one of them is on disk |
 | `PublishedAssets::relative` | `static relative(string $path): string` | the path with `base_path()` stripped |
 | `FrontendPaths::panel` | `static panel(string $path = ''): string` | absolute path, `panda-panel.frontend.panel_path`, default `js/panel` |
 | `FrontendPaths::pages` | `static pages(string $path = ''): string` | absolute path, `panda-panel.frontend.pages_path`, default `js/pages/Panels` |
@@ -455,8 +465,8 @@ every file as edited.
 - **Publishing does not build.** Every published *frontend* file is Vue or CSS. Run `npm run build`.
   The translations are PHP and take effect on the next request.
 - **Publishing the translations to add a locale is the one mistake worth naming.** A locale the
-  package does not ship is read from `lang/vendor/panda-panel` whether or not anything was published
-  there, so publishing to add German means owning English and Indonesian for no reason.
+  package does not ship is read from `lang/{locale}` whether or not anything was published there,
+  so publishing to add German means owning English and Indonesian for no reason.
 
 ## See also
 

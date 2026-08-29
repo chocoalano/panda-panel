@@ -51,12 +51,12 @@ comparison into an unambiguous three-way one — the move `git merge-base` makes
 ## Translations
 
 An application that ran `vendor:publish --tag=panda-panel-translations` owns
-`lang/vendor/panda-panel/{locale}/*.php` the same way it owns the frontend, and
-had the same problem before this command reached them: the copy was frozen at
-the release it was published from, and every sentence the package improved
-afterwards stopped at the vendor directory with nothing to say so.
+`lang/{locale}/*.php` the same way it owns the frontend, and had the same
+problem before this command reached them: the copy was frozen at the release it
+was published from, and every sentence the package improved afterwards stopped
+there with nothing to say so.
 
-They join the report the moment that directory exists, with the same seven
+They join the report the moment one of them is on disk, with the same seven
 statuses and the same two rules about what may be written:
 
 ```text
@@ -64,8 +64,8 @@ statuses and the same two rules about what may be written:
   yours ............................................................... 1
   current ........................................................... 361
 
-  lang/vendor/panda-panel/id/actions.php ........................ written
-  lang/vendor/panda-panel/en/notifications.php .................. written
+  lang/id/actions.php ........................................... written
+  lang/en/notifications.php ..................................... written
 
 INFO  Wrote 2 file(s).
 ```
@@ -86,7 +86,7 @@ release added, reads as `new`, and an update writes over it:
 ```bash
 php artisan vendor:publish --tag=panda-panel-translations
 php artisan panel:assets --update      # records what you just published
-# now reword lang/vendor/panda-panel/en/actions.php
+# now reword lang/en/actions.php
 ```
 
 A run with `--update` writes the manifest even when it had nothing else to
@@ -166,7 +166,7 @@ reads.
 {
     "_": "Written by php artisan panel:install / panel:assets. Commit this file: it is the record of which version of the panel frontend and translations this application published, and without it an upgrade cannot tell your edits from a stale copy.",
     "files": {
-        "lang/vendor/panda-panel/en/actions.php": "…",
+        "lang/en/actions.php": "…",
         "resources/js/panel/components/PanelSidebar.vue": "…",
         "resources/js/panel/icons/registry.ts": "…"
     }
@@ -240,12 +240,14 @@ What is published:
 | `resources/js/pages` | `resources/js/pages` | always |
 | `resources/js/types` | `resources/js/types` | always |
 | `resources/css/panda-panel.css` | `resources/css/panda-panel.css` | always |
-| `lang` | `lang/vendor/panda-panel` | once published |
+| `lang` | `lang/{locale}` | once published |
 
-`files()` includes a translation from the moment `lang/vendor/panda-panel`
-exists and never before it. An application that never published is never told
-about files it did not ask for; one that did gets them treated exactly like the
-frontend from then on.
+`files()` includes a translation from the moment one of them is on disk and
+never before it. A `lang/` directory is not the signal — `lang:publish` creates
+one, and so does a project that wrote a single sentence of its own — so the
+signal is one of the package's own files present at the path it publishes to. An
+application that never published is never told about files it did not ask for;
+one that did gets them treated exactly like the frontend from then on.
 
 ## Exit code
 

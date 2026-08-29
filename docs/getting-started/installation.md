@@ -1,21 +1,31 @@
 # Installation
 
 Getting Panda Panel into an application: the package, the config, the frontend, a first panel,
-and an account that can sign in. On a Laravel Vue starter kit application this is two commands
-and a build.
+and an account that can sign in. On a Laravel Vue starter kit this is two commands and a build.
+On a blank `laravel new` it is the same two commands — `panel:install` writes the root view, the
+entrypoint, the Vite config and the host modules that application does not have, and offers to
+install the npm dependencies and run the build.
 
 ## The short version
 
 ```bash
 composer require chocoalano/panel
 php artisan panel:install
-npm install
-npm run build
 php artisan serve
 ```
 
-Then open `/admin`. `panel:install` scaffolds the panel, registers it, and finishes by naming
-anything it could not do for you — on a starter kit application, that list is usually empty.
+Then open `/admin`. `panel:install` publishes, scaffolds the panel, registers it, fills in what
+the application is missing, offers `npm install` and `npm run build`, and finishes by naming
+anything left — on a starter kit that list is usually empty.
+
+To keep the package manager out of it, or to script the whole thing:
+
+```bash
+php artisan panel:install --no-npm          # reports the npm line instead of running it
+npm install && npm run build
+
+php artisan panel:install --npm --no-interaction
+```
 
 ## What `composer require` does on its own
 

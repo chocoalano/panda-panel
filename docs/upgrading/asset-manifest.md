@@ -267,7 +267,7 @@ use PandaPanel\Support\Installer\PublishedAssets;
 
 count(PublishedAssets::map());              // 7 — six directories and one stylesheet
 count(PublishedAssets::files());            // every file inside them, plus any published translations
-count(PublishedAssets::translationFiles()); // 0 until lang/vendor/panda-panel exists
+count(PublishedAssets::translationFiles()); // 0 until one of them is on disk
 
 PublishedAssets::relative('/var/www/app/resources/js/panel/tables/DataTable.vue');
 // 'resources/js/panel/tables/DataTable.vue'
@@ -287,13 +287,13 @@ edited is neither changed nor unchanged.
 | `resources/js/pages` | `resources/js/pages` |
 | `resources/js/types` | `resources/js/types` |
 | `resources/css/panda-panel.css` | `resources/css/panda-panel.css` |
-| `lang` | `lang/vendor/panda-panel` — **only once the application has published them** |
+| `lang` | `lang/{locale}` — **only once the application has published them** |
 
 The translations are the one conditional entry, and the condition is the difference between them and
 the frontend. A panel cannot run without the published components; it runs perfectly well without
 published strings, because `loadTranslationsFrom()` reads the package's own `lang/` and an
 application that publishes nothing is never behind. So they are tracked from the moment
-`lang/vendor/panda-panel` exists and never before it: an application that never published is not
+one of the package's own translation files is on disk and never before it: an application that never published is not
 told about files it did not ask for, and one that did gets its reworded copies compared against the
 package exactly the way a component is — reported when the package moves ahead, written by
 `--update` where it never touched them, and left alone where it did.

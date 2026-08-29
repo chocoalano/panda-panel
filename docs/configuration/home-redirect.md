@@ -39,8 +39,16 @@ $this->actingAs($admin)->get('/dashboard')->assertOk();
 
 A Laravel Vue starter kit ships a `/dashboard` route with an empty placeholder page, and points
 Fortify's post-login redirect at it. Installing a panel changes neither, so the first screen after
-signing in is that placeholder and the panel is somewhere you have to know the URL of. That is the
-worst moment in the install, and it is not something the application did wrong.
+signing in was that placeholder and the panel was somewhere you had to know the URL of. That is
+the worst moment in the install, and it is not something the application did wrong.
+
+The sign-in itself is now answered earlier, by
+[`login_redirect`](panda-panel.md#login_redirect) — which this key is a
+prerequisite for, and which handles the two cases this one cannot: a `/dashboard`
+that matches no route never reaches `web` middleware at all, and this key
+answers with the *first* panel a user can enter rather than the one they signed
+in at. What is left for this key is the visit *after* the sign-in: a bookmark, a
+link, a redirect out of somewhere else.
 
 Nothing is rewritten to fix it. The application keeps its route, its route name and its page
 component; a request that reaches it is answered earlier, and that is the whole of it. Turning the
@@ -207,9 +215,9 @@ have to register yourself. See [Middleware Registration](middleware.md).
   including `'true'`.
 - **Patterns have no leading slash.** `'/dashboard'` matches nothing; `$request->is()` compares
   against a trimmed path.
-- **This is not Fortify's post-login redirect.** Fortify still sends a user to whatever
-  `HOME`/`LoginResponse` says; this catches them when they arrive. Change Fortify's own redirect
-  if you would rather they never touch `/dashboard` at all.
+- **This is not the sign-in itself.** That is [`login_redirect`](panda-panel.md#login_redirect),
+  which binds Fortify's `LoginResponse` and lands in the panel the sign-in started at. This key
+  catches a signed-in user who arrives at `/dashboard` afterwards.
 - **A user no panel admits sees the application's own page**, unchanged. There is no error and no
   403 — the redirect does not happen.
 - **`register_routes => false` disables this in practice.** With no `panel.{id}.dashboard` route
@@ -217,6 +225,9 @@ have to register yourself. See [Middleware Registration](middleware.md).
 - **The redirect fires on every matching GET, not only after login.** Any later visit to
   `/dashboard` goes to the panel too, which is usually the point and occasionally a surprise for a
   link somebody bookmarked.
+- **Turning this off also narrows `login_redirect`.** A sign-in that started at a panel still
+  lands there; one that did not is left to Fortify's own answer, because this key is how an
+  application says whether it would rather keep its own dashboard.
 
 ## See also
 

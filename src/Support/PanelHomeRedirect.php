@@ -72,9 +72,14 @@ final class PanelHomeRedirect
      * that keeps a section of starter kit screens can hand over all of them
      * at once.
      *
+     * Public because `PanelPostLogin` has to ask the same question about a
+     * *stored* URL rather than the current request: an intended URL pointing
+     * at a screen this class hands over is an intended URL that would bounce,
+     * or 404 outright in an application that has no such route.
+     *
      * @return list<string>
      */
-    private static function paths(): array
+    public static function paths(): array
     {
         /** @var array<string, mixed> $config */
         $config = (array) config('panda-panel.home_redirect', []);

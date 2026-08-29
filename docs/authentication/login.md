@@ -204,12 +204,26 @@ Fortify's `LoginResponse` does `redirect()->intended(Fortify::redirects('login')
 The intended URL was stored by the guest redirect, so a user who was sent to
 `/admin/login` from `/admin/users/3/edit` lands back on that record.
 
-A user who opened the login page directly has no intended URL and falls through
-to Fortify's configured home, which on a Laravel Vue starter kit is
-`/dashboard` — the placeholder screen. That is what
-`PandaPanel\Http\Middleware\RedirectPanelHome` is for: it sends a signed-in
-user who lands on `/dashboard` into the first panel they can enter, without
-touching the application's route, its name, or its page component.
+A user who opened the login page directly has no intended URL, and Fortify's own
+fallback is its configured home — `/dashboard` on a Laravel Vue starter kit, and
+nothing at all on a blank application. So the package binds three of Fortify's
+response contracts and answers with **the panel whose login page was rendered**:
+
+| Contract | Bound to |
+| --- | --- |
+| `Laravel\Fortify\Contracts\LoginResponse` | `PandaPanel\Http\Responses\PanelLoginResponse` |
+| `Laravel\Fortify\Contracts\TwoFactorLoginResponse` | `PandaPanel\Http\Responses\PanelTwoFactorLoginResponse` |
+| `Laravel\Fortify\Contracts\RegisterResponse` | `PandaPanel\Http\Responses\PanelRegisterResponse` |
+
+The panel is remembered in the session when any of its auth pages renders, and
+forgotten after one sign-in — so a second panel's door leads to *that* panel,
+not to whichever one happens to be registered first. A sign-in that never
+touched a panel falls back to the first panel the account can enter, and only
+while `home_redirect` is on. Turn all of it off with `login_redirect => false`.
+
+`PandaPanel\Http\Middleware\RedirectPanelHome` is the second line of defence,
+for a signed-in user who navigates to `/dashboard` later — without touching the
+application's route, its name, or its page component.
 
 ```php
 // config/panda-panel.php

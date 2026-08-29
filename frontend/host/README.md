@@ -5,11 +5,22 @@ They belong to the application: a Laravel Vue starter kit writes most of them,
 and [Wayfinder](https://github.com/laravel/wayfinder) generates the rest at
 build time from the application's own routes and controllers.
 
-This directory holds a minimal stand-in for each, used **only** when
-type-checking and building this package on its own. Nothing here is published,
-exported by composer, or reachable from an application — `@/…` resolves to
-`resources/js/…` first, and falls through to this directory only when the file
-is genuinely not part of the package.
+This directory holds a minimal stand-in for each. Its first job is this
+repository's own type-check and build: `@/…` resolves to `resources/js/…` first,
+and falls through to this directory only when the file is genuinely not part of
+the package.
+
+Its second job is a blank application. `php artisan panel:install` copies the
+stand-ins an application has *no module of its own* for — which is nineteen of
+them on a `laravel new`, and none of them on a Laravel Vue starter kit. Nothing
+here is in a publish map, and nothing here ever overwrites: an application that
+has a `UserMenuContent` keeps it, however it is spelled on disk.
+
+That is a change of position. These used to be documented as never shipping, on
+the grounds that a component is the application's design and a vendored one
+would be overwriting somebody's. Both halves of that are still true, and neither
+is an argument for a blank application getting a build error and a list of
+nineteen files to write by hand instead.
 
 That fall-through is what makes `npm run typecheck` possible at all. Without
 it, 337 files would fail to resolve eighteen imports and the toolchain would

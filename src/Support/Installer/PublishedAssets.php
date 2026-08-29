@@ -34,13 +34,17 @@ use PandaPanel\Support\FrontendPaths;
  * every locale the package ships. Publishing them is a choice — to reword a
  * sentence, or to keep the strings in the project's own repository.
  *
- * So they are tracked only once that choice has been made. `files()` includes
- * a translation the moment `lang/vendor/panda-panel` exists and never before
- * it, which means an application that never published is never told about
- * files it did not ask for, and one that did publish gets them treated
- * exactly like the frontend from then on: reported when the package moves
- * ahead, written by `panel:assets --update`, and never silently overwritten
- * where it has reworded a line.
+ * So they are tracked only once that choice has been made. The signal used to
+ * be a directory: `lang/vendor/panda-panel` existed or it did not. The strings
+ * publish into `lang/{locale}` now, beside the application's own, and a
+ * `lang/` directory says nothing — Laravel's `lang:publish` creates one, and
+ * so does a project that has written a single sentence of its own. So the
+ * signal is the files themselves: at least one translation this package ships
+ * present at the path it would have been published to. An application that
+ * never published is never told about files it did not ask for, and one that
+ * did gets them treated exactly like the frontend from then on: reported when
+ * the package moves ahead, written by `panel:assets --update`, and never
+ * silently overwritten where it has reworded a line.
  */
 final class PublishedAssets
 {
@@ -70,17 +74,25 @@ final class PublishedAssets
     /**
      * The map `vendor:publish --tag=panda-panel-translations` is given.
      *
-     * `lang/vendor/panda-panel` is where Laravel's file loader looks for a
-     * namespaced override, and it merges key by key over the package's own
-     * copy — so a published file that is missing a key added in a later
-     * release still gets that key from the package.
+     * `lang/{locale}` by default, so the panel's strings sit beside the
+     * application's own rather than three directories away under
+     * `lang/vendor/panda-panel`. Laravel's file loader does not look there for
+     * a namespaced override, which is what `PanelTranslationLoader` is for —
+     * and it merges key by key the same way, so a published file missing a key
+     * added in a later release still gets that key from the package.
+     *
+     * `panda-panel.translations.publish_to_lang_root` puts it back under
+     * `lang/vendor/panda-panel`, which is Laravel's own convention and needs
+     * no loader.
      *
      * @return array<string, string>
      */
     public static function translations(): array
     {
+        $root = config('panda-panel.translations.publish_to_lang_root', true) === true;
+
         return [
-            self::packagePath('lang') => lang_path('vendor/panda-panel'),
+            self::packagePath('lang') => $root ? lang_path() : lang_path('vendor/panda-panel'),
         ];
     }
 
@@ -105,21 +117,31 @@ final class PublishedAssets
      * The translations this application has actually adopted, file by file.
      *
      * Empty until something publishes them, which is the whole of the
-     * "tracked only once the choice has been made" rule above. Once the
-     * directory is there every locale the package ships is tracked against
-     * it, including one added in a later release — that file reads as `new`
-     * and `panel:assets --update` writes it.
+     * "tracked only once the choice has been made" rule above. Once one of
+     * them is on disk every locale the package ships is tracked, including one
+     * added in a later release — that file reads as `new` and
+     * `panel:assets --update` writes it.
+     *
+     * A destination equal to its own source is not evidence of anything, and
+     * has to be excluded from the check rather than merely from the result:
+     * this repository is its own test application, so `lang_path()` *is* the
+     * package's `lang/`, every file "exists at its destination", and without
+     * this every run would report the package's own strings as an application
+     * that had published them.
      *
      * @return array<string, string> absolute destination => absolute source
      */
     public static function translationFiles(): array
     {
-        $adopted = array_filter(
-            self::translations(),
-            static fn (string $destination): bool => File::exists($destination),
-        );
+        $files = self::expand(self::translations());
 
-        return self::expand($adopted);
+        foreach ($files as $destination => $source) {
+            if ($destination !== $source && File::exists($destination)) {
+                return $files;
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -157,6 +179,10 @@ final class PublishedAssets
             // package's own `lang/`. Left in, the published copies would be
             // enumerated as sources and mapped back onto themselves, one
             // directory deeper on every run.
+            //
+            // Still guarded even though the default target is now `lang/`
+            // itself, because `publish_to_lang_root` can be turned off and the
+            // nested shape comes straight back.
             //
             // Strictly inside: the frontend map has source and destination
             // *equal* here for the same reason, and skipping on that would

@@ -19,7 +19,12 @@ it('registers the install and user commands with the signatures the docs promise
     $install = $commands['panel:install']->getDefinition();
 
     expect(array_keys($install->getOptions()))
-        ->toContain('panel', 'no-panel', 'no-user', 'force');
+        ->toContain('panel', 'no-panel', 'no-user', 'force')
+        // The installer writes the application files a blank Laravel is
+        // missing and offers to install the npm dependencies. Both are
+        // opt-out, and the dependency install is settleable without a prompt
+        // in either direction for a scripted run.
+        ->toContain('no-scaffold', 'npm', 'no-npm');
 
     $user = $commands['panel:user']->getDefinition();
 

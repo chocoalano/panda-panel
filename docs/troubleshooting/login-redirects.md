@@ -1,12 +1,18 @@
 # Login redirects
 
-A guest opening a panel URL is sent somewhere, and a signed-in user landing on the application's
-dashboard is sent somewhere else. Two redirects, in opposite directions, both registered by this
-package and both overridable. Reach for this page when a guest lands on the wrong login, when
-signing in does not lead into the panel, or when a `redirectGuestsTo()` you wrote stopped taking
-effect.
+A guest opening a panel URL is sent somewhere, somebody who has just signed in is sent somewhere
+else, and a signed-in user landing on the application's dashboard is sent somewhere else again.
+Three redirects, all registered by this package and all overridable. Reach for this page when a
+guest lands on the wrong login, when signing in does not lead into the panel, or when a
+`redirectGuestsTo()` you wrote stopped taking effect.
 
-## Ask the two functions directly
+| Moment | Answered by | Config key |
+| --- | --- | --- |
+| A guest opens a panel URL | `PandaPanel\Support\PanelLoginRedirect` | `register_guest_redirect` |
+| A sign-in finishes | `PandaPanel\Support\PanelPostLogin` | `login_redirect` |
+| A signed-in user opens `/dashboard` | `PandaPanel\Support\PanelHomeRedirect` | `home_redirect` |
+
+## Ask the functions directly
 
 Neither redirect needs a browser to reproduce. Both are static methods taking a request and
 answering a URL or `null`, so the answer can be had from tinker before any theory about middleware:
@@ -28,7 +34,15 @@ PanelHomeRedirect::for($request);
 // '/admin', or null to change nothing
 ```
 
-`null` from either one means *this redirect is not what moved the browser*, which narrows the
+```php
+use PandaPanel\Support\PanelPostLogin;
+
+// Where a sign-in that has just succeeded is sent.
+PanelPostLogin::for($request);
+// '/admin', or null to leave Fortify's own answer alone
+```
+
+`null` from any of them means *this redirect is not what moved the browser*, which narrows the
 search to the application's own routes, Fortify, or the auth middleware.
 
 | Answer | Read it as |
@@ -184,9 +198,66 @@ at the same callback. The package sets only the two above; an application using
 
 ## 5. Signing in still lands on the starter kit's `/dashboard`
 
-**Cause.** `PandaPanel\Http\Middleware\RedirectPanelHome` answers that request, and
-`PanelHomeRedirect::for()` returned `null`. Five conditions produce `null`, and each is worth
-checking in this order:
+A panel's login page posts to **Fortify's** endpoint, not to a route of the panel's — deliberately,
+so that rate limiting, two-factor, passkeys and session fixation have exactly one implementation.
+Fortify then answers with its own `LoginResponse`, which redirects to `fortify.home`. That is
+`/dashboard` in every starter kit and in Fortify's shipped config.
+
+**Cause 1 — `login_redirect` is off.** With it on, the package binds Fortify's three post-sign-in
+response contracts and lands in the panel the sign-in started at:
+
+```php
+use Laravel\Fortify\Contracts\LoginResponse;
+use PandaPanel\Http\Responses\PanelLoginResponse;
+
+app(LoginResponse::class);   // PandaPanel\Http\Responses\PanelLoginResponse
+```
+
+| Contract | Bound to |
+| --- | --- |
+| `Laravel\Fortify\Contracts\LoginResponse` | `PandaPanel\Http\Responses\PanelLoginResponse` |
+| `Laravel\Fortify\Contracts\TwoFactorLoginResponse` | `PandaPanel\Http\Responses\PanelTwoFactorLoginResponse` |
+| `Laravel\Fortify\Contracts\RegisterResponse` | `PandaPanel\Http\Responses\PanelRegisterResponse` |
+
+If `app(LoginResponse::class)` is Fortify's own class, either `login_redirect` is `false` or
+something in your application bound it later — a `FortifyServiceProvider` calling
+`$this->app->singleton(LoginResponse::class, …)` wins, because both bindings are made in
+`register()` and the last one stands.
+
+**Cause 2 — the sign-in did not start at a panel.** The panel is remembered from the panel's own
+auth pages, in the session under `panda-panel.login_panel`, and is forgotten after one sign-in. A
+POST to `/login` that never rendered `/admin/login` has nothing to resolve, and falls back to the
+first panel the account can enter — but only while `home_redirect` is on.
+
+```php
+use PandaPanel\Support\PanelPostLogin;
+
+session(PanelPostLogin::SESSION_KEY);        // 'admin', or null
+PanelPostLogin::for(request());              // '/admin', or null to leave Fortify's answer alone
+```
+
+**Cause 3 — an intended URL is winning.** That is the point of `redirect()->intended()`: a guest
+who asked for `/admin/users` and was sent to a login comes back to `/admin/users`. The one URL
+that is deliberately dropped is one `home_redirect` has taken over, because following it would
+bounce straight back out again.
+
+```php
+session('url.intended');   // 'https://example.test/dashboard' — dropped, the panel wins
+```
+
+**Cause 4 — the account cannot enter the panel it signed in at.** Sending it there would 403, so
+the answer falls through to the same search as anybody else.
+
+### When the request reaches `/dashboard` anyway
+
+`PandaPanel\Http\Middleware\RedirectPanelHome` is the second line of defence — for a signed-in
+user who navigates to `/dashboard` later, rather than for the sign-in itself. It cannot catch the
+sign-in in two cases, which is why the responses above exist: it is `web` group middleware, so a
+`/dashboard` that matches no route (a blank application has none) never reaches it, and it answers
+with the *first* panel the account can enter rather than the one they signed in at.
+
+When it does run and changes nothing, `PanelHomeRedirect::for()` returned `null`. Five conditions
+produce `null`, and each is worth checking in this order:
 
 | Condition | Check |
 | --- | --- |
@@ -362,6 +433,15 @@ PanelLoginRedirect::for(...);        // first-class callable, which is how it is
 | Outside every panel | `route('login')` when the application has one |
 | Neither route exists | `null` |
 
+### `PandaPanel\Support\PanelPostLogin`
+
+| Member | Signature | Answers |
+| --- | --- | --- |
+| `SESSION_KEY` | `const string` | `'panda-panel.login_panel'` — the panel this sign-in started at |
+| `remember` | `static remember(Request $request, Panel $panel): void` | records that panel, called from every one of a panel's auth pages |
+| `for` | `static for(Request $request): ?string` | the URL to land on, or `null` to leave Fortify's own answer alone |
+| `discardHandedOverIntent` | `static discardHandedOverIntent(Request $request): void` | forgets an intended URL that `home_redirect` has taken over |
+
 ### `PandaPanel\Support\PanelHomeRedirect`
 
 ```php
@@ -388,6 +468,7 @@ and has nothing to share props for.
 | Key | Default | Effect |
 | --- | --- | --- |
 | `register_guest_redirect` | `true` | Registers `PanelLoginRedirect` on `Authenticate` and `AuthenticationException` |
+| `login_redirect` | `true` | Binds Fortify's `LoginResponse`, `TwoFactorLoginResponse` and `RegisterResponse` to the panel-aware ones |
 | `home_redirect.enabled` | `true` | Whether `RedirectPanelHome` does anything |
 | `home_redirect.paths` | `['dashboard']` | The `Request::is()` patterns it takes over |
 | `register_web_middleware` | `true` | Whether the four `web` middleware are appended at all |
@@ -447,16 +528,19 @@ $this->actingAs($admin)->get('/dashboard')->assertOk();
 
 ## Gotchas
 
-- **Both config flags are compared with `!== true`.** A string `'true'` from an environment
-  variable turns the feature off, not on.
+- **Every one of these config flags is compared with `!== true`.** A string `'true'` from an
+  environment variable turns the feature off, not on.
 - **`home_redirect.paths` patterns have no leading slash.** `'/dashboard'` matches nothing;
   `$request->is()` compares against a trimmed path.
 - **The home redirect fires on every matching GET, not only after signing in.** A bookmarked
   `/dashboard` goes to the panel too, which is usually the point and occasionally a surprise.
-- **This is not Fortify's post-login redirect.** Fortify still sends a user wherever its own
-  configuration says; `RedirectPanelHome` catches them when they arrive. Nothing in the package
-  edits Fortify's `home`, which is why turning the key off gives the starter kit's screen back
-  exactly as it was.
+- **`login_redirect` does not edit `fortify.home`.** It binds three response contracts, and each
+  falls back to `Fortify::redirects(…)` when no panel claims the sign-in — so turning the key off
+  gives Fortify's own behaviour back exactly as it was, and an application that reads
+  `config('fortify.home')` still reads what it always did.
+- **`login_redirect` and `home_redirect` are two different moments.** The first answers the
+  sign-in itself; the second catches a signed-in user who navigates to `/dashboard` later. A
+  blank application has no `/dashboard` route at all, so only the first one can help there.
 - **A signed-in user who fails a panel's access check gets a 403, never a redirect.** Hiding a
   panel behind a login is not an access control — see [403 responses](authorization-403.md).
 - **`login()` on a public panel is a login page nobody needs.** The pages are registered from
@@ -466,7 +550,8 @@ $this->actingAs($admin)->get('/dashboard')->assertOk();
   `ResetPassword` notification builds its URL from the application's `password.reset` route;
   pointing it at a panel is a call to `ResetPassword::createUrlUsing()` in your own provider.
 - **`firstAccessibleTo()` walks panels in id order, not config order.** Renaming a panel can
-  therefore change where users land after signing in.
+  therefore change where a sign-in that did not start at a panel lands. One that *did* start at a
+  panel is unaffected — it is remembered by id.
 - **`isAccessibleTo()` runs on every request into a panel and again for the home redirect.** Keep
   `canAccess()` cheap; a query per request per user is a query per page view.
 

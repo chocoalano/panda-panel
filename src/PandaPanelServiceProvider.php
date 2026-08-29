@@ -6,10 +6,15 @@ namespace PandaPanel;
 
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Contracts\Routing\Registrar;
+use Illuminate\Contracts\Translation\Loader;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
+use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
+use Laravel\Fortify\Contracts\TwoFactorLoginResponse as TwoFactorLoginResponseContract;
 use PandaPanel\Cache\PanelManifest;
 use PandaPanel\Console\Commands\CachePanelsCommand;
 use PandaPanel\Console\Commands\ClearPanelsCommand;
@@ -37,6 +42,9 @@ use PandaPanel\Http\Middleware\ResolveParentRecord;
 use PandaPanel\Http\Middleware\SetPanelLocale;
 use PandaPanel\Http\Middleware\ShareFlashToast;
 use PandaPanel\Http\Middleware\SharePanelData;
+use PandaPanel\Http\Responses\PanelLoginResponse;
+use PandaPanel\Http\Responses\PanelRegisterResponse;
+use PandaPanel\Http\Responses\PanelTwoFactorLoginResponse;
 use PandaPanel\Integrations\IntegrationObserver;
 use PandaPanel\Resources\Resource;
 use PandaPanel\Routing\PanelRouteRegistrar;
@@ -44,6 +52,8 @@ use PandaPanel\Support\Installer\PublishedAssets;
 use PandaPanel\Support\NavigationBuilder;
 use PandaPanel\Support\PanelContext;
 use PandaPanel\Support\PanelLoginRedirect;
+use PandaPanel\Support\PanelPostLogin;
+use PandaPanel\Translation\PanelTranslationLoader;
 
 /**
  * Wires the panel framework into the application.
@@ -84,6 +94,15 @@ final class PandaPanelServiceProvider extends ServiceProvider
     ];
 
     /**
+     * The translation namespace the package's own strings live under.
+     *
+     * Every `__('panda-panel::…')` in `src/` resolves through it, and
+     * `PanelTranslationLoader` uses it to decide which lookups an
+     * application's `lang/{locale}` files are allowed to override.
+     */
+    public const TRANSLATION_NAMESPACE = 'panda-panel';
+
+    /**
      * Aliases for the middleware a panel route group applies.
      *
      * The registrar names these classes directly, so the aliases exist for
@@ -103,6 +122,9 @@ final class PandaPanelServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom($this->packagePath('config/panda-panel.php'), 'panda-panel');
+
+        $this->registerTranslationLoader();
+        $this->registerLoginResponses();
 
         $this->app->singleton(PanelRegistry::class);
         $this->app->scoped(PanelContext::class);
@@ -166,6 +188,34 @@ final class PandaPanelServiceProvider extends ServiceProvider
         }
 
         $this->app->afterResolving(Kernel::class, $redirect);
+    }
+
+    /**
+     * Sends somebody who has just signed in into the panel they signed in at.
+     *
+     * The counterpart to `registerGuestRedirect()`, and the half that was
+     * missing. A panel's login page posts to Fortify's own endpoint on
+     * purpose — one implementation of rate limiting, two-factor, passkeys and
+     * session fixation — and Fortify then answers with a redirect to
+     * `fortify.home`. That is the starter kit's `/dashboard`, or nothing at
+     * all in a blank application, so signing in at `/admin/login` did not land
+     * in `/admin`.
+     *
+     * Bound in `register()` because Fortify's own provider binds these in its
+     * `register()` too, and the last binding wins. Guarded by a config flag
+     * for an application that has bound its own.
+     *
+     * @see PanelPostLogin
+     */
+    private function registerLoginResponses(): void
+    {
+        if ($this->app->make('config')->get('panda-panel.login_redirect') !== true) {
+            return;
+        }
+
+        $this->app->singleton(LoginResponseContract::class, PanelLoginResponse::class);
+        $this->app->singleton(TwoFactorLoginResponseContract::class, PanelTwoFactorLoginResponse::class);
+        $this->app->singleton(RegisterResponseContract::class, PanelRegisterResponse::class);
     }
 
     /**
@@ -294,14 +344,50 @@ final class PandaPanelServiceProvider extends ServiceProvider
      * translation the translator has not been told where to find, and get the
      * key back instead of the sentence.
      *
-     * `loadTranslationsFrom` looks in `lang/vendor/panda-panel` first, so an
-     * application that published the files and edited a line keeps that line
-     * across an upgrade — and one that published nothing follows the
-     * package's own copy, including any locale a later version adds.
+     * The hint is the package's own `lang/`, which is what an application
+     * that published nothing reads — including any locale a later version
+     * adds. What an application *has* published is merged over the top by
+     * `PanelTranslationLoader`, from `lang/{locale}` rather than from
+     * `lang/vendor/panda-panel`.
      */
     private function registerTranslations(): void
     {
-        $this->loadTranslationsFrom($this->packagePath('lang'), 'panda-panel');
+        $this->loadTranslationsFrom($this->packagePath('lang'), self::TRANSLATION_NAMESPACE);
+    }
+
+    /**
+     * Teaches the translator to read the panel's strings from `lang/{locale}`.
+     *
+     * The framework looks for a namespaced override in exactly one place —
+     * `lang/vendor/{namespace}/{locale}/{group}.php` — and that is where this
+     * package used to publish. It is three directories away from where an
+     * application keeps every other sentence it has written, so the publish
+     * target is now `lang/{locale}` and this is what makes the framework find
+     * it. See `PanelTranslationLoader` for the merge and for what the flat
+     * layout costs.
+     *
+     * In `register()` rather than `boot()`, and through `extend()` rather than
+     * a rebind: `translation.loader` is a deferred singleton, so extending it
+     * before anything resolves it means the wrapper is in place the first time
+     * a string is asked for — including one asked for by another package's
+     * `boot()`.
+     */
+    private function registerTranslationLoader(): void
+    {
+        if ($this->app->make('config')->get('panda-panel.translations.publish_to_lang_root') !== true) {
+            return;
+        }
+
+        $this->app->extend(
+            'translation.loader',
+            fn (Loader $loader, Application $app): Loader => new PanelTranslationLoader(
+                $loader,
+                $app->make('files'),
+                static fn (): string => $app->langPath(),
+                self::TRANSLATION_NAMESPACE,
+                $this->packagePath('lang'),
+            ),
+        );
     }
 
     private function registerMigrations(): void
@@ -330,9 +416,13 @@ final class PandaPanelServiceProvider extends ServiceProvider
         ], 'panda-panel-stubs');
 
         // Publishing is for rewording. A locale the package does not ship
-        // needs no publish at all — Laravel reads `lang/vendor/panda-panel`
-        // first either way — and the strings work untouched, which is why
-        // this is not part of the umbrella install.
+        // needs no publish at all — the panel reads its own `lang/` either
+        // way — and the strings work untouched, which is why this is not part
+        // of the umbrella install.
+        //
+        // Into `lang/{locale}`, beside the application's own strings, rather
+        // than `lang/vendor/panda-panel` — see `registerTranslationLoader()`
+        // for what makes the namespace resolve there.
         //
         // A published copy used to stop following the package: the file was
         // frozen at the version it was published, and a sentence improved

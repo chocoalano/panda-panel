@@ -265,7 +265,7 @@ The report covers the publish map, plus the translations once an application has
 | `resources/js/pages` | `resources/js/pages` |
 | `resources/js/types` | `resources/js/types` |
 | `resources/css/panda-panel.css` | `resources/css/panda-panel.css` |
-| `lang` | `lang/vendor/panda-panel` — only once `vendor:publish --tag=panda-panel-translations` has run |
+| `lang` | `lang/{locale}` — only once `vendor:publish --tag=panda-panel-translations` has run |
 
 Published strings are yours in exactly the way a published component is, and they used to be yours
 *permanently*: a confirmation you reworded stayed at the release you published it from, and every
@@ -302,7 +302,7 @@ Not in the report, and never written by `panel:assets`:
   `panda-panel-config`, `panda-panel-migrations`, `panda-panel-stubs`. Re-publish those yourself
   and diff by hand. The fourth separate tag, `panda-panel-translations`, is the exception: what it
   writes *is* compared, once it has been run.
-- **Translations you never published.** Nothing under `lang/vendor/panda-panel` is tracked until
+- **Translations you never published.** No panel translation is tracked until
   that directory exists, and a third locale you added there yourself is a file the package does not
   ship, so it is never compared or written.
 - **Wayfinder's output.** `resources/js/routes` and `resources/js/actions` are generated from your

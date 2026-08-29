@@ -1,7 +1,7 @@
 # config/panda-panel.php
 
 Every key the package reads, what it decides, and what an invalid value does. This is the
-whole configuration file: eight top-level keys, all of them registration-time switches or
+whole configuration file: ten top-level keys, all of them registration-time switches or
 security bounds. Everything with logic in it — paths, domains, middleware, navigation,
 branding, access — is configured in code on the panel, because a decision with a condition
 in it does not belong in an array.
@@ -41,6 +41,8 @@ most common "the install worked but the URL 404s".
 | `register_guest_redirect` | `bool` | `true` | `PandaPanelServiceProvider::registerGuestRedirect()` |
 | `home_redirect.enabled` | `bool` | `true` | `PandaPanel\Support\PanelHomeRedirect` |
 | `home_redirect.paths` | `list<string>` | `['dashboard']` | `PandaPanel\Support\PanelHomeRedirect` |
+| `login_redirect` | `bool` | `true` | `PandaPanel\Support\PanelPostLogin` |
+| `translations.publish_to_lang_root` | `bool` | `true` | `PandaPanel\Translation\PanelTranslationLoader`, `PublishedAssets::translations()` |
 | `load_migrations` | `bool` | `true` | `PandaPanelServiceProvider::registerMigrations()` |
 | `integrations.allowed_hosts` | `list<string>` | `[]` | `PandaPanel\Integrations\OutboundUrl` |
 | `integrations.block_private_networks` | `bool` | `true` | `PandaPanel\Integrations\OutboundUrl` |
@@ -146,6 +148,76 @@ A path a panel is itself mounted on is ignored, because redirecting one to itsel
 
 Entries that are not non-empty strings are filtered out. An empty list, or `enabled` set to
 anything other than boolean `true`, turns the feature off entirely. [Home Redirect](home-redirect.md).
+
+## `login_redirect`
+
+```php
+'login_redirect' => true,
+```
+
+Where somebody who has just signed in ends up.
+
+A panel's login page posts to Fortify's own endpoint on purpose — one implementation of rate
+limiting, two-factor, passkeys and session fixation — and Fortify then redirects to
+`fortify.home`. That is `/dashboard` in every starter kit and in Fortify's shipped config, so
+signing in at `/admin/login` used to land on the application's dashboard, and on a blank
+application on a 404.
+
+With this on, the panel whose login page was rendered is remembered for the length of the
+sign-in, and Fortify's `LoginResponse`, `TwoFactorLoginResponse` and `RegisterResponse` are bound
+to responses that land there instead. A sign-in that did not start at a panel is handed the first
+panel the account can enter, but only where [`home_redirect`](#home_redirect) is on — that flag is
+already the application saying it would rather land people in the panel.
+
+An intended URL still wins, which is what makes `/admin/users` behind a sign-in come back to
+`/admin/users`. The one exception is an intended URL that `home_redirect` has taken over, because
+following it would bounce straight back out again.
+
+Set this to `false` if your application binds any of those three response contracts itself.
+[Login redirects](../troubleshooting/login-redirects.md).
+
+## `translations`
+
+```php
+'translations' => [
+    'publish_to_lang_root' => true,
+],
+```
+
+Where `vendor:publish --tag=panda-panel-translations` puts the panel's strings, and where the panel
+reads your edits back from.
+
+With this on — the default — they publish into `lang/en`, `lang/id`, and any other locale a release
+adds, beside the strings your own application has written. Laravel has exactly one place it looks
+for a namespaced override, `lang/vendor/{namespace}/{locale}`, so the package decorates the
+translation loader to read `lang/{locale}` as well:
+
+```text
+lang/en/tables.php          ← your rewording
+vendor/…/panel/lang/en/tables.php   ← the package's own copy, merged under it
+```
+
+The merge is key by key, the same way Laravel merges its own vendor overrides: a published copy
+that predates a key added in a later release still gets that key from the package. It applies only
+to the `panda-panel` namespace, and within it only to the groups the package actually ships — a
+plain `__('tables.…')`, or a `panda-panel::` group that is not one of the package's, is handed
+straight to the loader underneath.
+
+The cost of the flat layout is a shared filename. `lang/en/actions.php` may already be yours, and
+then one file holds both the panel's `panda-panel::actions.*` keys and your own `actions.*` keys.
+Nothing is overwritten either way, but two sets of keys in one file is a thing to know about rather
+than discover.
+
+Set this to `false` to go back to Laravel's own convention, `lang/vendor/panda-panel/{locale}`,
+which keeps the panel's strings in a directory of their own and needs no decorator at all.
+[Publish tags](../cli/publish-tags.md#panda-panel-translations).
+
+**Upgrading from a release that published to `lang/vendor/panda-panel`.** Nothing breaks: Laravel
+still reads that directory, and the decorator merges `lang/{locale}` *on top of* whatever it found
+there. So an old published copy keeps winning until you publish again, and a file you have in both
+places resolves to the one in `lang/{locale}`. Move your rewordings across and delete
+`lang/vendor/panda-panel`, or set this key to `false` and carry on where you are — both are
+correct, and having the same group in both places is the one state worth not staying in.
 
 ## `load_migrations`
 

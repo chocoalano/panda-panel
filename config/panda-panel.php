@@ -121,6 +121,68 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Translations
+    |--------------------------------------------------------------------------
+    |
+    | Where `vendor:publish --tag=panda-panel-translations` puts the panel's
+    | strings, and where the panel reads your edits back from.
+    |
+    | With this on — the default — they publish into `lang/en`, `lang/id`, and
+    | any other locale a release adds, beside the strings your own application
+    | has written. The framework has no idea a namespaced translation can live
+    | there, so the package wraps the translation loader to find it; see
+    | `PandaPanel\Translation\PanelTranslationLoader`.
+    |
+    | The cost of the flat layout is a shared filename. `lang/en/actions.php`
+    | may already be yours, and then one file holds both the panel's
+    | `panda-panel::actions.*` keys and your own `actions.*` keys. Nothing is
+    | overwritten either way — the merge only ever adds to what the package
+    | shipped, and your own non-namespaced lookups are untouched — but two sets
+    | of keys in one file is a thing to know about rather than discover.
+    |
+    | Set this to false to go back to Laravel's own convention,
+    | `lang/vendor/panda-panel/{locale}`, which keeps the panel's strings in a
+    | directory of their own and needs no loader at all.
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Login redirect
+    |--------------------------------------------------------------------------
+    |
+    | The third redirect in the set, and the one everybody notices. A panel's
+    | login page posts to Fortify's own endpoint — deliberately, so that rate
+    | limiting, two-factor, passkeys and session handling have exactly one
+    | implementation — and Fortify then redirects to `fortify.home`. That is
+    | `/dashboard` in every starter kit and in Fortify's shipped config, so
+    | signing in at `/admin/login` used to land on the application's dashboard,
+    | and on a blank application on a 404.
+    |
+    | With this on, the panel whose login page was rendered is remembered for
+    | the length of the sign-in, and the response lands there instead. A
+    | sign-in that did not start at a panel is handed the first panel the
+    | account can enter, but only where `home_redirect` is on — that flag is
+    | already the application saying it would rather land people in the panel.
+    |
+    | An intended URL still wins, which is what makes `/admin/users` behind a
+    | sign-in come back to `/admin/users`. The one exception is an intended URL
+    | that `home_redirect` has taken over, because following it would bounce
+    | straight back out again.
+    |
+    | Set this to false if your application binds Fortify's LoginResponse,
+    | TwoFactorLoginResponse or RegisterResponse itself.
+    |
+    */
+
+    'login_redirect' => true,
+
+    'translations' => [
+        'publish_to_lang_root' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Migrations
     |--------------------------------------------------------------------------
     |
