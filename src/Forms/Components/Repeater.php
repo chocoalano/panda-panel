@@ -146,6 +146,20 @@ final class Repeater extends Field
     }
 
     /**
+     * The components one entry is built from, layouts included.
+     *
+     * `itemFields()` flattens to leaves, which is right for rules and wrong
+     * for addressing: working out where a field writes means walking the same
+     * tree the renderer does, layouts and all.
+     *
+     * @return list<FormComponent>
+     */
+    public function componentsForPaths(): array
+    {
+        return $this->components;
+    }
+
+    /**
      * The fields of one entry.
      *
      * @return list<Field>

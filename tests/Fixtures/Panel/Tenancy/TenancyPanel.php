@@ -35,6 +35,10 @@ final class TenancyPanel
 
         Gate::policy(Document::class, DocumentPolicy::class);
         Gate::policy(Workspace::class, DocumentPolicy::class);
+        // The relation's related model needs one too, or "may this user read
+        // the relation" is answered no by a missing policy rather than by
+        // tenancy — and the isolation tests would pass for the wrong reason.
+        Gate::policy(Revision::class, DocumentPolicy::class);
 
         $manager = app(PanelManager::class);
 

@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace PandaPanel\Forms\Components;
 
+use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use PandaPanel\Forms\Enums\FieldType;
+use PandaPanel\Forms\Support\CallbackParameters;
+use PandaPanel\Forms\Support\FormState;
 
 /**
  * A single- or multiple-choice field, backed either by a static option list
@@ -44,6 +49,17 @@ final class Select extends Field
 
     /** @var array{table: string, column: string}|null */
     private ?array $existsIn = null;
+
+    /**
+     * Builds the whole option list, replacing both the static list and the
+     * relation query.
+     */
+    private ?Closure $optionsUsing = null;
+
+    /**
+     * Narrows the relation query the options come from.
+     */
+    private ?Closure $modifyOptionsQueryUsing = null;
 
     /**
      * Options resolved from the relation, filled in by the schema before it
@@ -117,6 +133,74 @@ final class Select extends Field
         return $this;
     }
 
+    /**
+     * Builds the option list from whatever the form currently holds.
+     *
+     * The case this exists for is a select whose choices depend on a sibling:
+     *
+     *     Select::make('employee_id')
+     *         ->searchable()
+     *         ->optionsUsing(fn (FormState $state, ?string $search) => Employee::query()
+     *             ->where('department_id', $state->get('department_id'))
+     *             ->when($search, fn ($query) => $query->where('name', 'like', "%{$search}%"))
+     *             ->pluck('name', 'id'))
+     *
+     * Server-side search knew the term and the field but not the rest of the
+     * form, so a dependent select could only ever search the whole table and
+     * then refuse most of what it found. The state travels with the request —
+     * see `PanelFormOptionsController` — and is narrowed to this schema's own
+     * fields before a callback ever sees it.
+     *
+     * Returns either `[value => label]` or a list of `{value, label}`; both
+     * are normalised the same way the static list is.
+     *
+     * @param  Closure  $callback  receives `FormState`, `Get`, and/or the search term
+     */
+    public function optionsUsing(Closure $callback): self
+    {
+        $this->optionsUsing = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Narrows the query a relation-backed select draws its options from.
+     *
+     * The smaller half of `optionsUsing()`, for the common case where the
+     * relation is right and only the scope is wrong:
+     *
+     *     Select::make('shift_id')
+     *         ->relationship('shift', 'name')
+     *         ->searchable()
+     *         ->modifyOptionsQueryUsing(
+     *             fn (Builder $query, FormState $state) => $query
+     *                 ->where('department_id', $state->get('department_id')),
+     *         );
+     *
+     * Ordering, the search term, and the limit are still applied afterwards,
+     * so a callback cannot accidentally unbound the list.
+     *
+     * @param  Closure  $callback  receives the query builder and `FormState`/`Get`
+     */
+    public function modifyOptionsQueryUsing(Closure $callback): self
+    {
+        $this->modifyOptionsQueryUsing = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Whether this select's options depend on the rest of the form.
+     *
+     * The client asks so it knows to throw away what it has cached when a
+     * sibling changes: a dependent list that kept answering from the previous
+     * parent is worse than one that is briefly empty.
+     */
+    public function hasDependentOptions(): bool
+    {
+        return $this->optionsUsing !== null || $this->modifyOptionsQueryUsing !== null;
+    }
+
     public function getRelation(): ?string
     {
         return $this->relation;
@@ -155,7 +239,7 @@ final class Select extends Field
      *
      * @param  class-string<Model>  $modelClass
      */
-    public function hydrateRelationship(string $modelClass): void
+    public function hydrateRelationship(string $modelClass, ?FormState $state = null): void
     {
         if ($this->relation === null) {
             return;
@@ -174,17 +258,55 @@ final class Select extends Field
             'column' => $related->getKeyName(),
         ];
 
-        $this->resolvedOptions = $this->resolveOptions($modelClass);
+        $this->resolvedOptions = $this->resolveOptions($modelClass, null, $state);
+    }
+
+    /**
+     * Resolves the list for a select whose options come from a callback
+     * rather than from a relation.
+     *
+     * Separate from `hydrateRelationship()` because it needs no model class:
+     * an action's form frequently has none, and a dependent select on one is
+     * exactly the case that used to have nowhere to get its options from.
+     */
+    public function hydrateOptions(?FormState $state = null): void
+    {
+        if ($this->optionsUsing === null) {
+            return;
+        }
+
+        $this->resolvedOptions = $this->resolveOptions(null, null, $state);
     }
 
     /**
      * The value/label pairs the browser receives.
      *
+     * `$state` is what the form currently holds, and is what lets a dependent
+     * select answer for the parent that is actually selected rather than for
+     * the whole table. It is optional because most selects do not depend on
+     * anything, and because every caller that predates it still works.
+     *
      * @param  class-string<Model>|null  $modelClass  the resource model, needed to resolve a relation
      * @return list<array{value: string, label: string}>
      */
-    public function resolveOptions(?string $modelClass = null, ?string $search = null): array
-    {
+    public function resolveOptions(
+        ?string $modelClass = null,
+        ?string $search = null,
+        ?FormState $state = null,
+    ): array {
+        $state ??= new FormState;
+
+        // A callback owns the whole list, relation or not: it was given the
+        // state precisely so it could decide what the choices are.
+        if ($this->optionsUsing !== null) {
+            return $this->mapOptions($this->normalizeOptions(CallbackParameters::call(
+                $this->optionsUsing,
+                [$state, $search],
+                $state,
+                ['search' => $search, 'term' => $search, 'state' => $state],
+            )));
+        }
+
         if ($this->relation === null) {
             return $this->mapOptions($this->options);
         }
@@ -200,6 +322,15 @@ final class Select extends Field
 
         $query = $related->newQuery();
 
+        if ($this->modifyOptionsQueryUsing !== null) {
+            CallbackParameters::call(
+                $this->modifyOptionsQueryUsing,
+                [$query, $state],
+                $state,
+                ['query' => $query, 'state' => $state, 'search' => $search],
+            );
+        }
+
         if ($search !== null && $search !== '') {
             $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $search);
             $query->where($title, 'like', '%'.$escaped.'%');
@@ -213,6 +344,43 @@ final class Select extends Field
             ->all();
 
         return $this->mapOptions($options);
+    }
+
+    /**
+     * Accepts either shape a callback might reasonably return.
+     *
+     * `[value => label]` is what `pluck()` gives and what `options()` takes;
+     * a list of `{value, label}` is what this field serializes. Neither is
+     * more correct, so both are understood rather than one being documented
+     * and the other silently producing an empty list.
+     *
+     * @return array<array-key, string>
+     */
+    private function normalizeOptions(mixed $options): array
+    {
+        if ($options instanceof Collection) {
+            $options = $options->all();
+        }
+
+        if (! is_array($options)) {
+            return [];
+        }
+
+        $mapped = [];
+
+        foreach ($options as $key => $option) {
+            if (is_array($option) && array_key_exists('value', $option) && array_key_exists('label', $option)) {
+                $mapped[(string) $option['value']] = (string) $option['label'];
+
+                continue;
+            }
+
+            if (is_scalar($option) || $option === null) {
+                $mapped[$key] = (string) $option;
+            }
+        }
+
+        return $mapped;
     }
 
     /**
@@ -306,6 +474,10 @@ final class Select extends Field
             'searchable' => $this->searchable,
             'multiple' => $this->multiple,
             'usesRelationship' => $this->relation !== null,
+            // The client throws away what it has cached for this field when a
+            // sibling changes. A dependent list that kept answering from the
+            // previous parent is worse than one that is briefly empty.
+            'dependentOptions' => $this->hasDependentOptions(),
         ];
     }
 

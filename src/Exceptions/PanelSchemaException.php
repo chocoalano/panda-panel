@@ -52,6 +52,61 @@ final class PanelSchemaException extends InvalidArgumentException
     }
 
     /**
+     * The same, for a collision the plain name check cannot see.
+     *
+     * `title` twice inside one repeater is not two fields called `title`; it
+     * is two fields at `items.*.title`, and only the address says so. The
+     * message names the address rather than the field, because the field name
+     * on its own is exactly what looked innocent.
+     *
+     * @param  array<string, list<string>>  $paths  address => the components that declared it
+     */
+    public static function duplicateFieldPaths(array $paths): self
+    {
+        $described = [];
+
+        foreach ($paths as $path => $owners) {
+            $owner = array_values(array_unique(array_filter(
+                $owners,
+                static fn (string $name): bool => $name !== 'form',
+            )));
+
+            $described[] = $owner === []
+                ? sprintf('[%s]', $path)
+                : sprintf('[%s] (inside %s)', $path, self::list($owner));
+        }
+
+        return new self(sprintf(
+            'A form writes to the same place twice: %s. A field\'s state path — not its name — '
+                .'is the key its value, its rule and its write are all stored under, so two '
+                .'fields sharing one means the second is rendered, filled in, submitted and '
+                .'discarded without a word. Rename one of them. Two fields may share a *name* '
+                .'when they sit in different scopes: a relation group namespaces its children, '
+                .'and each repeater and builder block is its own.',
+            implode(', ', $described),
+        ));
+    }
+
+    /**
+     * A field that is required on a page where it is never submitted.
+     *
+     * @param  list<string>  $names
+     */
+    public static function impossibleRequirement(array $names, string $page): self
+    {
+        return new self(sprintf(
+            'On the %s page, %s is required and disabled. A disabled control is not submitted '
+                .'by the browser, so the rule asks for a value that cannot arrive and the form '
+                .'fails on a field nobody can type into — usually while somebody was editing '
+                .'something else. Use requiredOn([...]) to ask only on the pages where the '
+                .'field is writable, or dehydrated(false) if the value is the server\'s to '
+                .'supply rather than the browser\'s.',
+            $page,
+            self::list($names),
+        ));
+    }
+
+    /**
      * @param  list<string>  $names
      */
     public static function duplicateActions(string $set, array $names): self

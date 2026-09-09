@@ -30,6 +30,7 @@ use PandaPanel\Support\CssHooks;
 use PandaPanel\Support\Label;
 use PandaPanel\Support\NavigationGroupName;
 use PandaPanel\Support\PanelTheme;
+use PandaPanel\Tenancy\Tenancy;
 use UnitEnum;
 
 /**
@@ -106,7 +107,19 @@ final class Panel implements PanelContract
     /** @var array<string, string> child label => parent label */
     private array $navigationGroupParents = [];
 
-    private ?string $brandName = null;
+    /**
+     * The panel's name in the shell.
+     *
+     * A closure is evaluated on every render rather than once at boot, which
+     * is the only way a brand can name the tenant this request is in. The
+     * panel is configured in a service provider's `boot()`, long before any
+     * middleware has resolved a tenant, so a string computed there would be
+     * whichever tenant happened to be first — and under Octane it would then
+     * be that tenant for every request the worker went on to serve.
+     *
+     * @var string|(Closure(): string)|null
+     */
+    private string|Closure|null $brandName = null;
 
     private ?string $brandLogo = null;
 
@@ -141,6 +154,17 @@ final class Panel implements PanelContract
      * @var class-string<Model>|null
      */
     private ?string $tenantModel = null;
+
+    /**
+     * How the tenant this request is in is named in the shell.
+     *
+     * A closure like `$brandName`, and for the same reason: the tenant does
+     * not exist when the panel is configured. It receives the current tenant,
+     * so the common case needs no service resolution at all.
+     *
+     * @var string|(Closure(Model): string)|null
+     */
+    private string|Closure|null $tenantLabel = null;
 
     /** @var Closure(Request, ?Authenticatable): ?Model|null */
     private ?Closure $tenantResolver = null;
@@ -552,7 +576,21 @@ final class Panel implements PanelContract
         return $this->navigationGroupParents;
     }
 
-    public function brandName(string $brandName): self
+    /**
+     * Names the panel, statically or per request.
+     *
+     *     ->brandName('HRMS')
+     *     ->brandName(fn () => Tenancy::current()?->name ?? 'HRMS')
+     *
+     * The closure runs while the response is being built, so it sees the
+     * tenant, the user, and the locale — none of which exist yet when the
+     * panel is configured. Nothing is memoized: a value cached on this object
+     * would outlive the request under Octane and show one tenant's name to
+     * the next.
+     *
+     * @param  string|(Closure(): string)  $brandName
+     */
+    public function brandName(string|Closure $brandName): self
     {
         $this->brandName = $brandName;
 
@@ -1220,6 +1258,46 @@ final class Panel implements PanelContract
     /**
      * One tenant's URL, or null when the panel never said how to build one.
      */
+    /**
+     * Names the current tenant in the shell.
+     *
+     *     ->tenantLabel(fn (Model $company) => $company->legal_name)
+     *
+     * Separate from the switcher, which is the distinction this exists to
+     * make. A user who belongs to one tenant has nothing to switch to and so
+     * saw no tenant anywhere in the shell — the company they were working in
+     * was simply not on screen, and applications worked around it by putting
+     * the name in a page heading. Identity and navigation are two questions:
+     * "which company am I in" is always worth answering, "which others could
+     * I be in" only when there are others.
+     *
+     * Defaults to the tenant's own name — see `Tenancy::nameOf()`.
+     *
+     * @param  string|(Closure(Model): string)|null  $label
+     */
+    public function tenantLabel(string|Closure|null $label): self
+    {
+        $this->tenantLabel = $label;
+
+        return $this;
+    }
+
+    /**
+     * The label for one tenant, resolved now rather than at boot.
+     */
+    public function getTenantLabel(?Model $tenant): ?string
+    {
+        if ($tenant === null) {
+            return is_string($this->tenantLabel) ? $this->tenantLabel : null;
+        }
+
+        if ($this->tenantLabel instanceof Closure) {
+            return (string) ($this->tenantLabel)($tenant);
+        }
+
+        return $this->tenantLabel ?? Tenancy::nameOf($tenant);
+    }
+
     public function getTenantUrl(Model $tenant): ?string
     {
         return $this->tenantUrl === null ? null : ($this->tenantUrl)($tenant, $this);
@@ -1679,6 +1757,10 @@ final class Panel implements PanelContract
 
     public function getBrandName(): string
     {
+        if ($this->brandName instanceof Closure) {
+            return (string) ($this->brandName)();
+        }
+
         return $this->brandName ?? (string) config('app.name');
     }
 

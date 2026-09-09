@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 return [
     'action_no_form' => 'Action ini tidak memiliki formulir.',
+    'action_requires_form' => 'Aksi ini harus dijalankan melalui formulirnya.',
     'action_not_executable' => 'Action ini tidak dapat dijalankan.',
     'cell_not_editable' => 'Sel tersebut tidak dapat diubah.',
     'column_not_editable' => 'Kolom tersebut tidak dapat diubah.',

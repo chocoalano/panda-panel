@@ -369,4 +369,28 @@ return [
         'pages_path' => 'js/pages/Panels',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Forms
+    |--------------------------------------------------------------------------
+    |
+    | What to do about a schema that contradicts itself — two fields writing to
+    | one state path, or a field that is required on a page where it is
+    | disabled and so never submitted. Both produce a form that looks correct
+    | and behaves inexplicably.
+    |
+    |   'throw'  — refuse to compile the schema.
+    |   'log'    — write a warning and carry on.
+    |   'ignore' — say nothing.
+    |
+    | Null means `throw` in `local` and `testing` and `log` everywhere else:
+    | the message is useful where a developer is looking, and an exception
+    | costs more than the bug where a user is.
+    |
+    */
+
+    'forms' => [
+        'diagnostics' => env('PANDA_PANEL_FORM_DIAGNOSTICS'),
+    ],
+
 ];

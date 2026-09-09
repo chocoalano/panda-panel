@@ -11,7 +11,9 @@ use Illuminate\Support\Traits\Conditionable;
 use PandaPanel\Exceptions\PanelSchemaException;
 use PandaPanel\Forms\Enums\ConditionOperator;
 use PandaPanel\Forms\Enums\FieldType;
+use PandaPanel\Forms\Support\CallbackParameters;
 use PandaPanel\Forms\Support\Condition;
+use PandaPanel\Forms\Support\FormState;
 use PandaPanel\Support\Label;
 
 /**
@@ -69,6 +71,35 @@ abstract class Field extends FormComponent
 
     /** @var list<string> */
     protected array $disabledOn = [];
+
+    /**
+     * Pages the field is required on, when that is not every page.
+     *
+     * Null means "whatever `required()` said, everywhere", which is what every
+     * field written before this existed means.
+     *
+     * @var list<string>|null
+     */
+    protected ?array $requiredOn = null;
+
+    /**
+     * Which page the schema is currently building for.
+     *
+     * Set by the schema rather than passed to every method that needs it:
+     * `validationRules()` is public and is called from four places, and adding
+     * a parameter to it would break every caller to answer a question the
+     * schema already knows the answer to.
+     */
+    protected ?string $pageContext = null;
+
+    /**
+     * The form state the schema is currently being built against.
+     *
+     * Read-only as far as a visibility closure is concerned: it decides
+     * whether a field exists, and a field that rewrote its siblings while
+     * being asked that would be answering a different question.
+     */
+    protected ?FormState $stateContext = null;
 
     /** @var (Closure(?Model): bool)|null */
     protected ?Closure $hiddenUsing = null;
@@ -295,11 +326,74 @@ abstract class Field extends FormComponent
     }
 
     /**
-     * Hides the field outright, optionally per record.
+     * Requires the field on the named pages, and only those.
      *
-     * Evaluated on the server, so it cannot react to what is being typed —
-     * use `hiddenWhen()` for that. A field hidden here is not rendered, not
-     * validated, and not persisted.
+     * The other half of `disabledOn()`, and the pair is what makes a
+     * write-once field expressible without contradicting itself:
+     *
+     *     ->requiredOn(['create'])
+     *     ->disabledOn(['edit'])
+     *     ->dehydrated(fn (?Model $record) => $record === null)
+     *
+     * Written as `->required()->disabledOn(['edit'])` the same field asks for
+     * a value on the edit page and gives the browser no way to send one, so
+     * an unrelated edit fails on a greyed-out box — see
+     * `FormSchema::reportImpossibleRequirements()`.
+     *
+     * @param  list<string>  $pages
+     */
+    public function requiredOn(array $pages): static
+    {
+        $this->requiredOn = $pages;
+        $this->required = true;
+
+        return $this;
+    }
+
+    /**
+     * Which page the schema is building. Called by `FormSchema`.
+     */
+    public function onPage(?string $page): static
+    {
+        $this->pageContext = $page;
+
+        return $this;
+    }
+
+    /**
+     * Whether a value is demanded, on the page being built or a named one.
+     */
+    public function isRequired(?string $page = null): bool
+    {
+        if (! $this->required) {
+            return false;
+        }
+
+        if ($this->requiredOn === null) {
+            return true;
+        }
+
+        return in_array($page ?? $this->pageContext ?? 'create', $this->requiredOn, true);
+    }
+
+    /**
+     * Hides the field outright, optionally per record or per form state.
+     *
+     * Two ways to react to what is being typed, and they are not
+     * interchangeable. `hiddenWhen()` describes a comparison the browser
+     * re-evaluates on every keystroke, costing no request — reach for it
+     * first, and for anything a comparison can express it is the right answer.
+     *
+     * This one runs on the server, so it can consult anything the server
+     * knows: a policy, a setting, another table. That makes it the answer for
+     * a rule a comparison cannot state, and the cost is that it is only
+     * re-evaluated when a `live()` field asks the schema to be rebuilt.
+     *
+     *     TextInput::make('contract_end_date')
+     *         ->visible(fn (Get $get) => $get('employment_type') === 'contract')
+     *
+     * A closure asking for none of `FormState`, `Get`, or `Set` is called
+     * with the record exactly as it always was — see `CallbackParameters`.
      *
      * @param  (Closure(?Model): bool)|bool  $condition
      */
@@ -313,6 +407,8 @@ abstract class Field extends FormComponent
     }
 
     /**
+     * The inverse of `hidden()`, and state-aware in the same way.
+     *
      * @param  (Closure(?Model): bool)|bool  $condition
      */
     public function visible(Closure|bool $condition = true): static
@@ -402,6 +498,25 @@ abstract class Field extends FormComponent
      * and for deciding what other fields should become — it returns nothing,
      * because a hook that both mutated and returned would leave two places to
      * change a value.
+     *
+     * ## Changing a sibling field
+     *
+     * Ask for a `Set` and the hook can say that another field is no longer
+     * valid, which is the thing it could not previously do:
+     *
+     *     Select::make('department_id')
+     *         ->live()
+     *         ->afterStateUpdated(fn (Set $set) => $set('position_id', null));
+     *
+     * Rebuilding the options for `position_id` was never enough on its own.
+     * The renderer preserves what the user typed across a rebuild — it has to,
+     * or a rebuild would discard the rest of the form — so the stale value
+     * came straight back and stayed on screen until the submit refused it.
+     * A `Set` is recorded as a patch and overwrites the client's value; see
+     * `FormState`.
+     *
+     * A hook that asks for none of `FormState`, `Get`, or `Set` is called
+     * exactly as it always was — see `CallbackParameters`.
      *
      * @param  Closure(mixed, mixed, ?Model): void  $callback
      */
@@ -547,11 +662,11 @@ abstract class Field extends FormComponent
      */
     public function isHiddenOn(string $page, ?Model $record = null): bool
     {
-        if ($this->hiddenUsing !== null && ($this->hiddenUsing)($record)) {
+        if ($this->hiddenUsing !== null && $this->condition($this->hiddenUsing, $record)) {
             return true;
         }
 
-        if ($this->visibleUsing !== null && ! ($this->visibleUsing)($record)) {
+        if ($this->visibleUsing !== null && ! $this->condition($this->visibleUsing, $record)) {
             return true;
         }
 
@@ -560,6 +675,37 @@ abstract class Field extends FormComponent
         }
 
         return in_array($page, $this->hiddenOn, true);
+    }
+
+    /**
+     * Runs a visibility closure with whatever it asked for.
+     *
+     * The state is the one the schema is currently being built against, which
+     * is empty on a first render and holds what has been typed on a rebuild.
+     * That is what lets a `live()` field change which fields exist rather than
+     * only what they contain.
+     */
+    private function condition(Closure $condition, ?Model $record): bool
+    {
+        return (bool) CallbackParameters::call(
+            $condition,
+            [$record],
+            $this->stateContext ?? new FormState,
+            ['record' => $record],
+        );
+    }
+
+    /**
+     * The values the schema is being built against. Set by `FormSchema`, for
+     * the reason `onPage()` is: `isHiddenOn()` is called from several places
+     * and none of them should have to carry a parameter the schema already
+     * knows.
+     */
+    public function withFormState(?FormState $state): static
+    {
+        $this->stateContext = $state;
+
+        return $this;
     }
 
     public function isDisabledOn(string $page, ?Model $record = null): bool
@@ -622,12 +768,27 @@ abstract class Field extends FormComponent
 
     /**
      * Runs the update hook. The caller has already decided the value changed.
+     *
+     * `$formState` is optional so the signature stays compatible with any
+     * caller that predates it; without one the hook simply has no siblings to
+     * read and no patch to record.
      */
-    public function handleStateUpdated(mixed $state, mixed $previous, ?Model $record = null): void
-    {
-        if ($this->afterStateUpdated !== null) {
-            ($this->afterStateUpdated)($state, $previous, $record);
+    public function handleStateUpdated(
+        mixed $state,
+        mixed $previous,
+        ?Model $record = null,
+        ?FormState $formState = null,
+    ): void {
+        if ($this->afterStateUpdated === null) {
+            return;
         }
+
+        CallbackParameters::call(
+            $this->afterStateUpdated,
+            [$state, $previous, $record],
+            $formState ?? new FormState,
+            ['state' => $state, 'value' => $state, 'previous' => $previous, 'old' => $previous, 'record' => $record],
+        );
     }
 
     /**
@@ -673,7 +834,7 @@ abstract class Field extends FormComponent
      */
     public function validationRules(?Model $record): array
     {
-        $rules = [$this->required ? 'required' : 'nullable'];
+        $rules = [$this->isRequired() ? 'required' : 'nullable'];
 
         $rules = [...$rules, ...$this->typeRules(), ...$this->rules];
 
@@ -747,7 +908,7 @@ abstract class Field extends FormComponent
             'value' => $this->formValue($record),
             'placeholder' => $this->placeholder,
             'helperText' => $this->helperText,
-            'required' => $this->required,
+            'required' => $this->isRequired($page),
             'disabled' => $this->isDisabledOn($page, $record),
             'inlineLabel' => $this->inlineLabel,
             'columnSpan' => $this->columnSpan,
@@ -769,7 +930,7 @@ abstract class Field extends FormComponent
             ] : null,
             // What the browser may check before submitting. The server still
             // validates everything; this only saves a round trip.
-            'validation' => $this->validationHints(),
+            'validation' => $this->validationHints($page),
             ...$this->extraArray(),
         ];
     }
@@ -784,9 +945,9 @@ abstract class Field extends FormComponent
      *
      * @return array<string, mixed>
      */
-    protected function validationHints(): array
+    protected function validationHints(?string $page = null): array
     {
-        $hints = ['required' => $this->required];
+        $hints = ['required' => $this->isRequired($page)];
 
         foreach ([...$this->typeRules(), ...$this->rules] as $rule) {
             if (! is_string($rule)) {

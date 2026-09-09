@@ -1,6 +1,7 @@
 import { inject, provide } from 'vue';
 import type { InjectionKey } from 'vue';
-import type { SelectOption } from '@/panel/types/form';
+import { postJson } from '@/panel/forms/http';
+import type { FormValues, SelectOption } from '@/panel/types/form';
 
 /**
  * The endpoint a searchable select asks for the options its bounded first
@@ -30,6 +31,27 @@ export function provideOptionsUrl(url: () => string | null): void {
  */
 export function useOptionsUrl(): () => string | null {
     return inject(OPTIONS_URL, () => null);
+}
+
+/**
+ * What the form currently holds, for a select whose choices depend on it.
+ *
+ * A dependent select — the employees in the chosen department, the shifts a
+ * chosen site runs — cannot answer from the search term alone. The values go
+ * with the request so the server can scope the query; it narrows them to the
+ * fields its own schema declares before any of it reaches a query.
+ *
+ * Empty by default, which is the honest answer for a select rendered outside
+ * a form: it then searches exactly as it always did.
+ */
+const FORM_VALUES: InjectionKey<() => FormValues> = Symbol('panel.form.values');
+
+export function provideFormValues(values: () => FormValues): void {
+    provide(FORM_VALUES, values);
+}
+
+export function useFormValues(): () => FormValues {
+    return inject(FORM_VALUES, () => ({}));
 }
 
 /**
@@ -75,11 +97,29 @@ export async function fetchOptions(
     url: string,
     field: string,
     search: string,
+    /**
+     * The rest of the form, for a select that depends on it. Omitted for one
+     * that does not, which keeps the request a plain GET — the overwhelming
+     * majority of searches carry no state and should not pay for one.
+     */
+    values?: FormValues,
 ): Promise<SelectOption[] | null> {
     const target = new URL(url, window.location.origin);
 
     target.searchParams.set('field', field);
     target.searchParams.set('search', search);
+
+    // POSTed rather than appended to the query string: there is no bound on
+    // how much a form holds and a URL has one. The context stays in the query
+    // string either way, so a value in the body can never say which form this
+    // is — only what it currently contains.
+    if (values !== undefined) {
+        const payload = await postJson(target.pathname + target.search, {
+            state: values,
+        });
+
+        return payload === null ? null : toOptions(payload);
+    }
 
     try {
         const response = await fetch(target.toString(), {

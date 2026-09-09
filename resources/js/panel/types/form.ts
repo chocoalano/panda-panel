@@ -144,6 +144,17 @@ export interface SelectFieldDefinition extends BaseFieldDefinition {
     /** A many-to-many relation selects a set, so its value is an array. */
     multiple: boolean;
     usesRelationship: boolean;
+    /**
+     * Whether the server resolves this field's options from the rest of the
+     * form — the employees in the chosen department, the shifts a chosen site
+     * runs.
+     *
+     * The field sends the form's values with its searches, and throws away
+     * what it has cached whenever the form changes underneath it: a dependent
+     * list that went on answering for the previous parent is worse than one
+     * that is briefly empty.
+     */
+    dependentOptions: boolean;
 }
 
 export interface DateFieldDefinition extends BaseFieldDefinition {

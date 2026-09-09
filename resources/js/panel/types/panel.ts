@@ -156,6 +156,15 @@ export interface PanelTenantSummary {
 export interface PanelTenancy {
     current: PanelTenantSummary | null;
     available: PanelTenantSummary[];
+    /**
+     * What the shell calls the tenant this request is in.
+     *
+     * Sent whether or not there is anywhere to switch to, because identity and
+     * navigation are two questions. A user who belongs to one tenant has
+     * nothing to switch between and still needs to see which company they are
+     * working in.
+     */
+    label: string | null;
 }
 
 /**

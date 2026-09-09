@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ActionButton from '@/panel/actions/ActionButton.vue';
-import ActionDialog from '@/panel/actions/ActionDialog.vue';
+import ActionModal from '@/panel/actions/ActionModal.vue';
 import { useRelationActions } from '@/panel/composables/useRelationActions';
 import { useRelationTable } from '@/panel/composables/useRelationTable';
 import RelationFormDialog from '@/panel/relations/RelationFormDialog.vue';
@@ -43,38 +43,74 @@ const {
     clearFilters,
 } = useRelationTable(() => props.relation);
 
-const { pending, processing, runRecord, runBulk, confirm, cancel } =
-    useRelationActions(
-        () => ({
-            resource: props.resource,
-            record: props.record,
-            relation: props.relation.key,
-        }),
-        () => props.relation.endpoints,
-    );
+const {
+    pending,
+    processing,
+    formUrl,
+    formContext,
+    runRecord,
+    runBulk,
+    runHeader,
+    confirm,
+    cancel,
+} = useRelationActions(
+    () => ({
+        resource: props.resource,
+        record: props.record,
+        relation: props.relation.key,
+    }),
+    () => props.relation.endpoints,
+);
 
 const selected = ref<Array<string | number>>([]);
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 const openFormUrl = ref<string | null>(null);
 
 /**
- * A form action opens a dialog; everything else goes to the action endpoint.
- * The decision is the server's — it is the action's declared type — so this
- * only routes it.
+ * One rule, and it is the same for a row action and a header action:
+ *
+ *     the action carries a form  ->  open a form
+ *
+ * Two kinds of form, decided by the server rather than by the caller. An
+ * action carrying a `formUrl` is one of the relation's own operations —
+ * create, edit, attach, associate — whose URL names an owner and an operation
+ * this component knows nothing about, so `RelationFormDialog` is handed it as
+ * given. An action carrying its own schema is an ordinary action that happens
+ * to collect something first, and it opens the same `ActionModal` a resource
+ * action does.
+ *
+ * What it used to be was "has a form *and* happens to have had a formUrl
+ * injected", which is why an action declaring its own schema fell through and
+ * ran immediately — no dialog, no values, a handler called with an empty
+ * array. A header action declaring one did nothing at all.
  */
-function onRunAction(action: ActionDefinition, record: string | number): void {
+function openOrRun(action: ActionDefinition, run: () => void): void {
     if (action.type === 'form' && action.formUrl !== null) {
         openFormUrl.value = action.formUrl;
 
         return;
     }
 
-    runRecord(action, record);
+    run();
+}
+
+function onRunAction(action: ActionDefinition, record: string | number): void {
+    openOrRun(action, () => runRecord(action, record));
 }
 
 function onRunHeaderAction(action: ActionDefinition): void {
-    if (action.formUrl !== null) {
-        openFormUrl.value = action.formUrl;
+    openOrRun(action, () => runHeader(action));
+}
+
+/**
+ * An action registered on an open dialog. It is about the same related record
+ * its parent was, which is the only record in scope while that dialog is open.
+ */
+function onRunModalAction(action: ActionDefinition): void {
+    const related = pending.value?.related ?? null;
+
+    if (related !== null) {
+        onRunAction(action, related);
     }
 }
 
@@ -162,11 +198,15 @@ const headerActions = computed(() => props.relation.headerActions);
             />
         </CardContent>
 
-        <ActionDialog
+        <ActionModal
             :action="pending?.action ?? null"
             :processing="processing"
+            :form-url="formUrl"
+            :context="formContext"
             @confirm="confirm"
             @cancel="cancel"
+            @saved="cancel"
+            @run="onRunModalAction"
         />
 
         <RelationFormDialog

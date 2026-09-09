@@ -51,6 +51,8 @@ abstract class EditRecord extends ResourcePage
             'optionsUrl' => FormEndpoints::forResource($resource, static::$page, $model),
             'uploadUrl' => FormEndpoints::upload($resource, static::$page, $model),
             'formStateUrl' => FormEndpoints::formState($resource, static::$page, $model),
+            // Null keeps "Save changes" — see `ResourcePage::$submitLabel`.
+            'submitLabel' => $this->getSubmitLabel(),
             'validateStepUrl' => $this->schema()->wizard() === null
                 ? null
                 : $resource::url('validateEditStep', $model),

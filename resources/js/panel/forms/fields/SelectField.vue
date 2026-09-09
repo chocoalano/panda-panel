@@ -13,7 +13,11 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
-import { fetchOptions, useOptionsUrl } from '@/panel/forms/optionsEndpoint';
+import {
+    fetchOptions,
+    useFormValues,
+    useOptionsUrl,
+} from '@/panel/forms/optionsEndpoint';
 import type { SelectFieldDefinition, SelectOption } from '@/panel/types/form';
 import { useTranslator } from '@/composables/useTranslator';
 
@@ -47,6 +51,7 @@ const single = computed<string | undefined>(() =>
 );
 
 const optionsUrl = useOptionsUrl();
+const formValues = useFormValues();
 
 const search = ref('');
 const searching = ref(false);
@@ -128,7 +133,14 @@ async function run(term: string): Promise<void> {
         return;
     }
 
-    const found = await fetchOptions(url, props.field.name, term);
+    // Only a dependent select sends the form's values. Every other search is
+    // a plain GET, which is what the overwhelming majority of them are.
+    const found = await fetchOptions(
+        url,
+        props.field.name,
+        term,
+        props.field.dependentOptions ? formValues() : undefined,
+    );
 
     // A search that raced ahead of a later keystroke is stale; the later one
     // is already on its way and this answer is about a term nobody typed.
@@ -144,6 +156,25 @@ async function run(term: string): Promise<void> {
         searched.value = found;
     }
 }
+
+/**
+ * Throws away the cached search when the server re-sends this field's own
+ * options.
+ *
+ * A dependent select's list is a function of its parent. When the parent
+ * changes, the rebuild brings a new list — and a result cached from the old
+ * parent would keep being shown on top of it, which is the stale-options bug
+ * rather than a stale-value one. Only for a dependent field: for every other
+ * select the sent list never changes, so this would never fire anyway.
+ */
+watch(
+    () => props.field.options,
+    () => {
+        if (props.field.dependentOptions) {
+            searched.value = null;
+        }
+    },
+);
 
 onBeforeUnmount(() => {
     if (timer !== null) {

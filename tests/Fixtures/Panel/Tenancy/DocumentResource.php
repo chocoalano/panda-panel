@@ -6,6 +6,7 @@ namespace Tests\Fixtures\Panel\Tenancy;
 
 use PandaPanel\Forms\Components\TextInput;
 use PandaPanel\Forms\FormSchema;
+use PandaPanel\Resources\RelationManager;
 use PandaPanel\Resources\Resource;
 use PandaPanel\Tables\Columns\TextColumn;
 use PandaPanel\Tables\TableSchema;
@@ -25,6 +26,14 @@ final class DocumentResource extends Resource
     public static function table(TableSchema $table): TableSchema
     {
         return $table->columns([TextColumn::make('title')]);
+    }
+
+    /**
+     * @return list<class-string<RelationManager>>
+     */
+    public static function relationManagers(): array
+    {
+        return [RevisionsRelationManager::class];
     }
 
     /**

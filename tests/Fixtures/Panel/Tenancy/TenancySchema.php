@@ -36,6 +36,13 @@ final class TenancySchema
             $table->string('title');
         });
 
+        // A child of a scoped record, carrying no tenant key of its own.
+        Schema::create('fixture_revisions', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('document_id');
+            $table->string('note');
+        });
+
         Schema::create('fixture_workspace_user', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('workspace_id');

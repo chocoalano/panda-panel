@@ -12,7 +12,10 @@ import {
     provideFormStateUrl,
 } from '@/panel/forms/formStateEndpoint';
 import FormWizard from '@/panel/forms/FormWizard.vue';
-import { provideOptionsUrl } from '@/panel/forms/optionsEndpoint';
+import {
+    provideFormValues,
+    provideOptionsUrl,
+} from '@/panel/forms/optionsEndpoint';
 import { provideUploadUrl } from '@/panel/forms/uploadEndpoint';
 import { validateFields } from '@/panel/forms/validation';
 import type {
@@ -221,6 +224,12 @@ const values = ref<FormValues>({ ...initial });
 const errors = ref<Record<string, string>>({});
 const processing = ref(false);
 
+// A dependent select searches within what the rest of the form holds — the
+// employees in the chosen department, not every employee. Provided rather
+// than passed down for the reason the URLs are: the field asking can be four
+// layouts deep, and every layout between would carry a prop it does not use.
+provideFormValues(() => values.value);
+
 const label = computed(() => props.submitLabel ?? t('forms.save'));
 
 /**
@@ -280,7 +289,7 @@ async function sendState(name: string): Promise<void> {
     inFlight?.abort();
     inFlight = new AbortController();
 
-    const form = await fetchFormState(
+    const response = await fetchFormState(
         url,
         values.value,
         name,
@@ -290,20 +299,42 @@ async function sendState(name: string): Promise<void> {
 
     previousValues.delete(name);
 
-    if (form === null) {
+    if (response === null) {
         return;
     }
 
-    schema.value = form.schema;
+    schema.value = response.form.schema;
 
     // Fields the rebuilt schema introduced need a value to bind to; ones the
     // user has already typed into keep theirs, because the request describes
     // what the form looks like, not what it holds.
     const next = { ...values.value };
 
-    for (const field of collectFields(form.schema)) {
+    for (const field of collectFields(response.form.schema)) {
         if (!(field.name in next)) {
             next[field.name] = toFormValue(field.value);
+        }
+    }
+
+    // Except where the server said otherwise. A patch is the one thing that
+    // overrides what the user typed, and it is only ever produced by a
+    // callback the schema declared — nothing in the request can name one.
+    //
+    // This is what makes a stale dependent value actually clear. Rebuilding
+    // the child's options was never enough on its own: the value stayed in
+    // `next` above, so the select went on displaying a choice its own list no
+    // longer contained until the submit refused it.
+    for (const [path, value] of Object.entries(response.statePatch)) {
+        next[path] = toFormValue(value);
+
+        // A patched field is no longer wrong in the way it was, and leaving
+        // the error up would point at a value that is gone.
+        if (errors.value[path]) {
+            const remaining = { ...errors.value };
+
+            delete remaining[path];
+
+            errors.value = remaining;
         }
     }
 

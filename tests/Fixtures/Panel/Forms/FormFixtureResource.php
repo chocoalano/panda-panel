@@ -12,6 +12,9 @@ use PandaPanel\Forms\Components\Select;
 use PandaPanel\Forms\Components\TextInput;
 use PandaPanel\Forms\Enums\ConditionOperator;
 use PandaPanel\Forms\FormSchema;
+use PandaPanel\Forms\Support\FormState;
+use PandaPanel\Forms\Support\Get;
+use PandaPanel\Forms\Support\Set;
 use PandaPanel\Resources\Resource;
 use PandaPanel\Tables\Columns\TextColumn;
 use PandaPanel\Tables\TableSchema;
@@ -40,6 +43,16 @@ final class FormFixtureResource extends Resource
      * @var array<string, mixed>
      */
     public static array $lastData = [];
+
+    /** What a `Get` in a reactive callback read, for asserting on injection. */
+    public static mixed $lastGet = null;
+
+    /**
+     * The arguments a legacy positional callback was handed.
+     *
+     * @var list<mixed>|null
+     */
+    public static ?array $legacyArgs = null;
 
     public static function table(TableSchema $table): TableSchema
     {
@@ -71,6 +84,26 @@ final class FormFixtureResource extends Resource
                     ->tableAction(static function (): void {
                         Project::query()->delete();
                     }),
+
+                // An action whose form is reactive. Its `live()` field and its
+                // dependent select are the two things that used to work on a
+                // resource's own pages and be silently inert inside a dialog.
+                Action::make('categorise')
+                    ->label('Categorise')
+                    ->schema(static fn (): FormSchema => FormSchema::make()->schema([
+                        Select::make('group')
+                            ->options(['a' => 'A', 'b' => 'B'])
+                            ->live()
+                            ->afterStateUpdated(static fn (Set $set) => $set('member', null)),
+                        Select::make('member')
+                            ->searchable()
+                            ->optionsUsing(static fn (FormState $state): array => $state->get('group') === 'b'
+                                ? ['b1' => 'B one', 'b2' => 'B two']
+                                : ['a1' => 'A one']),
+                    ]))
+                    ->tableAction(static function (array $data): void {
+                        self::$lastData = $data;
+                    }),
             ]);
     }
 
@@ -88,6 +121,46 @@ final class FormFixtureResource extends Resource
                 ->directory('attachments')
                 ->acceptedTypes(['image/png'])
                 ->maxSize(64),
+
+            // The dependent pair. `parent` clears `child` when it changes, so
+            // a value that was valid under the old parent does not survive as
+            // a selection its own list no longer contains.
+            Select::make('parent')
+                ->options(['produksi' => 'Produksi', 'gudang' => 'Gudang'])
+                ->live()
+                ->afterStateUpdated(static function (Set $set, Get $get): void {
+                    self::$lastGet = $get('parent');
+
+                    $set('child', null);
+                }),
+
+            Select::make('child')
+                ->searchable()
+                ->optionsUsing(static fn (FormState $state): array => match ($state->get('parent')) {
+                    'produksi' => ['welder' => 'Welder', 'operator' => 'Operator'],
+                    'gudang' => ['picker' => 'Picker'],
+                    default => [],
+                }),
+
+            // Part N — visibility decided on the server from the form state.
+            // `hiddenWhen()` covers a comparison the browser can make; this
+            // covers a rule it cannot, and is re-evaluated when a live field
+            // asks for a rebuild.
+            Select::make('employment_type')
+                ->options(['permanent' => 'Permanent', 'contract' => 'Contract'])
+                ->live(),
+
+            TextInput::make('contract_end_date')
+                ->visible(static fn (Get $get): bool => $get('employment_type') === 'contract'),
+
+            // Written the way every callback in every existing application is
+            // written. It must go on being called exactly as it was.
+            Select::make('legacy')
+                ->options(['x' => 'X'])
+                ->live()
+                ->afterStateUpdated(static function ($value, $previous, $record): void {
+                    self::$legacyArgs = [$value, $previous, $record];
+                }),
         ]);
     }
 

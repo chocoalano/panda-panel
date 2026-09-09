@@ -14,6 +14,9 @@ use PandaPanel\Forms\Components\PasswordInput;
 use PandaPanel\Forms\Components\Select;
 use PandaPanel\Forms\Layouts\Relationship;
 use PandaPanel\Forms\Layouts\Wizard;
+use PandaPanel\Forms\Support\FieldPaths;
+use PandaPanel\Forms\Support\FormState;
+use PandaPanel\Forms\Support\SchemaDiagnostics;
 use PandaPanel\Support\ColumnCount;
 
 /**
@@ -36,6 +39,18 @@ final class FormSchema
     private ?string $modelClass = null;
 
     private string $page = 'create';
+
+    /**
+     * The values the form currently holds, when they are not the record's.
+     *
+     * Set while rebuilding a live form. It is what lets a dependent select
+     * resolve its options against the parent that is actually selected rather
+     * than against an empty form — which is the whole of what a dependent
+     * select is for.
+     *
+     * @var array<string, mixed>
+     */
+    private array $state = [];
 
     public static function make(): self
     {
@@ -132,10 +147,22 @@ final class FormSchema
     {
         $fields = [];
 
+        $state = new FormState($this->state);
+
         foreach ($this->components as $component) {
             foreach ($component->fields() as $field) {
+                // Attached before the field is asked whether it is hidden: a
+                // `visible()` closure reading the form state is what lets a
+                // `live()` field change which fields exist, not only what they
+                // hold, and it has to be there for the question itself.
+                $field->withFormState($state);
+
                 if (! $field->isHiddenOn($this->page, $record)) {
-                    $fields[] = $field;
+                    // Told which page it is on here, so `requiredOn()` can be
+                    // answered by `validationRules()` — which is public, is
+                    // called from four places, and cannot grow a parameter for
+                    // a question the schema already knows the answer to.
+                    $fields[] = $field->onPage($this->page);
                 }
             }
         }
@@ -242,6 +269,11 @@ final class FormSchema
 
         $this->assertUniqueFieldNames();
 
+        // Here rather than at serialization: this is the moment the
+        // contradiction actually bites, and the rules being built are the
+        // thing that would refuse a value nobody could have sent.
+        $this->reportImpossibleRequirements($record);
+
         $rules = [];
 
         foreach ($this->fields($record) as $field) {
@@ -281,15 +313,55 @@ final class FormSchema
      */
     private function hydrateRelationshipFields(): void
     {
-        if ($this->modelClass === null) {
-            return;
-        }
+        $state = new FormState($this->state);
 
         foreach ($this->fields() as $field) {
-            if ($field instanceof Select && $field->getRelation() !== null) {
-                $field->hydrateRelationship($this->modelClass);
+            if (! $field instanceof Select) {
+                continue;
             }
+
+            if ($field->getRelation() !== null) {
+                // A relation still needs the model class to know what it
+                // points at, so a schema without one leaves it alone rather
+                // than guessing.
+                if ($this->modelClass !== null) {
+                    $field->hydrateRelationship($this->modelClass, $state);
+                }
+
+                continue;
+            }
+
+            // A callback-backed select needs no model class, which is what
+            // lets an action's form — which usually has none — carry a
+            // dependent select at all.
+            $field->hydrateOptions($state);
         }
+    }
+
+    /**
+     * The values a rebuild is being serialized against.
+     *
+     * Held on the schema rather than threaded through `toArray()` because
+     * everything that resolves an option list reaches it from somewhere
+     * different — the serializer, the options endpoint, the rules — and a
+     * parameter would have to be added to each of them and then remembered at
+     * each call.
+     *
+     * @param  array<string, mixed>  $state
+     */
+    public function withState(array $state): self
+    {
+        $this->state = $state;
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getState(): array
+    {
+        return $this->state;
     }
 
     /**
@@ -479,6 +551,12 @@ final class FormSchema
      */
     public function toArrayWithState(?Model $record, array $state): array
     {
+        // Before serializing, not after: a dependent select resolves its
+        // options while the schema is being built, and building it against
+        // the old state would answer for the parent the user just changed
+        // away from.
+        $this->withState($state);
+
         $form = $this->toArray($record);
 
         $form['schema'] = self::applyState($form['schema'], $state);
@@ -549,6 +627,80 @@ final class FormSchema
         if ($duplicates !== []) {
             throw PanelSchemaException::duplicateFields($duplicates);
         }
+
+        $this->reportDuplicateStatePaths();
+    }
+
+    /**
+     * The collisions the name check above cannot see.
+     *
+     * It compares the names a schema flattens to, which is the right check for
+     * the top level and blind everywhere else: `title` declared twice inside
+     * one repeater flattens to one name — the repeater's — and two fields at
+     * `items.*.title` never appear. So does a duplicate inside one builder
+     * block. Both discard a value silently, which is the same bug at a
+     * different depth.
+     *
+     * Reported rather than thrown outright — see `SchemaDiagnostics`. The
+     * check above has always thrown and goes on throwing; this one is new, and
+     * a schema that has been quietly wrong in production for a year should not
+     * start failing to render because the framework learned to notice.
+     */
+    private function reportDuplicateStatePaths(): void
+    {
+        $duplicates = FieldPaths::duplicates($this->components);
+
+        if ($duplicates === []) {
+            return;
+        }
+
+        SchemaDiagnostics::report(PanelSchemaException::duplicateFieldPaths($duplicates));
+    }
+
+    /**
+     * Fields that are required on a page where they are never submitted.
+     *
+     * `->disabledOn(['edit'])->required()` reads as two sensible statements
+     * and is one contradiction. A disabled control is not submitted by the
+     * browser, so the server asks for a value that could not have arrived —
+     * and the form fails on a field the user cannot even type into, usually
+     * while they were editing something else entirely. The message is
+     * `The X field is required`, pointing at a greyed-out box.
+     *
+     * The semantics are deliberately not changed. `disabled` does not imply
+     * `required = false`: a field can be disabled, carry a value the server
+     * put there, and legitimately be required — that is what `dehydrated()`
+     * is for, and a field that declines to dehydrate has opted out of the
+     * whole exchange and is not contradictory at all. So the only case
+     * reported is the one that cannot work: shown, required, not submitted,
+     * and still expected.
+     */
+    private function reportImpossibleRequirements(?Model $record): void
+    {
+        $impossible = [];
+
+        foreach ($this->fields($record) as $field) {
+            if (! $field->isRequired() || ! $field->isDisabledOn($this->page, $record)) {
+                continue;
+            }
+
+            // A field that does not dehydrate has said it takes no part in the
+            // write. Its rule still runs, but the schema has already declared
+            // the value is not the browser's to send.
+            if (! $field->isDehydrated($record)) {
+                continue;
+            }
+
+            $impossible[] = $field->getName();
+        }
+
+        if ($impossible === []) {
+            return;
+        }
+
+        SchemaDiagnostics::report(
+            PanelSchemaException::impossibleRequirement($impossible, $this->page),
+        );
     }
 
     /**
@@ -556,6 +708,8 @@ final class FormSchema
      */
     public function toArray(?Model $record = null): array
     {
+        $this->seedStateFromRecord($record);
+
         $this->hydrateRelationshipFields();
 
         $this->assertUniqueFieldNames();
@@ -565,6 +719,55 @@ final class FormSchema
             'columns' => $this->columns,
             'schema' => $this->serializeComponents($record),
         ];
+    }
+
+    /**
+     * Fills the state from the record for a form nobody has typed into yet.
+     *
+     * An edit form's dependent select has to resolve against what the record
+     * already holds, or it renders empty and the value it is displaying is
+     * not in its own list. Only when the state is otherwise empty: a rebuild
+     * has already said what the form holds, and that is newer than the record.
+     *
+     * Read straight off the record rather than through `formValue()`, which
+     * runs `afterStateHydrated` — a hook that would then run twice per field,
+     * once here and once while serializing.
+     */
+    private function seedStateFromRecord(?Model $record): void
+    {
+        if ($record === null || $this->state !== []) {
+            return;
+        }
+
+        // Only for a schema that has something to answer with it. `data_get()`
+        // on a dotted name walks into the model and would lazily load the
+        // relation behind it, so seeding unconditionally would put a query
+        // behind every form render to build a value nothing reads.
+        if (! $this->hasDependentOptions()) {
+            return;
+        }
+
+        $state = [];
+
+        foreach ($this->fields($record) as $field) {
+            $state[$field->getName()] = data_get($record, $field->getName());
+        }
+
+        $this->state = $state;
+    }
+
+    /**
+     * Whether any select here resolves its options from the rest of the form.
+     */
+    private function hasDependentOptions(): bool
+    {
+        foreach ($this->fields() as $field) {
+            if ($field instanceof Select && $field->hasDependentOptions()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

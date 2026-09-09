@@ -92,6 +92,21 @@ abstract class ResourcePage
     protected static ?string $subheading = null;
 
     /**
+     * What the form's submit button says.
+     *
+     * Null keeps the default the page already had — "Create <resource>" on a
+     * create page, "Save changes" on an edit one — so a page that says nothing
+     * is unaffected.
+     *
+     * It exists because the alternative was building a `Wizard` or a custom
+     * page to change one word. A record form that ends in "Process schedule"
+     * rather than "Save" is describing what saving it does, and that is the
+     * page's own statement about itself, not a reason to leave the standard
+     * lifecycle behind.
+     */
+    protected static ?string $submitLabel = null;
+
+    /**
      * Override any of these three when the text depends on something a static
      * property cannot say — the record, the tenant, a count.
      */
@@ -115,6 +130,16 @@ abstract class ResourcePage
      * the only thing every page has in common, so that is the fallback a
      * custom page inherits.
      */
+    /**
+     * Override for a label that depends on the record, the user, or anything
+     * else only the page knows. Translate here rather than in the property:
+     * a static initializer runs before the locale is resolved.
+     */
+    protected function getSubmitLabel(): ?string
+    {
+        return static::$submitLabel;
+    }
+
     protected function defaultTitle(?Model $record): string
     {
         return static::$resource::pluralLabel();

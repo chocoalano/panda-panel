@@ -249,6 +249,28 @@ it('declares a layout on every published panel page', function (): void {
 
 `IconRegistryTest` is the other one of this kind: it walks panel icons, navigation items, resource navigation icons and every record and bulk action, and asserts each name exists in `resources/js/panel/icons/registry.ts`. An unregistered icon renders nothing at all, with no error. Use `Action::getIcon()` there rather than `toArray()` — `toArray(null)` returns null whenever the action is hidden or unauthorized for the absent record, so collecting icons through it gathers nothing and passes for the wrong reason.
 
+## The other thing a PHP test cannot see
+
+Which branch an action takes is decided in the browser, and the one time it was wrong the action ran with no dialog and no values while the whole PHP suite stayed green. The bug was that the request was never made, and no assertion about a payload can see a request that does not happen.
+
+So five files mount, through `@vue/test-utils` in a `happy-dom` environment, opted into per file with `@vitest-environment happy-dom` rather than globally — Vitest's default here stays `node`, and the rest of the suite is pure functions that should not pay for a DOM they never touch:
+
+```
+resources/js/panel/composables/useRelationActions.test.ts   which branch, which scope, which URL
+resources/js/panel/composables/useActions.test.ts           the resource side of the same contract
+resources/js/panel/relations/RelationManagerPanel.test.ts   mount, click, observe the dialog
+resources/js/panel/forms/FormRenderer.test.ts               submit payload, 422, success, upload URL
+resources/js/panel/forms/liveFormState.test.ts              a live field: request out, schema back, DOM changed
+```
+
+`happy-dom` is a DOM implementation, not a browser. Nothing here launches one, and none of it is an end-to-end test.
+
+The router is the boundary that is mocked — `vi.mock('@inertiajs/vue3')` — and what is asserted is what crossed it, or that nothing did. Mocking a composable and asserting it was called would prove nothing: the defect was in the decision, not in the plumbing.
+
+The table half of `RelationManagerPanel` is stubbed by name. Mounting the data-table stack to answer a question about a button would make the test about the table.
+
+This is not a browser test runner and ADR 001 stands — see [Architecture decisions](architecture-decisions.md).
+
 ## The one thing a PHP test cannot see
 
 `tests/browser/frozen-columns.mjs` is a script, not a runner. ADR 001 records that this package ships no browser test runner and that stands — nothing installs, nothing is added to `npm run ci`, and the suite is unaffected.

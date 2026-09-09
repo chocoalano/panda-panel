@@ -49,9 +49,11 @@ Written down so they are not re-argued as bugs:
 | Explicit over magic | More verbose than Filament's conventions in places, for example `getId()` versus a combined accessor |
 | Dependency-free SVG chart | No tooltips, zoom or animation; in exchange no charting library and the widget union stays complete |
 | Panels listed by hand | One edit per new panel; in exchange the panel set is visible |
-| No browser test runner | Client-side interaction is covered by types, the build and server-side request tests only |
+| No browser test runner | Client-side interaction is covered by types, the build, server-side request tests, and — for the action layer only — mounted component tests in `happy-dom` |
 
 "No browser test runner" is a decision rather than a gap. A proposal to add one is a proposal to reverse a recorded trade-off, and it needs an ADR.
+
+The action layer is the one place components are mounted, and it does not reverse that trade-off: `happy-dom` is not a browser, nothing is driven, and `tests/browser` remains the only place a layout engine is asked anything. What it covers is a class of failure the row above could not — a relation action carrying a form once ran immediately, with no dialog and no values, while every server-side test stayed green, because the bug was that the request was never made. A payload assertion cannot see a request that does not happen. See [Testing](testing.md).
 
 ## The decisions table
 

@@ -13,6 +13,8 @@ use PandaPanel\Actions\Action;
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
 use PandaPanel\Exceptions\PanelRegistrationException;
+use PandaPanel\Forms\Support\FormContext;
+use PandaPanel\Forms\Support\FormSurface;
 use PandaPanel\Infolists\InfolistSchema;
 use PandaPanel\Resources\Resource as PanelResource;
 use PandaPanel\Support\FormEndpoints;
@@ -50,28 +52,27 @@ final class PanelActionFormController
     {
         $panel = $this->currentPanel();
 
-        $validated = $request->validate([
-            'resource' => ['required', 'string'],
-            'action' => ['required', 'string'],
-            'scope' => ['required', 'string', 'in:'.implode(',', self::SCOPES)],
-            'record' => ['nullable'],
-        ]);
+        // One resolver for every form surface — see `FormContext`. It does the
+        // same four things this method used to do inline (resolve the
+        // resource, bind a nested parent, find the record, find and authorize
+        // the action) and does them the same way the options, state, and
+        // upload endpoints now do.
+        $context = FormContext::resolve($this->manager, $request);
 
-        $resource = $this->resolveResource($panel, (string) $validated['resource']);
+        abort_unless($context->surface === FormSurface::Action, 404);
 
-        $this->bindParentRecord($request, $resource);
+        $action = $context->action;
 
-        $record = $this->resolveRecord($resource, $validated['record'] ?? null);
-        $action = $this->resolveAction($resource, (string) $validated['scope'], (string) $validated['action']);
-
-        abort_unless($action->isAuthorizedFor($record), 403);
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
         abort_unless($action->hasForm(), 400, __('panda-panel::errors.action_no_form'));
 
-        $schema = $action->resolveSchema($record);
+        $schema = $context->schema();
 
         abort_if($schema === null, 400, __('panda-panel::errors.action_no_form'));
 
+        $record = $context->stateRecord();
         $modal = $action->getModal();
+        $endpoints = FormEndpoints::forContext($context);
 
         return response()->json([
             'title' => $modal->getHeading() ?? $action->getLabel(),
@@ -80,19 +81,18 @@ final class PanelActionFormController
             // The submit carries the same context this request did, built
             // here so the browser never assembles a panel URL.
             'submitUrl' => route($panel->routeName('actions.submit'), [], absolute: false),
-            // A file field on an action's form is authorized by the action,
-            // not by the resource: an action the user may not run must not be
-            // a way to put a file on a disk.
-            'uploadUrl' => FormEndpoints::uploadForAction(
-                $resource,
-                $action->getName(),
-                (string) $validated['scope'],
-                $record,
-            ),
+            // All three carry the action's own context, so a select, a file,
+            // and a `live()` field on an action's form are each authorized by
+            // the action rather than by the resource — an action the user may
+            // not run must not be a way to put a file on a disk, nor a way to
+            // read an option list the form itself would have refused.
+            'optionsUrl' => $endpoints['options'],
+            'uploadUrl' => $endpoints['upload'],
+            'formStateUrl' => $endpoints['formState'],
             'context' => [
-                'resource' => $resource::slugIn($panel),
+                'resource' => $context->resource::slugIn($panel),
                 'action' => $action->getName(),
-                'scope' => $validated['scope'],
+                'scope' => $context->scope,
             ],
             'modal' => $modal->toArray(),
         ]);

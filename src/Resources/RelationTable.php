@@ -112,7 +112,7 @@ final readonly class RelationTable
                 'from' => (int) $records->firstItem(),
                 'to' => (int) $records->lastItem(),
             ],
-            'headerActions' => $this->headerActions(),
+            'headerActions' => $this->headerActions($schema),
             'endpoints' => RelationEndpoints::forManager($this->resource, $manager, $this->owner),
         ];
     }
@@ -128,17 +128,32 @@ final readonly class RelationTable
      *
      * @return list<array<string, mixed>>
      */
-    private function headerActions(): array
+    private function headerActions(TableSchema $schema): array
     {
         $actions = [
             CreateRelatedAction::make($this->resource, $this->manager, $this->owner),
             AttachAction::make($this->resource, $this->manager, $this->owner),
             AssociateAction::make($this->resource, $this->manager, $this->owner),
+
+            // And whatever the manager declared for itself.
+            //
+            // These used to be built and thrown away. `RelationManager::table()`
+            // returns an ordinary `TableSchema`, so `->headerActions([...])` has
+            // always been callable on it — the list simply never reached this
+            // method, so the actions were never serialized, never rendered and
+            // never resolvable. A manager could declare one and watch nothing
+            // happen, with no error anywhere to say why.
+            //
+            // After the three built-ins rather than before: create, attach and
+            // associate are what the relation *is*, and a manager's own actions
+            // read as additions to that rather than replacements for it.
+            ...$schema->getHeaderActions(),
         ];
 
         $serialized = [];
 
         foreach ($actions as $action) {
+            // No record: a header action is about the relation, not a row.
             $definition = $action->toArray();
 
             if ($definition !== null) {
@@ -216,5 +231,25 @@ final readonly class RelationTable
     public static function bulkActionFor(string $manager, Model $owner, string $name): ?Action
     {
         return $manager::table(TableSchema::make(), $owner)->getBulkAction($name);
+    }
+
+    /**
+     * One of the manager's own header actions.
+     *
+     * Only the manager's: the three built-ins are relation *operations* with
+     * their own endpoint and their own form, and resolving them here would
+     * give them a second way in that authorizes differently from the first.
+     *
+     * @param  class-string<RelationManager>  $manager
+     */
+    public static function headerActionFor(string $manager, Model $owner, string $name): ?Action
+    {
+        foreach ($manager::table(TableSchema::make(), $owner)->getHeaderActions() as $action) {
+            if ($action->getName() === $name) {
+                return $action;
+            }
+        }
+
+        return null;
     }
 }

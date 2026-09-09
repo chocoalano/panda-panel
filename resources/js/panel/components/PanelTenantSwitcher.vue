@@ -23,24 +23,44 @@ const { t } = useTranslator();
  * path and needs the room, while a tenant is a name. A list of names in a
  * sheet is a lot of chrome around very little.
  *
- * Renders nothing at all unless three things are true — the panel declared
+ * The *switcher* renders only when three things are true — the panel declared
  * tenancy, the user belongs to more than one tenant, and the panel said how
  * to build a tenant's URL. The third is the one that catches people out, and
  * it is deliberate: identification is the application's (a subdomain, a path
  * segment, one tenant per user), so reversing it into a URL is too. A
  * switcher whose entries went nowhere would be worse than no switcher.
  *
+ * The *identity* renders whenever there is a tenant, which is the case those
+ * three conditions used to swallow. A user who belongs to one company had
+ * nothing to switch to, so nothing rendered, so the company they were working
+ * in appeared nowhere in the shell — and applications put it in a page
+ * heading instead. Which company you are in is worth saying even when it is
+ * the only one you could be in.
+ *
  * A plain `<a>` rather than Inertia's `<Link>`, because a tenant usually
  * lives on another host. An Inertia visit across origins is a request the
  * browser refuses; a navigation is what actually moves.
  */
-const { tenancy, canSwitchTenants } = usePanel();
+const { tenancy, canSwitchTenants, tenantIdentity } = usePanel();
 
 const open = ref(false);
 </script>
 
 <template>
-    <DropdownMenu v-if="canSwitchTenants" v-model:open="open">
+    <!--
+        Not a button: there is nothing to press. Same chrome as the switcher's
+        trigger so the shell does not visibly rearrange itself for a user who
+        happens to belong to a second tenant.
+    -->
+    <div
+        v-if="!canSwitchTenants && tenantIdentity !== null"
+        class="flex items-center gap-2 px-2 text-sm font-medium"
+    >
+        <Building2 class="size-4 shrink-0 opacity-70" />
+        <span class="max-w-40 truncate">{{ tenantIdentity }}</span>
+    </div>
+
+    <DropdownMenu v-else-if="canSwitchTenants" v-model:open="open">
         <DropdownMenuTrigger as-child>
             <Button
                 variant="ghost"
@@ -50,7 +70,7 @@ const open = ref(false);
             >
                 <Building2 class="size-4" />
                 <span class="max-w-32 truncate">
-                    {{ tenancy?.current?.name ?? t('shell.select') }}
+                    {{ tenantIdentity ?? t('shell.select') }}
                 </span>
             </Button>
         </DropdownMenuTrigger>

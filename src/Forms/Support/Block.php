@@ -76,6 +76,17 @@ final class Block
     }
 
     /**
+     * The components this block is built from, layouts included — see
+     * `Repeater::componentsForPaths()`.
+     *
+     * @return list<FormComponent>
+     */
+    public function componentsForPaths(): array
+    {
+        return $this->components;
+    }
+
+    /**
      * @return list<Field>
      */
     public function fields(): array

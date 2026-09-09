@@ -46,6 +46,12 @@ interface RelationFormPayload {
      * than the owning resource's.
      */
     uploadUrl: string | null;
+    /**
+     * Where a `live()` field on this form asks what the form should look like
+     * now. Null when the server did not send one, which leaves live fields
+     * behaving as ordinary ones rather than failing.
+     */
+    formStateUrl: string | null;
 }
 
 const payload = ref<RelationFormPayload | null>(null);
@@ -88,6 +94,10 @@ function toPayload(value: unknown): RelationFormPayload | null {
         uploadUrl:
             typeof candidate.uploadUrl === 'string'
                 ? candidate.uploadUrl
+                : null,
+        formStateUrl:
+            typeof candidate.formStateUrl === 'string'
+                ? candidate.formStateUrl
                 : null,
     };
 }
@@ -166,6 +176,7 @@ function onOpenChange(open: boolean): void {
                 :submit-label="payload.submitLabel"
                 :options-url="payload.optionsUrl"
                 :upload-url="payload.uploadUrl"
+                :form-state-url="payload.formStateUrl"
                 @saved="emit('close')"
             />
         </DialogContent>

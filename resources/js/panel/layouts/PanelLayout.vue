@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useContractCheck } from '@/panel/composables/useContractCheck';
 import { useErrorNotifications } from '@/panel/composables/useErrorNotifications';
 import { usePanel } from '@/panel/composables/usePanel';
 import { usePanelBroadcasting } from '@/panel/composables/usePanelBroadcasting';
@@ -24,6 +25,10 @@ const pageMetadata = usePanelPage();
 // panel route and is torn down when the panel is left.
 useErrorNotifications();
 usePanelBroadcasting();
+
+// Says so once, in development, when this published frontend is older than
+// the backend serving it — the drift that otherwise fails silently.
+useContractCheck();
 
 /**
  * The shell variant is panel configuration, not a page concern, so pages

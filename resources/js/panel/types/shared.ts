@@ -42,6 +42,26 @@ export interface PanelSharedProps {
      * `useTranslator()` rather than directly.
      */
     translations: Record<string, unknown>;
+    /**
+     * The protocol the backend speaks, and what to run when this frontend
+     * does not speak it.
+     *
+     * Optional because it is newer than the components an application may have
+     * published: a frontend new enough to read this is by definition the one
+     * that can act on it, and one too old to read it is exactly the case a
+     * backend-side warning has to cover instead.
+     */
+    contract?: PanelContract;
+}
+
+/**
+ * See `PandaPanel\Support\FrontendContract`.
+ */
+export interface PanelContract {
+    /** The version the backend expects this frontend to speak. */
+    expected: number;
+    /** The command that republishes the components. */
+    remediation: string;
 }
 
 /**

@@ -162,8 +162,12 @@ final class PanelRouteRegistrar
             // page could not show. The field is resolved out of the schema
             // that declared it, so nothing about a column or a table ever
             // comes from the request.
+            // Both verbs, one handler. GET is what a select that depends on
+            // nothing needs; POST is what one that depends on a sibling needs,
+            // because the form's values go in the body — there is no bound on
+            // how much a form holds and a query string has one.
             $this->router
-                ->get('options', PanelFormOptionsController::class)
+                ->match(['get', 'post'], 'options', PanelFormOptionsController::class)
                 ->name('options');
 
             // A file is stored before the form is submitted, so the submit
@@ -401,6 +405,22 @@ final class PanelRouteRegistrar
             $this->router
                 ->post('action', [PanelRelationController::class, 'action'])
                 ->name('action');
+
+            // An action a relation's table declared, when it carries a form.
+            // Its own route rather than the resource action-form endpoint,
+            // which resolves actions out of the resource's table and so could
+            // never find one of these — that mismatch is what made every
+            // relation action with a form answer 404.
+            //
+            // The context is in the query string on both verbs, which is what
+            // lets the POST body be nothing but the user's values.
+            $this->router
+                ->get('action-form', [PanelRelationController::class, 'actionForm'])
+                ->name('action-form');
+
+            $this->router
+                ->post('action-form', [PanelRelationController::class, 'submitAction'])
+                ->name('submit-action');
 
             $this->router
                 ->post('bulk', [PanelRelationController::class, 'bulk'])

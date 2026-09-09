@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PandaPanel\Http\Controllers;
 
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +13,8 @@ use Illuminate\Http\Request;
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
 use PandaPanel\Exceptions\PanelRegistrationException;
+use PandaPanel\Forms\Support\FormContext;
+use PandaPanel\Forms\Support\FormSurface;
 use PandaPanel\Resources\RelationForm;
 use PandaPanel\Resources\RelationManager;
 use PandaPanel\Resources\RelationTable;
@@ -93,6 +97,16 @@ final class PanelRelationController
                 $operation->value,
                 $related,
             ),
+            // And so a `live()` field on a relation form works at all. It used
+            // to be silently inert here: the field declared itself live, the
+            // renderer honoured it, and there was no URL to ask.
+            'formStateUrl' => FormEndpoints::formStateForRelation(
+                $resource,
+                $manager,
+                $owner,
+                $operation->value,
+                $related,
+            ),
         ]);
     }
 
@@ -130,7 +144,150 @@ final class PanelRelationController
     }
 
     /**
-     * Runs a row action the manager's table declared.
+     * The form an action on this manager's table carries.
+     *
+     * This endpoint is why relation actions with forms did not work. A form
+     * action is described by whichever endpoint can resolve it, and the only
+     * one that existed looked the action up in the *resource's* table — where
+     * a relation manager's actions have never been and never will be. Every
+     * one of them answered 404, so the dialog never opened; and because the
+     * dialog never opened, the submit that would have carried its values was
+     * never made either.
+     *
+     * The payload is deliberately the same shape `PanelActionFormController`
+     * answers with. A dialog is a dialog: the same component renders both, and
+     * two payload shapes for one component is two things to keep in step.
+     */
+    public function actionForm(Request $request): JsonResponse
+    {
+        $context = FormContext::resolve($this->manager, $request);
+
+        abort_unless($context->surface === FormSurface::RelationAction, 404);
+
+        $action = $context->action;
+
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
+        abort_unless($action->hasForm(), 400, __('panda-panel::errors.action_no_form'));
+
+        $schema = $context->schema();
+
+        abort_if($schema === null, 400, __('panda-panel::errors.action_no_form'));
+
+        $modal = $action->getModal();
+        $endpoints = FormEndpoints::forContext($context);
+        $record = $context->stateRecord();
+
+        return response()->json([
+            'title' => $modal->getHeading() ?? $action->getLabel(),
+            'submitLabel' => $modal->getSubmitLabel() ?? $action->getLabel(),
+            'form' => $schema->toArray($record),
+            // The submit is the same URL as this one, by POST. Its context is
+            // already in the query string, which is what lets the body be
+            // nothing but the user's values.
+            'submitUrl' => RelationEndpoints::actionForm(
+                $context->resource,
+                (string) $context->relation,
+                $context->owner ?? abort(404),
+                $action->getName(),
+                (string) $context->scope,
+                $context->related,
+            ),
+            'method' => 'post',
+            'optionsUrl' => $endpoints['options'],
+            'uploadUrl' => $endpoints['upload'],
+            'formStateUrl' => $endpoints['formState'],
+            'context' => [],
+            'modal' => $modal->toArray(),
+        ]);
+    }
+
+    /**
+     * Runs an action on this manager's table with what its form submitted.
+     *
+     * The data is validated and dehydrated by the action's own schema before
+     * the handler sees it, exactly as a resource action's is — so an extra key
+     * in the body is discarded rather than passed through, and a required
+     * field left empty stops the run before anything is written.
+     *
+     * A separate route from `action()` rather than a branch inside it. The
+     * two carry their context differently and cannot be merged without one of
+     * them losing: `action()` reads its context from the body, which is safe
+     * only while the body is nothing but context. Here the body is whatever
+     * the user typed, and a field named `action` must not be able to run a
+     * different one.
+     */
+    public function submitAction(Request $request): RedirectResponse
+    {
+        $context = FormContext::resolve($this->manager, $request);
+
+        abort_unless($context->surface === FormSurface::RelationAction, 404);
+
+        $action = $context->action;
+
+        abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
+        abort_unless($action->hasForm(), 400, __('panda-panel::errors.action_no_form'));
+
+        $schema = $context->schema();
+
+        abort_if($schema === null, 400, __('panda-panel::errors.action_no_form'));
+
+        $record = $context->stateRecord();
+
+        $data = $schema->dehydrate(
+            $request->validate($schema->validationRules($record)),
+            $record,
+        );
+
+        if ($context->scope === 'bulk') {
+            $records = $this->selection(
+                (string) $context->relation,
+                $context->owner ?? abort(404),
+                $request->input('records'),
+            );
+
+            abort_unless(
+                $action->isBulkExecutable() || $action->isExecutable(),
+                400,
+                __('panda-panel::errors.action_not_executable'),
+            );
+
+            $action->executeBulk($records, $data);
+
+            return back()->with('success', $action->getSuccessMessage());
+        }
+
+        // A header action is about the relation, not a row, so it runs through
+        // the same handler a resource's table action does — `tableAction()`,
+        // taking the data and no record. The owner is not passed as one: it is
+        // already in scope where the action was declared, because
+        // `RelationManager::table()` receives it, so a closure that needs it
+        // closes over it. Handing it in as `$record` would make every handler
+        // signature ambiguous about whether the model is the owner or a row.
+        if ($context->scope === 'table') {
+            abort_unless($action->isTableExecutable(), 400, __('panda-panel::errors.action_not_executable'));
+
+            $action->executeWithoutRecord($data);
+
+            return back()->with('success', $action->getSuccessMessage());
+        }
+
+        abort_if($record === null, 404);
+        abort_unless($action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
+
+        $action->execute($record, $data);
+
+        return back()->with('success', $action->getSuccessMessage());
+    }
+
+    /**
+     * Runs an action the manager's table declared, on a row or on the relation.
+     *
+     * The form-less half of the contract. Anything carrying a form goes to
+     * `submitAction()` instead, which validates and dehydrates it first.
+     *
+     * `scope` decides which whitelist the name is looked up in and whether a
+     * row is required — a header action has none, and demanding one was what
+     * left a form-less header action with no way to run at all.
      */
     public function action(Request $request): RedirectResponse
     {
@@ -139,17 +296,41 @@ final class PanelRelationController
             'record' => ['required'],
             'relation' => ['required', 'string'],
             'action' => ['required', 'string'],
-            'related' => ['required'],
+            'scope' => ['nullable', 'string', 'in:record,table'],
+            // Only a row action is about one. Required below rather than here,
+            // so the message names the scope that needed it.
+            'related' => ['nullable'],
         ]);
 
         [, $manager, $owner] = $this->resolveContext($request, $validated);
 
-        $action = RelationTable::actionFor($manager, $owner, (string) $validated['action']);
+        $scope = $validated['scope'] ?? 'record';
+
+        $action = $scope === 'table'
+            ? RelationTable::headerActionFor($manager, $owner, (string) $validated['action'])
+            : RelationTable::actionFor($manager, $owner, (string) $validated['action']);
 
         abort_if($action === null, 404, __('panda-panel::errors.unknown_action'));
+
+        // An action with a form runs through `submitAction()`, which validates
+        // and dehydrates that form first. Reaching it here means the values
+        // were never collected, and running the handler with an empty array
+        // would be a write the user never described — so it is refused rather
+        // than performed with nothing.
+        abort_if($action->hasForm(), 400, __('panda-panel::errors.action_requires_form'));
+
+        if ($scope === 'table') {
+            abort_unless($action->isTableExecutable(), 400, __('panda-panel::errors.action_not_executable'));
+            abort_unless($action->isAuthorizedFor(null), 403);
+
+            $action->executeWithoutRecord();
+
+            return back()->with('success', $action->getSuccessMessage());
+        }
+
         abort_unless($action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
 
-        $key = $validated['related'];
+        $key = $validated['related'] ?? null;
 
         abort_unless(is_string($key) || is_int($key), 422, __('panda-panel::errors.invalid_record_key'));
 
@@ -185,16 +366,11 @@ final class PanelRelationController
         abort_unless($action->isBulkExecutable() || $action->isExecutable(), 400, __('panda-panel::errors.action_not_executable'));
         abort_unless($action->isAuthorizedFor(null), 403);
 
-        $keys = $this->scalarKeys($validated['records']);
+        // See `action()`: an action carrying a form has values to collect
+        // first, and running it here would run it with none of them.
+        abort_if($action->hasForm(), 400, __('panda-panel::errors.action_requires_form'));
 
-        abort_if($keys === [], 422, __('panda-panel::errors.invalid_record_keys'));
-
-        $records = $manager::query($owner)->whereKey($keys)->get();
-
-        // Keys outside the relation silently disappear from the query, so the
-        // count check is what turns that into a visible failure rather than a
-        // partial operation.
-        abort_if($records->count() !== count($keys), 404, __('panda-panel::errors.records_not_found'));
+        $records = $this->selection($manager, $owner, $validated['records']);
 
         $action->executeBulk($records);
 
@@ -325,6 +501,30 @@ final class PanelRelationController
             RelationOperation::Attach => $title.' attached.',
             RelationOperation::Associate => $title.' associated.',
         };
+    }
+
+    /**
+     * The related records a bulk action's form was submitted for.
+     *
+     * Loaded through the manager's own query, which starts from the owner's
+     * relation — so a key belonging to another owner is not found rather than
+     * found and operated on. The count check is what turns a key that
+     * silently disappeared into a visible failure rather than a partial run.
+     *
+     * @param  class-string<RelationManager>  $manager
+     * @return Collection<int, Model>
+     */
+    private function selection(string $manager, Model $owner, mixed $records): EloquentCollection
+    {
+        $keys = $this->scalarKeys($records);
+
+        abort_if($keys === [], 422, __('panda-panel::errors.invalid_record_keys'));
+
+        $found = $manager::query($owner)->whereKey($keys)->get();
+
+        abort_if($found->count() !== count($keys), 404, __('panda-panel::errors.records_not_found'));
+
+        return $found;
     }
 
     /**

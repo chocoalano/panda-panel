@@ -26,7 +26,7 @@ final class RelationEndpoints
     /**
      * @param  class-string<PanelResource>  $resource
      * @param  class-string<RelationManager>  $manager
-     * @return array{form: string, save: string, action: string, bulk: string}
+     * @return array{form: string, save: string, action: string, bulk: string, actionForm: string}
      */
     public static function forManager(string $resource, string $manager, Model $owner): array
     {
@@ -37,7 +37,47 @@ final class RelationEndpoints
             'save' => self::contextUrl($panel, 'relations.save', $resource, $manager, $owner),
             'action' => route($panel->routeName('relations.action'), absolute: false),
             'bulk' => route($panel->routeName('relations.bulk'), absolute: false),
+            // Where an action this manager's table declared fetches its form.
+            // Sent as a base URL rather than one per action: a table of
+            // twenty rows would otherwise carry twenty near-identical URLs to
+            // open at most one dialog. The client appends the action name,
+            // the scope, and the related key — never the resource, the owner,
+            // or the relation, which are already fixed here.
+            'actionForm' => self::contextUrl($panel, 'relations.action-form', $resource, $manager, $owner),
         ];
+    }
+
+    /**
+     * The form URL for one of a relation table's actions.
+     *
+     * Carries the same context the manager's endpoints do, plus the action
+     * and the record it is about — so the server resolves the action out of
+     * *this* relation's table and authorizes it against a record loaded
+     * through *this* relation.
+     *
+     * @param  class-string<PanelResource>  $resource
+     * @param  class-string<RelationManager>  $manager
+     */
+    public static function actionForm(
+        string $resource,
+        string $manager,
+        Model $owner,
+        string $action,
+        string $scope = 'record',
+        Model|int|string|null $related = null,
+    ): string {
+        return self::contextUrl(
+            self::panel(),
+            'relations.action-form',
+            $resource,
+            $manager,
+            $owner,
+            [
+                'action' => $action,
+                'scope' => $scope,
+                ...($related === null ? [] : ['related' => self::key($related)]),
+            ],
+        );
     }
 
     /**

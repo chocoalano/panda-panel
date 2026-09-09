@@ -99,6 +99,19 @@ final class Builder extends Field
     }
 
     /**
+     * The blocks an entry may name.
+     *
+     * For working out where the fields inside them write — each block is its
+     * own namespace, so two blocks may both hold a `text`.
+     *
+     * @return list<Block>
+     */
+    public function blocksForPaths(): array
+    {
+        return $this->blocks;
+    }
+
+    /**
      * @return list<Field>
      */
     public function fields(): array

@@ -23,6 +23,16 @@ final class TaskPolicy
 
     public static bool $restorable = true;
 
+    /**
+     * Guards the relation action that carries a form, so a test can prove the
+     * form is refused to somebody who may not run the action — separately
+     * from whether they may read the relation at all.
+     */
+    public static bool $canRename = true;
+
+    /** Guards the header action, separately from the row one. */
+    public static bool $canAddSpecial = true;
+
     public function viewAny(User $user): bool
     {
         return self::$viewable;
@@ -80,5 +90,7 @@ final class TaskPolicy
         self::$updatable = true;
         self::$deletable = true;
         self::$restorable = true;
+        self::$canRename = true;
+        self::$canAddSpecial = true;
     }
 }

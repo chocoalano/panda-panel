@@ -16,6 +16,7 @@ use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
 use PandaPanel\Resources\Resource as PanelResource;
 use PandaPanel\Support\BroadcastSupport;
+use PandaPanel\Support\FrontendContract;
 use PandaPanel\Support\NavigationBuilder;
 use PandaPanel\Tenancy\Tenancy;
 use Symfony\Component\HttpFoundation\Response;
@@ -58,6 +59,14 @@ final class SharePanelData
             'locale' => fn (): string => App::getLocale(),
             'locales' => fn (): ?array => $this->locales($request),
             'translations' => fn (): array => $this->translations(),
+            // What protocol this backend speaks. The frontend compares it
+            // against the one compiled into it and says so in development —
+            // see `FrontendContract` for why a published frontend that is
+            // behind fails silently rather than loudly.
+            'contract' => fn (): array => [
+                'expected' => FrontendContract::expected(),
+                'remediation' => FrontendContract::remediation(),
+            ],
         ]);
 
         return $next($request);
@@ -148,7 +157,16 @@ final class SharePanelData
      * send anybody, which is why `Panel::tenantUrlUsing()` is what turns the
      * switcher on rather than tenancy itself.
      *
-     * @return array{current: array{key: int|string, name: string, url: string|null, current: bool}|null, available: list<array{key: int|string, name: string, url: string|null, current: bool}>}|null
+     * ## Identity and the switcher are two questions
+     *
+     * `label` is what the shell calls the tenant this request is in, and it is
+     * sent whether or not there is anywhere to switch to. A user who belongs to
+     * one tenant used to see no tenant anywhere in the shell — the switcher was
+     * the only thing that named it, and the switcher hides itself when there is
+     * nothing to choose between. Applications worked around that by putting the
+     * company name in a page heading, which is the wrong place for it.
+     *
+     * @return array{current: array{key: int|string, name: string, url: string|null, current: bool}|null, available: list<array{key: int|string, name: string, url: string|null, current: bool}>, label: string|null}|null
      */
     private function tenancy(Request $request): ?array
     {
@@ -173,6 +191,10 @@ final class SharePanelData
                 $describe,
                 Tenancy::availableTo($request->user(), $panel),
             ),
+            // Resolved here, inside the per-request closure, so a panel whose
+            // label is a callback sees this request's tenant rather than
+            // whichever one a worker happened to serve first.
+            'label' => $panel->getTenantLabel($current),
         ];
     }
 

@@ -31,11 +31,31 @@ export function useFormStateUrl(): () => string | null {
 }
 
 /**
+ * What the server answers a rebuild with.
+ *
+ * Two things, and they are not the same thing. `form` is what the form should
+ * look like now; `statePatch` is what the server has decided it should now
+ * hold, and is only ever non-empty when a callback explicitly changed a field.
+ *
+ * The split exists because this component preserves what the user typed
+ * across a rebuild — it has to, or every rebuild would discard the rest of the
+ * form. That left a server which wanted to clear a now-invalid child field
+ * with no way to say so: it could remove the value from the schema and watch
+ * the client put it straight back. A patch is the server saying it, and it is
+ * the one thing that wins over the client's own state.
+ */
+export type FormStateResponse = {
+    form: FormDefinition;
+    /** Paths the server changed, by the name the schema gave them. */
+    statePatch: Record<string, unknown>;
+};
+
+/**
  * Narrowed rather than asserted. This crosses the wire as untyped JSON like
  * every other payload, and a shape that does not match must leave the form
  * showing what it already had.
  */
-function toFormDefinition(payload: unknown): FormDefinition | null {
+function toFormStateResponse(payload: unknown): FormStateResponse | null {
     if (typeof payload !== 'object' || payload === null) {
         return null;
     }
@@ -53,7 +73,17 @@ function toFormDefinition(payload: unknown): FormDefinition | null {
         return null;
     }
 
-    return form as FormDefinition;
+    const patch = (payload as { statePatch?: unknown }).statePatch;
+
+    return {
+        form: form as FormDefinition,
+        // Absent on a server that predates patches, and on every response that
+        // had nothing to patch. Both mean the same thing here.
+        statePatch:
+            typeof patch === 'object' && patch !== null && !Array.isArray(patch)
+                ? (patch as Record<string, unknown>)
+                : {},
+    };
 }
 
 /**
@@ -70,12 +100,12 @@ export async function fetchFormState(
     changed: string,
     previous: unknown,
     signal?: AbortSignal,
-): Promise<FormDefinition | null> {
+): Promise<FormStateResponse | null> {
     const payload = await postJson(
         url,
         { state: values, changed, previous },
         signal,
     );
 
-    return payload === null ? null : toFormDefinition(payload);
+    return payload === null ? null : toFormStateResponse(payload);
 }

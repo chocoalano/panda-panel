@@ -24,6 +24,11 @@ const props = withDefaults(
         uploadUrl?: string | null;
         formStateUrl?: string | null;
         validateStepUrl?: string | null;
+        /**
+         * What the submit button says. Null keeps the resource-derived
+         * default, so a page that names none reads exactly as it did.
+         */
+        submitLabel?: string | null;
         canCreateAnother?: boolean;
         /** Placed by the page above and below its own content. */
         headerWidgets?: WidgetDefinition[];
@@ -34,6 +39,7 @@ const props = withDefaults(
     {
         canCreateAnother: false,
         validateStepUrl: null,
+        submitLabel: null,
         optionsUrl: null,
         uploadUrl: null,
         formStateUrl: null,
@@ -60,7 +66,9 @@ const props = withDefaults(
             :form-state-url="formStateUrl"
             :validate-step-url="validateStepUrl"
             method="post"
-            :submit-label="`Create ${resource.label.toLowerCase()}`"
+            :submit-label="
+                submitLabel ?? `Create ${resource.label.toLowerCase()}`
+            "
             :create-another-label="
                 props.canCreateAnother ? t('forms.create_another') : undefined
             "

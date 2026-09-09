@@ -6,6 +6,7 @@ namespace PandaPanel\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use PandaPanel\Support\FrontendContract;
 use PandaPanel\Support\Installer\AssetManifest;
 use PandaPanel\Support\Installer\PublishedAssets;
 
@@ -94,6 +95,8 @@ final class PanelAssetsCommand extends Command
             $this->newLine();
         }
 
+        $this->contractDrift();
+
         $this->summary($counts);
 
         $updating = $this->option('update') || $this->option('force');
@@ -141,6 +144,36 @@ final class PanelAssetsCommand extends Command
         // found something a person has to look at. Reporting it as a non-zero
         // exit would break a deploy over a file somebody edited on purpose.
         return self::SUCCESS;
+    }
+
+    /**
+     * Says outright when the published frontend is a protocol behind.
+     *
+     * The file-by-file report below cannot say this. It says *which* files
+     * differ, which is most of them after any release and almost never worth
+     * acting on — so the one case that is gets lost in the list. A frontend
+     * behind on the contract is the case where features are missing rather
+     * than merely older: a prop nothing reads, an endpoint nothing calls, a
+     * payload the components reject. None of it logs anything.
+     *
+     * Said before the summary rather than after, because it is the reason to
+     * read the summary at all.
+     */
+    private function contractDrift(): void
+    {
+        if (! FrontendContract::isDrifted()) {
+            return;
+        }
+
+        $this->components->warn(sprintf(
+            'The published frontend speaks contract v%d; this backend speaks v%d. '
+                .'Anything added since v%d is missing or silently inert until the '
+                .'components are republished.',
+            (int) FrontendContract::published(),
+            FrontendContract::expected(),
+            (int) FrontendContract::published(),
+        ));
+        $this->newLine();
     }
 
     /**

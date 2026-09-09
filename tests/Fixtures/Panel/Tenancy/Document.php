@@ -6,6 +6,7 @@ namespace Tests\Fixtures\Panel\Tenancy;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 final class Document extends Model
 {
@@ -21,5 +22,13 @@ final class Document extends Model
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class, 'workspace_id');
+    }
+
+    /**
+     * @return HasMany<Revision, $this>
+     */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(Revision::class, 'document_id');
     }
 }

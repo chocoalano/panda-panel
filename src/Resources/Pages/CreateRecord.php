@@ -65,6 +65,9 @@ abstract class CreateRecord extends ResourcePage
             'optionsUrl' => FormEndpoints::forResource($resource, static::$page),
             'uploadUrl' => FormEndpoints::upload($resource, static::$page),
             'formStateUrl' => FormEndpoints::formState($resource, static::$page),
+            // Null keeps whatever the page already said — see
+            // `ResourcePage::$submitLabel`.
+            'submitLabel' => $this->getSubmitLabel(),
             // Present only for a stepped form; the wizard asks here before
             // moving on.
             'validateStepUrl' => $this->schema()->wizard() === null

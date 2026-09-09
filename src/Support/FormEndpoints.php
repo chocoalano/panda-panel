@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
 use PandaPanel\Exceptions\PanelRegistrationException;
+use PandaPanel\Forms\Support\FormContext;
 use PandaPanel\Resources\RelationManager;
 use PandaPanel\Resources\Resource as PanelResource;
 
@@ -168,6 +169,81 @@ final class FormEndpoints
             'page' => $page,
             ...($record === null ? [] : ['record' => (string) $record->getKey()]),
         ], absolute: false);
+    }
+
+    /**
+     * Where a `live()` field on a relation form asks the server to rebuild it.
+     *
+     * Same context the relation's own form, options, and upload endpoints
+     * carry, for the same reason: the operation decides which ability is
+     * asked, and a rebuild reads the schema that ability guards.
+     *
+     * @param  class-string<PanelResource>  $resource
+     * @param  class-string<RelationManager>  $manager
+     */
+    public static function formStateForRelation(
+        string $resource,
+        string $manager,
+        Model $owner,
+        string $operation,
+        Model|int|string|null $related = null,
+    ): string {
+        $panel = self::panel();
+
+        return route($panel->routeName('form-state'), [
+            'resource' => $resource::slugIn($panel),
+            'record' => (string) $owner->getKey(),
+            'relation' => $manager::key(),
+            'operation' => $operation,
+            ...($related === null ? [] : [
+                'related' => (string) ($related instanceof Model ? $related->getKey() : $related),
+            ]),
+        ], absolute: false);
+    }
+
+    /**
+     * The three side endpoints for any form, built from the context the
+     * server resolved rather than from a hand-assembled list of parameters.
+     *
+     * Every surface — create, edit, an action's form, a relation form, a
+     * relation action's form — carries the same three, and each carries the
+     * same context. Building them one at a time per surface is how a relation
+     * action's dialog ended up with an upload URL and no options URL: three
+     * call sites, and the one nobody remembered.
+     *
+     * @return array{options: string, upload: string, formState: string}
+     */
+    public static function forContext(FormContext $context): array
+    {
+        return [
+            'options' => self::optionsFor($context),
+            'upload' => self::uploadFor($context),
+            'formState' => self::formStateFor($context),
+        ];
+    }
+
+    /**
+     * Where a searchable select on this form fetches its options.
+     */
+    public static function optionsFor(FormContext $context): string
+    {
+        return route(self::panel()->routeName('options'), $context->toQuery(), absolute: false);
+    }
+
+    /**
+     * Where a file field on this form stores its file.
+     */
+    public static function uploadFor(FormContext $context): string
+    {
+        return route(self::panel()->routeName('uploads'), $context->toQuery(), absolute: false);
+    }
+
+    /**
+     * Where a `live()` field on this form asks the server to rebuild it.
+     */
+    public static function formStateFor(FormContext $context): string
+    {
+        return route(self::panel()->routeName('form-state'), $context->toQuery(), absolute: false);
     }
 
     private static function panel(): Panel

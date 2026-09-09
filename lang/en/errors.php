@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 return [
     'action_no_form' => 'This action has no form.',
+    'action_requires_form' => 'This action must be run through its form.',
     'action_not_executable' => 'This action cannot be executed.',
     'cell_not_editable' => 'That cell cannot be edited.',
     'column_not_editable' => 'That column is not editable.',

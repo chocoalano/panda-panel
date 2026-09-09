@@ -51,6 +51,8 @@ export type UsePanelReturn = {
     notifications: ComputedRef<PanelNotificationSettings>;
     shell: ComputedRef<PanelShellSettings>;
     tenancy: ComputedRef<PanelTenancy | null>;
+    /** What the shell calls the current tenant, switcher or no switcher. */
+    tenantIdentity: ComputedRef<string | null>;
     canSwitchTenants: ComputedRef<boolean>;
     locales: ComputedRef<PanelLocales | null>;
 };
@@ -122,6 +124,17 @@ export function usePanel(): UsePanelReturn {
                 (tenancy.value?.available ?? []).some(
                     (entry) => entry.url !== null,
                 ),
+        ),
+        /**
+         * What to call the tenant this request is in, or null outside one.
+         *
+         * Deliberately not conditional on being able to switch. Naming the
+         * company somebody is working in and offering them another are two
+         * different jobs, and tying the first to the second is why a
+         * single-tenant user saw no company name anywhere in the shell.
+         */
+        tenantIdentity: computed(
+            () => tenancy.value?.label ?? tenancy.value?.current?.name ?? null,
         ),
         // Everything on by default: the shell a panel has said nothing about
         // is the whole shell.

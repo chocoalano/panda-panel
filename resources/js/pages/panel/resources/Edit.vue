@@ -24,6 +24,11 @@ withDefaults(
         uploadUrl?: string | null;
         formStateUrl?: string | null;
         validateStepUrl?: string | null;
+        /**
+         * What the submit button says. Null keeps "Save changes", so a page
+         * that names none reads exactly as it did.
+         */
+        submitLabel?: string | null;
         recordKey: string | number;
         /** The record's relation managers; empty when it declares none. */
         relations?: RelationDefinition[];
@@ -38,6 +43,7 @@ withDefaults(
         optionsUrl: null,
         uploadUrl: null,
         formStateUrl: null,
+        submitLabel: null,
         relations: () => [],
         headerWidgets: () => [],
         footerWidgets: () => [],
@@ -72,7 +78,7 @@ withDefaults(
             :form-state-url="formStateUrl"
             :validate-step-url="validateStepUrl"
             method="put"
-            submit-label="Save changes"
+            :submit-label="submitLabel ?? 'Save changes'"
             :cancel-url="resource.indexUrl"
             sticky-actions
         />

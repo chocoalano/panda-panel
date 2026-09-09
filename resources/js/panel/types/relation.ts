@@ -22,6 +22,17 @@ export interface RelationEndpoints {
     save: string;
     action: string;
     bulk: string;
+    /**
+     * Where an action this relation's table declared fetches its form, and
+     * posts it back.
+     *
+     * One base URL rather than one per action: a table of twenty rows would
+     * otherwise carry twenty near-identical URLs to open at most one dialog.
+     * The client appends the action name, the scope, and the related key —
+     * never the resource, the owner, or the relation, which the server has
+     * already fixed here.
+     */
+    actionForm: string;
 }
 
 export interface RelationDefinition {

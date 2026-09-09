@@ -7,14 +7,13 @@ namespace PandaPanel\Http\Controllers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use PandaPanel\Core\Panel;
 use PandaPanel\Core\PanelManager;
-use PandaPanel\Exceptions\PanelRegistrationException;
 use PandaPanel\Forms\Components\Select;
 use PandaPanel\Forms\FormSchema;
+use PandaPanel\Forms\Support\FormContext;
+use PandaPanel\Forms\Support\FormState;
+use PandaPanel\Forms\Support\FormSurface;
 use PandaPanel\Resources\RelationForm;
-use PandaPanel\Resources\Resource as PanelResource;
-use PandaPanel\Support\RelationOperation;
 
 /**
  * Answers what a searchable select may offer.
@@ -30,6 +29,22 @@ use PandaPanel\Support\RelationOperation;
  * never names a column, a table, or a model — only a field name the schema
  * either has or does not.
  *
+ * ## Why the form's values are sent too
+ *
+ * A dependent select is one whose choices are a function of a sibling: the
+ * employees in the chosen department, the shifts a chosen site runs. The
+ * search used to know the term and the field and nothing else, so such a
+ * select could only search the whole table and then refuse most of what it
+ * found — the dependency had to be re-implemented in every application that
+ * wanted one.
+ *
+ * The values travel in the body, on a POST, because there is no bound on how
+ * much a form holds and a query string has one. They are narrowed to the
+ * fields this schema declares before any callback sees them, exactly as they
+ * are on submit — so a key that was never a field cannot reach a query
+ * through here either. GET still works and simply carries no state, which is
+ * what every select that depends on nothing does.
+ *
  * JSON rather than Inertia, like the search endpoint: re-rendering the page
  * somebody is filling in to answer a keystroke would throw away what they
  * typed.
@@ -43,125 +58,39 @@ final class PanelFormOptionsController
 
     public function __invoke(Request $request): JsonResponse
     {
-        $panel = $this->currentPanel();
-        $resource = $this->resolveResource($panel, $request->query('resource'));
+        // Resolves which form this is and proves the user may open it, in one
+        // decision. Which schema gets built and which ability gets asked are
+        // the same branch — see `FormContext`.
+        $context = FormContext::resolve($this->manager, $request);
 
-        $field = $request->query('field');
+        $field = $request->input('field');
 
         abort_unless(is_string($field), 422, __('panda-panel::errors.invalid_field'));
 
-        $search = $request->query('search');
+        $search = $request->input('search');
         $search = is_string($search) ? mb_substr(trim($search), 0, 255) : null;
-
-        $relation = $request->query('relation');
-
-        return response()->json([
-            'options' => is_string($relation)
-                ? $this->relationOptions($request, $resource, $relation, $field, $search)
-                : $this->resourceOptions($request, $resource, $field, $search),
-        ]);
-    }
-
-    /**
-     * Options for a field on the resource's own form.
-     *
-     * @param  class-string<PanelResource>  $resource
-     * @return list<array{value: string, label: string}>
-     */
-    private function resourceOptions(
-        Request $request,
-        string $resource,
-        string $field,
-        ?string $search,
-    ): array {
-        $page = $request->query('page');
-
-        abort_unless(in_array($page, ['create', 'edit'], true), 422, __('panda-panel::errors.invalid_page'));
-
-        $page = (string) $page;
-
-        $record = null;
-
-        if ($page === 'create') {
-            abort_unless($resource::canCreate(), 403);
-        } else {
-            $record = $this->resolveRecord($request, $resource);
-
-            abort_unless($resource::canEdit($record), 403);
-        }
-
-        $schema = $resource::form(
-            FormSchema::make()
-                ->model($resource::getModel())
-                ->forPage($page),
-        );
-
-        return $this->optionsFor($schema, $field, $resource::getModel(), $search, $record);
-    }
-
-    /**
-     * Options for a field on a relation form, including the select that names
-     * the record an attach or associate is about.
-     *
-     * @param  class-string<PanelResource>  $resource
-     * @return list<array{value: string, label: string}>
-     */
-    private function relationOptions(
-        Request $request,
-        string $resource,
-        string $relationKey,
-        string $field,
-        ?string $search,
-    ): array {
-        $manager = $resource::relationManager($relationKey);
-
-        abort_if($manager === null, 404, __('panda-panel::errors.unknown_relation'));
-
-        $operation = RelationOperation::tryFromRequest($request->query('operation'));
-
-        abort_if($operation === null, 404, __('panda-panel::errors.unknown_relation_operation'));
-
-        $owner = $this->resolveOwner($request, $resource);
-
-        // Reading a relation's field options requires being able to read the
-        // relation at all, and then to perform the operation the field
-        // belongs to. Neither substitutes for the other: without the first,
-        // a manager the user may not open would still answer what its records
-        // are called.
-        abort_unless($manager::canViewAny($owner), 403);
-        abort_unless($operation->isAuthorized($manager, $owner), 403);
 
         // The select naming the record to join is not a schema field backed by
         // a column; its options are the relation's own answer to "what is not
         // in here yet".
-        if ($field === RelationForm::RELATED_FIELD) {
-            return $manager::attachableOptions($owner, $search, self::MAX_RESULTS);
+        if ($context->surface === FormSurface::Relation && $field === RelationForm::RELATED_FIELD) {
+            return response()->json([
+                'options' => ($context->relation)::attachableOptions(
+                    $context->owner ?? abort(404),
+                    $search,
+                    self::MAX_RESULTS,
+                ),
+            ]);
         }
 
-        $related = $operation->needsRelatedRecord()
-            ? $manager::resolveRecord($owner, (string) $request->query('related'))
-            : null;
+        $schema = $context->schema();
 
-        return $this->optionsFor(
-            RelationForm::for($manager, $owner, $operation, $related)->schema(),
-            $field,
-            $manager::getRelatedModel($owner),
-            $search,
-        );
-    }
+        abort_if($schema === null, 400, __('panda-panel::errors.action_no_form'));
 
-    /**
-     * @param  class-string<Model>  $modelClass
-     * @return list<array{value: string, label: string}>
-     */
-    private function optionsFor(
-        FormSchema $schema,
-        string $field,
-        string $modelClass,
-        ?string $search,
-        ?Model $record = null,
-    ): array {
-        $component = $schema->field($field, $record);
+        $record = $context->stateRecord();
+        $state = new FormState($this->submitted($request, $schema, $record));
+
+        $component = $schema->withState($state->all())->field($field, $record);
 
         // A field the schema does not declare does not exist, however the
         // request spells it — the same rule that governs sorting and
@@ -169,60 +98,38 @@ final class PanelFormOptionsController
         abort_if($component === null, 404, __('panda-panel::errors.unknown_field'));
         abort_unless($component instanceof Select, 400, __('panda-panel::errors.field_has_no_options'));
 
-        return $component->resolveOptions($modelClass, $search);
+        return response()->json([
+            'options' => $component->resolveOptions($context->modelClass(), $search, $state),
+        ]);
     }
 
     /**
-     * @param  class-string<PanelResource>  $resource
+     * The values the form currently holds, narrowed to its own fields.
+     *
+     * The same narrowing the state endpoint and the submit apply. A key that
+     * is not a field is discarded here, so an option callback is never handed
+     * something the schema did not declare.
+     *
+     * @return array<string, mixed>
      */
-    private function resolveRecord(Request $request, string $resource): Model
+    private function submitted(Request $request, FormSchema $schema, ?Model $record): array
     {
-        $key = $request->query('record');
+        $submitted = $request->input('state');
 
-        abort_unless(is_string($key), 422, __('panda-panel::errors.invalid_record_key'));
+        if (! is_array($submitted)) {
+            return [];
+        }
 
-        $record = $resource::findRecord($key);
+        $state = [];
 
-        abort_if($record === null, 404);
+        foreach ($schema->fields($record) as $field) {
+            $name = $field->getName();
 
-        return $record;
-    }
+            if (array_key_exists($name, $submitted)) {
+                $state[$name] = $submitted[$name];
+            }
+        }
 
-    /**
-     * @param  class-string<PanelResource>  $resource
-     */
-    private function resolveOwner(Request $request, string $resource): Model
-    {
-        $key = $request->query('record');
-
-        abort_unless(is_string($key), 422, __('panda-panel::errors.invalid_record_key'));
-
-        $owner = $resource::query()->find($key);
-
-        abort_if($owner === null, 404);
-        abort_unless($resource::canView($owner), 403);
-
-        return $owner;
-    }
-
-    /**
-     * @return class-string<PanelResource>
-     */
-    private function resolveResource(Panel $panel, mixed $slug): string
-    {
-        abort_unless(is_string($slug), 422, __('panda-panel::errors.invalid_resource'));
-
-        $resource = $this->manager->resources($panel)->bySlug($slug);
-
-        abort_if($resource === null, 404, __('panda-panel::errors.unknown_resource'));
-
-        /** @var class-string<PanelResource> $resource */
-        return $resource;
-    }
-
-    private function currentPanel(): Panel
-    {
-        return $this->manager->currentPanel()
-            ?? throw PanelRegistrationException::noCurrentPanel();
+        return $state;
     }
 }

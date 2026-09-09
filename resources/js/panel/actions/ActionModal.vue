@@ -90,12 +90,24 @@ interface ActionFormPayload {
     submitLabel: string;
     form: FormDefinition;
     submitUrl: string;
+    method: 'post' | 'put';
+    /**
+     * Where a searchable select on this form asks for options beyond its first
+     * page, carrying the action's own context. Null when the server sent none.
+     */
+    optionsUrl: string | null;
     /**
      * Where a file field on this form uploads to, carrying the action's own
      * context so the server authorizes the upload as the action rather than
      * as the resource. Null when the server did not send one.
      */
     uploadUrl: string | null;
+    /**
+     * Where a `live()` field on this form asks what the form should look like
+     * now. Its absence is why `live()` used to work on a resource's create and
+     * edit pages and quietly do nothing inside an action's dialog.
+     */
+    formStateUrl: string | null;
     context: Record<string, unknown>;
 }
 
@@ -167,9 +179,18 @@ function toPayload(value: unknown): ActionFormPayload | null {
         submitLabel: candidate.submitLabel,
         form: candidate.form,
         submitUrl: candidate.submitUrl,
+        method: candidate.method === 'put' ? 'put' : 'post',
+        optionsUrl:
+            typeof candidate.optionsUrl === 'string'
+                ? candidate.optionsUrl
+                : null,
         uploadUrl:
             typeof candidate.uploadUrl === 'string'
                 ? candidate.uploadUrl
+                : null,
+        formStateUrl:
+            typeof candidate.formStateUrl === 'string'
+                ? candidate.formStateUrl
                 : null,
         context:
             typeof candidate.context === 'object' && candidate.context !== null
@@ -310,9 +331,11 @@ const { hook } = usePanelStyling();
                     :form="payload.form"
                     :submit-url="payload.submitUrl"
                     :submit-label="payload.submitLabel"
+                    :options-url="payload.optionsUrl"
                     :upload-url="payload.uploadUrl"
+                    :form-state-url="payload.formStateUrl"
                     :context="{ ...payload.context, ...context }"
-                    method="post"
+                    :method="payload.method"
                     @saved="emit('saved')"
                 />
             </div>
