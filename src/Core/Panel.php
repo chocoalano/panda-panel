@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use PandaPanel\Actions\Action;
-use PandaPanel\Broadcasting\PanelNotification;
+use PandaPanel\Broadcasting\NotificationChannel;
 use PandaPanel\Contracts\PanelContract;
 use PandaPanel\Contracts\PanelPlugin;
 use PandaPanel\Contracts\PanelUser;
@@ -154,6 +154,14 @@ final class Panel implements PanelContract
      * @var class-string<Model>|null
      */
     private ?string $tenantModel = null;
+
+    /**
+     * How a recipient's broadcast channel is named, when the application
+     * knows something about tenancy this package cannot see.
+     *
+     * @var Closure(Authenticatable): string|null
+     */
+    private ?Closure $broadcastChannelResolver = null;
 
     /**
      * How the tenant this request is in is named in the shell.
@@ -1042,6 +1050,47 @@ final class Panel implements PanelContract
      * for a panel that has nothing to receive, or one served where no
      * broadcaster is reachable.
      */
+    /**
+     * Decides the broadcast channel a recipient's notifications travel on.
+     *
+     *     ->broadcastChannelUsing(fn (Authenticatable $user) => sprintf(
+     *         'tenants.%s.users.%s',
+     *         app(CurrentTenant::class)->get()->getKey(),
+     *         $user->getAuthIdentifier(),
+     *     ))
+     *
+     * Needed when tenants are identified by something this package cannot
+     * see. A panel using this package's own tenancy is isolated already —
+     * see `NotificationChannel` — but an application identifying tenants
+     * through another library has to say so, because a user id is unique
+     * only inside one database and broadcasting is one shared namespace.
+     *
+     * A closure, evaluated per resolution rather than at boot, for the reason
+     * `brandName()` takes one: the tenant does not exist when the panel is
+     * configured, and a value captured then would be whichever tenant a
+     * worker served first.
+     *
+     * Returning null or an empty string throws rather than falling back — a
+     * fallback would be the bare user id, which is what the resolver was
+     * declared to prevent.
+     *
+     * @param  Closure(Authenticatable): string  $resolver
+     */
+    public function broadcastChannelUsing(Closure $resolver): self
+    {
+        $this->broadcastChannelResolver = $resolver;
+
+        return $this;
+    }
+
+    /**
+     * @return Closure(Authenticatable): string|null
+     */
+    public function getBroadcastChannelResolver(): ?Closure
+    {
+        return $this->broadcastChannelResolver;
+    }
+
     public function broadcasting(bool $broadcasting = true): self
     {
         $this->broadcasting = $broadcasting;
@@ -1665,7 +1714,7 @@ final class Panel implements PanelContract
     public function getBroadcastChannel(?Authenticatable $user): ?string
     {
         return $this->broadcasting && $user !== null
-            ? PanelNotification::channelFor($user)
+            ? NotificationChannel::for($user, $this)
             : null;
     }
 

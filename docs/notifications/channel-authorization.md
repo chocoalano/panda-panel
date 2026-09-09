@@ -68,6 +68,60 @@ public function getBroadcastChannel(?Authenticatable $user): ?string
 
 A guest gets `null`, so there is nothing to subscribe to rather than a channel that would be refused.
 
+## Multi-tenant applications
+
+A user id identifies a row, and a row id is unique only inside one database. An application with a database per tenant has a user 1 in every one of them, and they are different people — but broadcasting is a single shared namespace regardless, one Reverb or one Pusher app. On the bare `App.Models.User.{id}` channel all of those users share one private channel, and which of them receives a notification comes down to who is connected.
+
+**A panel that declares tenancy through this package is isolated without configuring anything.** The channel becomes tenant-scoped on its own:
+
+```
+no tenancy                     App.Models.User.{id}          (unchanged)
+tenancy, a tenant bound        panel.tenant.{tenant}.user.{id}
+tenancy, central page          panel.central.user.{id}
+```
+
+Central is its own namespace rather than the absence of one: falling back to the bare id outside a tenant would restore the collision.
+
+Because the name is no longer a fixed pattern, authorize it by asking the package what the channel resolves to:
+
+```php
+use PandaPanel\Broadcasting\NotificationChannel;
+
+Broadcast::channel(
+    'panel.tenant.{tenant}.user.{id}',
+    static fn ($user, $tenant, $id): bool => NotificationChannel::authorize(
+        $user,
+        "panel.tenant.{$tenant}.user.{$id}",
+    ),
+);
+```
+
+`NotificationChannel::authorize()` compares against what *this* user's channel actually resolves to, so a channel belonging to another tenant is refused without the callback having to understand tenancy itself.
+
+### Tenancy this package cannot see
+
+If tenants are identified by another library, the package has no way to know which one is current. Say so on the panel:
+
+```php
+$panel->broadcastChannelUsing(
+    fn (Authenticatable $user): string => sprintf(
+        'tenants.%s.users.%s',
+        app(CurrentTenant::class)->get()->getKey(),
+        $user->getAuthIdentifier(),
+    ),
+);
+```
+
+The closure is evaluated per resolution, never at provider boot, for the reason `brandName()` takes one — the tenant does not exist when the panel is configured, and a value captured then would be whichever tenant a worker served first.
+
+**Returning null or an empty string throws.** Falling back would be the bare user id, which is the collision the resolver was declared to prevent.
+
+> **The default is only safe when recipient ids are globally unique.** A panel without tenancy keeps `App.Models.User.{id}` because for that application the id *is* unique. Any application where two tenants can reuse a user id must either use this package's tenancy or declare a resolver.
+
+### Queued notifications
+
+The channel is resolved **when the notification is constructed**, not when it is broadcast, and travels with the event. A queued broadcast therefore keeps the channel of the tenant that sent it, even though the worker running it has no tenant bound. Nothing needs to re-establish tenant context for the channel to be right.
+
 ## How the check actually runs
 
 1. Echo opens the subscription and posts to `/broadcasting/auth` with the session cookie.

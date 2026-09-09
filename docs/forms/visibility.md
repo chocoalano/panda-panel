@@ -140,7 +140,27 @@ TextInput::make('email')->disabledOn(['edit']);
 
 `disabled()` takes a bool only. There is no record-aware disable callback on `Field`; the record-aware questions are `hidden()` and `visible()`. If a field must be read-only for some records and editable for others, hide it and show a read-only alternative, or branch on the page while building the schema.
 
-Because a disabled control is a browser state, it is not a control over what is submitted. The value still validates and still dehydrates. Use `dehydrated(false)` when a field must not be written whatever arrives.
+Because a disabled control is a browser state, it is not a control over what is submitted. The value still validates and still dehydrates. Use `dehydrated(false)` when a field must not be written whatever arrives — or `immutableOn()` below, which says both at once.
+
+## Fields the server will not write
+
+```php
+public function immutable(bool $immutable = true): static
+public function immutableOn(array $pages): static
+```
+
+```php
+TextInput::make('employee_code')->immutableOn(['edit']);   // set once, then locked
+TextInput::make('signed_at')->immutable();                 // never writable
+```
+
+A field that must not be edited needs two declarations — `disabledOn(['edit'])` so it renders locked, and `dehydrated(false)` so the server refuses it — and forgetting the second leaves a form that looks locked over a column that is wide open. That is the shape a crafted request is looking for: the browser never sends a disabled control, but a request the browser never made can carry anything.
+
+`immutableOn()` is both halves in one declaration. The field renders disabled *and* `dehydrate()` drops whatever arrived for it, so the guard cannot be half-declared. On any page not named, the field behaves normally — which is what makes "writable at creation, locked afterwards" a single line.
+
+It also stops being required on those pages. A value the server will refuse cannot sensibly be demanded from the client, and without that rule `immutableOn(['edit'])->required()` would fail every edit on a field nobody can type into.
+
+It wins over an explicit `dehydrated(true)`: declaring a field immutable and then asking for it to be written is a contradiction, and the safe reading of a contradiction is the one that writes nothing.
 
 ## Conditions on another field's value
 
@@ -326,6 +346,8 @@ It considers the declarative conditions only. The server-side answers are alread
 | `visible()` | `(Closure(?Model): bool\|bool $condition = true): static` | server, once per render |
 | `hidden()` | `(Closure(?Model): bool\|bool $condition = true): static` | server, once per render |
 | `disabled()` | `(bool $disabled = true): static` | server, at build time |
+| `immutable()` | `(bool $immutable = true): static` | server, at build time |
+| `immutableOn()` | `(list<string> $pages): static` | server, at build time |
 | `visibleWhen()` | `(string $field, ConditionOperator $operator = Truthy, mixed $value = null): static` | browser, per keystroke |
 | `hiddenWhen()` | `(string $field, ConditionOperator $operator = Truthy, mixed $value = null): static` | browser, per keystroke |
 | `isHiddenOn()` | `(string $page, ?Model $record = null): bool` | — |
@@ -351,7 +373,7 @@ TextInput::make('other_kind')
 
 **`visibleOn([])` hides the field everywhere.** An empty list is a list that names no page. Pass no `visibleOn()` at all for "no page restriction".
 
-**`disabled()` is not a write guard.** Use `dehydrated(false)` for a field that must never reach a column, and `hidden()` for one that must not exist at all.
+**`disabled()` is not a write guard.** Use `immutableOn()` for a field that must render locked *and* never reach a column, `dehydrated(false)` for one that must never reach a column at all, and `hidden()` for one that must not exist.
 
 **Conditions cannot read a relation manager's owner or the record.** They read the form's own values and nothing else. Record-dependent visibility is `visible()`/`hidden()`.
 

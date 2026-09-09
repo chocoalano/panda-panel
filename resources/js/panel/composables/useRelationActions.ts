@@ -2,6 +2,7 @@ import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type { Ref } from 'vue';
 import { safeUrl } from '@/lib/utils';
+import { opensModal } from '@/panel/actions/intent';
 import type { ActionDefinition } from '@/panel/types/action';
 import type { RelationEndpoints } from '@/panel/types/relation';
 
@@ -171,12 +172,9 @@ export function useRelationActions(
             return;
         }
 
-        // A form action and a confirmation both mean "hold this until the
-        // user has said something more", which is what the dialog is for. A
-        // form action held here used to fall straight through to `dispatch`,
-        // so it ran immediately with none of the values it was declared to
-        // collect.
-        if (request.action.confirmation || request.action.type === 'form') {
+        // Held until the user has said something more — the same three
+        // declarations every other entry point honours. See `opensModal()`.
+        if (opensModal(request.action)) {
             pending.value = request;
 
             return;

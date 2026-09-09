@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 use PandaPanel\Tables\Columns\Column;
 use PandaPanel\Tables\Enums\SortDirection;
 use PandaPanel\Tables\Enums\TableLayout;
@@ -117,6 +118,32 @@ final readonly class TableQuery
         }
 
         return data_get($this->request->query(), $this->namespace.'.'.$key);
+    }
+
+    /**
+     * Whether the request carried this parameter at all — regardless of what
+     * it carried in it.
+     *
+     * The distinction the value alone cannot make. A query string has no way
+     * to spell an empty array, so "I have cleared every filter" is sent as
+     * `filters=` — and `ConvertEmptyStringsToNull`, which nearly every Laravel
+     * application runs, rewrites that to null before any of this sees it.
+     * Reading the value then gives the same answer for "the user cleared
+     * everything" and "the user said nothing", and with persistence on those
+     * two mean opposite things: one must wipe the stored filters, the other
+     * must restore them. Clearing appeared to do nothing at all.
+     *
+     * The middleware replaces values and leaves keys alone, so the key is
+     * still there to be asked about. That is what makes an explicit empty
+     * distinguishable from silence without inventing a sentinel value a real
+     * filter could one day collide with.
+     */
+    private function namespacedPresent(string $key): bool
+    {
+        return Arr::has(
+            $this->request->query(),
+            $this->namespace === null ? $key : $this->namespace.'.'.$key,
+        );
     }
 
     /**
@@ -437,7 +464,7 @@ final readonly class TableQuery
     private function readFilterParams(): array
     {
         $raw = $this->namespaced('filters');
-        $present = $raw !== null;
+        $present = $this->namespacedPresent('filters');
         $filters = is_array($raw) ? $raw : [];
 
         $enabled = $this->schema->persistsFiltersInSession();
@@ -754,7 +781,7 @@ final readonly class TableQuery
     private function persistedColumnState(): array
     {
         $raw = $this->namespaced('columns');
-        $present = $raw !== null;
+        $present = $this->namespacedPresent('columns');
         $columns = is_array($raw) ? $this->stringKeyed($raw) : [];
 
         $enabled = $this->schema->persistsColumnsInSession();

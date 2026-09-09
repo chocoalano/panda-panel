@@ -38,14 +38,24 @@ final class PanelNotification implements ShouldBroadcast
         public readonly string $type = 'info',
         public readonly ?string $url = null,
         public readonly ?string $urlLabel = null,
-    ) {}
+    ) {
+        // Captured now rather than when the event is broadcast. A queued
+        // broadcast runs in a worker where the tenant that dispatched it is
+        // no longer bound, and resolving there would name the wrong channel —
+        // or the central one — and the notification would simply never
+        // arrive. Here, the tenant context is the one that sent it.
+        $this->channel = self::channelFor($user);
+    }
+
+    /** The channel this notification was addressed to when it was created. */
+    private readonly string $channel;
 
     /**
      * @return list<Channel>
      */
     public function broadcastOn(): array
     {
-        return [new PrivateChannel(self::channelFor($this->user))];
+        return [new PrivateChannel($this->channel)];
     }
 
     /**
@@ -54,7 +64,7 @@ final class PanelNotification implements ShouldBroadcast
      */
     public static function channelFor(Authenticatable $user): string
     {
-        return 'App.Models.User.'.$user->getAuthIdentifier();
+        return NotificationChannel::for($user);
     }
 
     public function broadcastAs(): string

@@ -276,7 +276,19 @@ final class FormSchema
 
         $rules = [];
 
+        $unwritable = $this->unwritableRelationshipFieldNames($record);
+
         foreach ($this->fields($record) as $field) {
+            // A field in a group this actor may not write is not their
+            // problem. Demanding it would block an edit to some unrelated
+            // part of the form on a value they are not allowed to supply —
+            // so it validates as nothing and is dropped before any write.
+            if (in_array($field->getName(), $unwritable, true)) {
+                $rules[$field->getName()] = ['nullable'];
+
+                continue;
+            }
+
             $rules[$field->getName()] = $field->validationRules($record);
 
             if ($field instanceof PasswordInput && $field->isConfirmed()) {
@@ -420,6 +432,33 @@ final class FormSchema
     }
 
     /**
+     * The fields belonging to relation groups this actor may not write.
+     *
+     * A group's permission is not the form's. Embedding a salary in an
+     * employee form is a layout decision; who may write it is not, and a
+     * group that refuses the write must refuse it everywhere the value could
+     * get in — the rules, the attributes, and the relation writer itself.
+     *
+     * @return list<string>
+     */
+    private function unwritableRelationshipFieldNames(?Model $record): array
+    {
+        $names = [];
+
+        foreach ($this->relationshipGroups() as $group) {
+            if ($group->isWritable($record, new FormState($this->state), $this->page)) {
+                continue;
+            }
+
+            foreach ($group->fields() as $field) {
+                $names[] = $field->getName();
+            }
+        }
+
+        return $names;
+    }
+
+    /**
      * Turns validated input into the attributes to persist.
      *
      * A field that declines to dehydrate, such as an untouched password, is
@@ -509,7 +548,15 @@ final class FormSchema
         $this->hydrateRelationshipFields();
 
         foreach ($this->relationshipGroups() as $group) {
-            $group->save($record, $validated);
+            // The guard itself. Whatever survived validation, a group that
+            // refuses the write is never handed the values — presentation,
+            // field-level dehydration settings and a crafted body all lose
+            // to this, because it is asked here rather than in the browser.
+            if (! $group->isWritable($record, new FormState($this->state), $this->page)) {
+                continue;
+            }
+
+            $group->save($record, $validated, $this->page);
         }
 
         if ($this->modelClass === null) {

@@ -2,6 +2,7 @@ import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type { Ref } from 'vue';
 import { safeUrl } from '@/lib/utils';
+import { opensModal } from '@/panel/actions/intent';
 import type { ActionDefinition, ActionEndpoints } from '@/panel/types/action';
 
 export type UseInfolistActionsReturn = {
@@ -102,9 +103,9 @@ export function useInfolistActions(
                 return;
             }
 
-            // A confirmation and a form both mean "hold this until the user
-            // has said something more", which is what the modal is for.
-            if (action.confirmation || action.type === 'form') {
+            // Held until the user has said something more — see
+            // `opensModal()`.
+            if (opensModal(action)) {
                 pending.value = action;
 
                 return;

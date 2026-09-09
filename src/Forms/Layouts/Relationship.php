@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PandaPanel\Forms\Layouts;
 
+use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 use PandaPanel\Forms\Components\Field;
 use PandaPanel\Forms\Components\FormComponent;
+use PandaPanel\Forms\Support\CallbackParameters;
+use PandaPanel\Forms\Support\FormState;
 use PandaPanel\Support\ColumnCount;
 use PandaPanel\Support\Label;
 
@@ -50,7 +53,66 @@ final class Relationship extends FormComponent
      */
     private bool $createsMissing = true;
 
+    /**
+     * Decides whether this group may be written at all.
+     *
+     * Null means writable, which is what every group declared before this
+     * existed means — see `authorize()`.
+     */
+    private ?Closure $authorizeUsing = null;
+
     public function __construct(private readonly string $relation) {}
+
+    /**
+     * Guards the write this group performs.
+     *
+     *     Relationship::make('salary')
+     *         ->authorize(fn (?Model $record) => Gate::allows('updateSalary', $record))
+     *
+     * A form's own permission is one question and a relation group's is
+     * another. Embedding a salary in an employee form is a layout decision,
+     * and it used to be an authorization decision too: whoever could pass
+     * `canEdit()` on the employee could write every group the schema
+     * declared, because `saveRelations()` wrote all of them unconditionally.
+     * The group did not have to be rendered — a crafted body carrying
+     * `salary[amount]` was enough.
+     *
+     * Hiding or disabling the group is not this. Both are presentation, and
+     * a request the browser never made ignores presentation entirely. This is
+     * evaluated on the server, from the schema, every time the form is
+     * validated or written.
+     *
+     * Receives whatever it asks for — the record, the operation, the form
+     * state — through the same injection every other schema callback uses.
+     *
+     * @param  Closure  $callback  returning false to refuse the write
+     */
+    public function authorize(Closure $callback): self
+    {
+        $this->authorizeUsing = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Whether this group may be written for the record and operation in hand.
+     *
+     * True when nothing was declared, so a schema written before this existed
+     * behaves exactly as it did.
+     */
+    public function isWritable(?Model $record = null, ?FormState $state = null, ?string $page = null): bool
+    {
+        if ($this->authorizeUsing === null) {
+            return true;
+        }
+
+        return (bool) CallbackParameters::call(
+            $this->authorizeUsing,
+            [$record, $page],
+            $state ?? new FormState,
+            ['record' => $record, 'page' => $page, 'operation' => $page],
+        );
+    }
 
     public static function make(string $relation): self
     {
@@ -144,7 +206,7 @@ final class Relationship extends FormComponent
      *
      * @param  array<string, mixed>  $validated  the whole form's validated input, nested
      */
-    public function save(Model $owner, array $validated): void
+    public function save(Model $owner, array $validated, ?string $page = null): void
     {
         $relation = $owner->{$this->relation}();
 
@@ -152,7 +214,7 @@ final class Relationship extends FormComponent
             return;
         }
 
-        $attributes = $this->attributes($validated, $owner);
+        $attributes = $this->attributes($validated, $owner, $page);
 
         if ($attributes === []) {
             return;
@@ -179,7 +241,7 @@ final class Relationship extends FormComponent
      * @param  array<string, mixed>  $validated
      * @return array<string, mixed>
      */
-    private function attributes(array $validated, Model $owner): array
+    private function attributes(array $validated, Model $owner, ?string $page = null): array
     {
         $related = $this->existing($owner);
         $attributes = [];
@@ -187,7 +249,19 @@ final class Relationship extends FormComponent
         foreach ($this->fields() as $field) {
             $path = $field->getName();
 
+            // Told which operation this is, so `immutableOn()` and a
+            // page-dependent `dehydrated()` mean the same thing inside a
+            // relation group as they do on the form's own fields.
+            $field->onPage($page);
+
             if (! self::hasPath($validated, $path)) {
+                continue;
+            }
+
+            // A child that refuses to be written refuses here too. Without
+            // this, `dehydrated(false)` and `immutable()` were honoured on the
+            // owner's own attributes and silently ignored on a group's.
+            if (! $field->isDehydrated($related)) {
                 continue;
             }
 

@@ -9,9 +9,12 @@ import ActionButton from '@/panel/actions/ActionButton.vue';
 import { resolveIcon } from '@/panel/icons/registry';
 import DataTableFilters from '@/panel/tables/DataTableFilters.vue';
 import DataTableSortMenu from '@/panel/tables/DataTableSortMenu.vue';
+import { completeRules, hasIncomplete } from '@/panel/tables/queryBuilderRules';
 import type { ActionDefinition } from '@/panel/types/action';
 import type {
+    FilterDefinition,
     FilterValue,
+    QueryBuilderRule,
     TableDefinition,
     TableState,
 } from '@/panel/types/table';
@@ -48,6 +51,27 @@ const pending = ref<Record<string, FilterValue | null>>({});
 
 const hasPending = computed(() => Object.keys(pending.value).length > 0);
 
+/**
+ * Query-builder rules the user is still composing.
+ *
+ * A rule with no value yet is not a condition the server can run, and it
+ * rightly drops it. On a table that filters immediately that answer used to
+ * come straight back and replace the editor's contents, so the row somebody
+ * had just added to fill in disappeared under them — which made "Add
+ * condition" unusable without deferring the whole table.
+ *
+ * So the editor keeps its own copy while any rule is incomplete, and sends
+ * only the ones the server can execute. Held per filter, and only for as
+ * long as it differs from what the server applied: once every rule is
+ * complete the server's answer says the same thing, and a second copy of it
+ * would only be a way for the two to disagree.
+ */
+const drafts = ref<Record<string, QueryBuilderRule[]>>({});
+
+function definitionFor(name: string): FilterDefinition | undefined {
+    return props.table.filters.find((filter) => filter.name === name);
+}
+
 watch(
     () => props.state.filters,
     () => {
@@ -61,7 +85,12 @@ watch(
  */
 const filterValues = computed<Record<string, FilterValue>>(() => {
     if (!behaviour.value.deferred) {
-        return props.state.filters;
+        // What the server applied, plus whatever is still being composed in a
+        // query builder. Without the second half an incomplete rule vanishes
+        // the moment the server answers.
+        return Object.keys(drafts.value).length === 0
+            ? props.state.filters
+            : { ...props.state.filters, ...drafts.value };
     }
 
     const merged: Record<string, FilterValue> = { ...props.state.filters };
@@ -78,13 +107,54 @@ const filterValues = computed<Record<string, FilterValue>>(() => {
 });
 
 function onFilter(name: string, value: FilterValue | null): void {
-    if (!behaviour.value.deferred) {
-        emit('filter', name, value);
+    if (behaviour.value.deferred) {
+        pending.value = { ...pending.value, [name]: value };
 
         return;
     }
 
-    pending.value = { ...pending.value, [name]: value };
+    emit('filter', name, executable(name, value));
+}
+
+/**
+ * The part of a filter's value the server can act on, remembering the rest.
+ *
+ * Only query builders have a "rest": every other filter is a single value
+ * that is either set or not. A rule the server would refuse is kept here and
+ * merged back over its answer, so the row survives while the user fills it
+ * in — and is forgotten as soon as it no longer needs to be.
+ */
+function executable(
+    name: string,
+    value: FilterValue | null,
+): FilterValue | null {
+    const filter = definitionFor(name);
+
+    if (
+        filter === undefined ||
+        filter.type !== 'query_builder' ||
+        !Array.isArray(value)
+    ) {
+        delete drafts.value[name];
+
+        return value;
+    }
+
+    const rules = value as QueryBuilderRule[];
+
+    if (hasIncomplete(filter, rules)) {
+        drafts.value = { ...drafts.value, [name]: rules };
+    } else {
+        const { [name]: _dropped, ...rest } = drafts.value;
+
+        drafts.value = rest;
+    }
+
+    const complete = completeRules(filter, rules);
+
+    // Null rather than an empty list, so a filter with nothing executable
+    // reads as "not applied" exactly as it did before.
+    return complete.length > 0 ? complete : null;
 }
 
 function applyFilters(): void {

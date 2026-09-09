@@ -73,6 +73,17 @@ abstract class Field extends FormComponent
     protected array $disabledOn = [];
 
     /**
+     * Pages the field is immutable on — shown, not editable, and not writable
+     * from the request whatever arrives. See `immutableOn()`.
+     *
+     * @var list<string>
+     */
+    protected array $immutableOn = [];
+
+    /** Immutable everywhere. See `immutable()`. */
+    protected bool $immutable = false;
+
+    /**
      * Pages the field is required on, when that is not every page.
      *
      * Null means "whatever `required()` said, everywhere", which is what every
@@ -326,6 +337,71 @@ abstract class Field extends FormComponent
     }
 
     /**
+     * Shown, not editable, and not writable — on every page.
+     *
+     * `disabled()` is presentation only, and deliberately so: it describes a
+     * browser state, and the browser is not where write authority lives. A
+     * disabled control simply is not submitted, so nothing arrives; a request
+     * that was not made by that browser can still carry the field, and
+     * `dehydrate()` will pass it through. That is documented, and it is why
+     * `dehydrated(false)` exists.
+     *
+     * The trouble is that a field which must not be edited nearly always
+     * needs both, and the two are declared separately:
+     *
+     *     ->disabledOn(['edit'])
+     *     ->dehydrated(fn () => ...)     // the half that is easy to forget
+     *
+     * Forget the second and the form looks locked while the column is wide
+     * open — which is exactly the shape a crafted request is looking for.
+     *
+     * This says both once. The field renders disabled *and* the server
+     * refuses to write it, so the guard cannot be half-declared.
+     *
+     * It also stops being required, because a value the server will not
+     * accept cannot sensibly be demanded from the client — see `isRequired()`.
+     */
+    public function immutable(bool $immutable = true): static
+    {
+        $this->immutable = $immutable;
+
+        return $this;
+    }
+
+    /**
+     * The same, on the named pages only.
+     *
+     *     TextInput::make('employee_code')->immutableOn(['edit'])
+     *
+     * Set once at creation, locked afterwards. On every other page the field
+     * behaves normally, so a create form still writes it.
+     *
+     * @param  list<string>  $pages
+     */
+    public function immutableOn(array $pages): static
+    {
+        $this->immutableOn = $pages;
+
+        return $this;
+    }
+
+    /**
+     * Whether the field refuses writes on this page.
+     *
+     * The page defaults to whichever one the schema is building — see
+     * `onPage()` — so `dehydrate()` and the serializer agree without either
+     * having to be told.
+     */
+    public function isImmutableOn(?string $page = null): bool
+    {
+        if ($this->immutable) {
+            return true;
+        }
+
+        return in_array($page ?? $this->pageContext ?? 'create', $this->immutableOn, true);
+    }
+
+    /**
      * Requires the field on the named pages, and only those.
      *
      * The other half of `disabledOn()`, and the pair is what makes a
@@ -365,6 +441,14 @@ abstract class Field extends FormComponent
      */
     public function isRequired(?string $page = null): bool
     {
+        // A value the server refuses to accept cannot be demanded from the
+        // client. Without this, `immutableOn(['edit'])->required()` would fail
+        // every edit on a field nobody can type into — the contradiction
+        // `FormSchema::reportImpossibleRequirements()` exists to catch.
+        if ($this->isImmutableOn($page)) {
+            return false;
+        }
+
         if (! $this->required) {
             return false;
         }
@@ -710,6 +794,12 @@ abstract class Field extends FormComponent
 
     public function isDisabledOn(string $page, ?Model $record = null): bool
     {
+        // Immutability is a stronger statement than disabling and includes it:
+        // a field the server will not write has no business being editable.
+        if ($this->isImmutableOn($page)) {
+            return true;
+        }
+
         if ($this->disabled) {
             return true;
         }
@@ -757,6 +847,15 @@ abstract class Field extends FormComponent
      */
     public function isDehydrated(?Model $record = null): bool
     {
+        // The half that makes `immutable()` a guard rather than a style. It
+        // wins over an explicit `dehydrated(true)`: declaring a field
+        // immutable and then asking for it to be written is a contradiction,
+        // and the safe reading of a contradiction is the one that writes
+        // nothing.
+        if ($this->isImmutableOn()) {
+            return false;
+        }
+
         if ($this->dehydrated === null) {
             return true;
         }

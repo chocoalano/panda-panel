@@ -191,3 +191,52 @@ describe('the sequence a chip close produces', () => {
         expect(readable(query)).toBe('filters[status]=open');
     });
 });
+
+/*
+ * The clear marker, as the server now reads it
+ *
+ * A query string cannot spell an empty array, so `filters=` is how the
+ * frontend says "filters, and there are none". `ConvertEmptyStringsToNull`
+ * then rewrites the value to null — but leaves the key, which is what the
+ * server reads to tell an explicit clear from silence.
+ *
+ * These pin the half of that contract this side owns: the key must be
+ * written, and it must not be written when real filters are present.
+ */
+describe('the marker a clear leaves behind', () => {
+    it('sends an explicit clear marker instead of relying on an empty string', () => {
+        const params = new URLSearchParams('filters[status]=active');
+
+        clearFilterParam(params, 'filters[status]');
+        markFiltersExplicit(params, 'filters');
+
+        // The bare key, present and empty. Its presence is the whole signal;
+        // its value is nulled in flight and never read.
+        expect(params.has('filters')).toBe(true);
+        expect(params.get('filters')).toBe('');
+        expect(params.has('filters[status]')).toBe(false);
+    });
+
+    it('leaves the marker off while any filter is still set', () => {
+        const params = new URLSearchParams(
+            'filters[status]=active&filters[kind]=a',
+        );
+
+        clearFilterParam(params, 'filters[status]');
+        markFiltersExplicit(params, 'filters');
+
+        // One filter going away is not a clear-all: the remaining one is
+        // still sent, and the bare key would contradict it.
+        expect(params.has('filters')).toBe(false);
+        expect(params.get('filters[kind]')).toBe('a');
+    });
+
+    it('survives being applied twice', () => {
+        const params = new URLSearchParams();
+
+        markFiltersExplicit(params, 'filters');
+        markFiltersExplicit(params, 'filters');
+
+        expect(params.getAll('filters')).toEqual(['']);
+    });
+});

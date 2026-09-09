@@ -154,6 +154,35 @@ $schema->relationshipGroups();   // list<Relationship>, found at any depth
 
 Relation managers have a second kind of relationship form: the related record's own fields and the pivot's, side by side. `PandaPanel\Resources\RelationForm` merges the two schemas for rendering and validation and keeps them apart for persistence, namespacing the pivot half under `pivot.` so a `role` column on the join table cannot overwrite a `role` column on the record. See [Pivot fields](../relations/pivot-fields.md).
 
+## Who may write a group
+
+```php
+public function authorize(Closure $callback): self
+```
+
+```php
+Relationship::make('salary')
+    ->schema([TextInput::make('amount')])
+    ->authorize(fn (?Model $record) => Gate::allows('updateSalary', $record));
+```
+
+A form's own permission is one question and a group's is another. Editing an employee and editing their salary are rarely the same right, and embedding one in the other is a layout decision — not an authorization one.
+
+Without `authorize()`, a group is writable by anyone who may submit the form, which is what every group declared before this method existed means and what they go on meaning. Declare it on the groups where the boundary is real.
+
+The callback runs on the server, from the schema, and is asked once per group per operation. It receives whatever it asks for — the record, the operation, the form state — through the same parameter injection every other schema callback uses. On a create form there is no persisted parent yet, so the record is `null` and the operation is `create`.
+
+When it answers false:
+
+- the group's fields validate as `nullable`, so a required field inside it cannot block somebody editing an unrelated part of the form;
+- the values never reach the relation writer, whatever arrived in the request.
+
+The rest of the form saves normally. Refusing is silent rather than an error, which is the same shape `dehydrated(false)` and `immutable()` already have — this package omits what must not be written rather than throwing about it. A group can therefore be shown read-only and simply not written, and an honest browser resubmitting the value it was shown is not treated as an attack.
+
+> **Hiding or disabling a group is not authorization.** Both are presentation, and a request the browser never made ignores presentation entirely. A crafted body carrying `salary[amount]` reaches the server whether or not the group was rendered. Use `authorize()` for anything sensitive.
+
+Field-level guards still apply inside a group that is writable — an `immutableOn(['edit'])` child stays protected — and they cannot argue the other way: a group that refuses the write refuses it whatever its fields declare.
+
 ## What is not supported here
 
 - **A to-many relation in a `Relationship` group.** The layout writes one related record. A list of related records is a [relation manager](../relations/relation-managers.md), a [nested resource](../resources/nested-resources.md), or — when the rows are plain data rather than records — a [`Repeater`](fields/repeater.md).
@@ -169,6 +198,7 @@ Relation managers have a second kind of relationship form: the related record's 
 - **`getRelationValue()` is what "existing" means.** A relation the owner has not loaded is loaded by that call; one that resolves to something other than a model counts as absent.
 - **Two fields with the same full name still throws.** The prefix is applied before the uniqueness check, so `profile.bio` and `bio` are two names — but two `bio` fields inside one group are not.
 - **A group renders even when empty.** Layouts always render; only fields disappear per page.
+- **A child that declines to dehydrate is honoured.** `dehydrated(false)` and `immutableOn()` on a field inside a group keep it out of the related record's attributes, the same way they do on the owner's own.
 
 ## See also
 

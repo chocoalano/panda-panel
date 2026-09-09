@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PandaPanel\Forms\Components;
 
+use BackedEnum;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -455,13 +456,52 @@ final class Select extends Field
     /**
      * @return string|int|list<string>|null
      */
+    /**
+     * The value the control binds to.
+     *
+     * A cast attribute arrives as whatever the model casts it to, and for an
+     * enum that is a case object — neither a string nor an int. It used to
+     * fall through to null, which is not a display bug: the control rendered
+     * empty, the browser submitted the empty value back, and an edit that
+     * meant to change somebody's name wrote null over their employment type.
+     * The value was lost by saving a form nobody had touched.
+     *
+     * So a backed enum is unwrapped to the value it is backed by, which is
+     * also what the option keys are and what the column stores. `strval()` is
+     * deliberately not used for the single case: an int-backed enum is an int
+     * on the wire, exactly as a plain int column already is, and stringifying
+     * it here would change the contract for every integer select.
+     *
+     * A pure (non-backed) enum has no value to bind to and still reads as
+     * null — there is nothing an option list could match it against.
+     */
     protected function castForForm(mixed $value): string|int|array|null
     {
         if ($this->multiple) {
-            return is_array($value) ? array_values(array_map(strval(...), $value)) : [];
+            return is_array($value)
+                ? array_values(array_map(
+                    static fn (mixed $entry): string => (string) self::backingOf($entry),
+                    $value,
+                ))
+                : [];
         }
 
+        $value = self::backingOf($value);
+
         return is_string($value) || is_int($value) ? $value : null;
+    }
+
+    /**
+     * What a value is worth to an option list: a backed enum's own backing
+     * value, and anything else unchanged.
+     *
+     * The same unwrapping `BadgeColumn` does, kept to one expression here
+     * rather than becoming a shared abstraction — two call sites in two
+     * layers is not yet a framework.
+     */
+    private static function backingOf(mixed $value): mixed
+    {
+        return $value instanceof BackedEnum ? $value->value : $value;
     }
 
     /**

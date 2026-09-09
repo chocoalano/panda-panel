@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Tests\Fixtures\Panel\Enums\EmploymentType;
+use Tests\Fixtures\Panel\Enums\Priority;
 
 /**
  * The owner side of every relation shape the panel supports.
@@ -23,6 +25,14 @@ final class Project extends Model
     protected $table = 'fixture_projects';
 
     protected $guarded = [];
+
+    /**
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'employment_type' => EmploymentType::class,
+        'priority' => Priority::class,
+    ];
 
     public $timestamps = false;
 

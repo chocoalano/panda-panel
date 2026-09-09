@@ -36,14 +36,21 @@ final class PanelNotificationSent implements ShouldBroadcast
     public function __construct(
         public readonly Authenticatable $user,
         public readonly array $payload,
-    ) {}
+    ) {
+        // See `PanelNotification`: resolved while the sender's tenant is
+        // still bound, not in whatever context the queue runs it.
+        $this->channel = PanelNotification::channelFor($user);
+    }
+
+    /** The channel this notification was addressed to when it was created. */
+    private readonly string $channel;
 
     /**
      * @return list<Channel>
      */
     public function broadcastOn(): array
     {
-        return [new PrivateChannel(PanelNotification::channelFor($this->user))];
+        return [new PrivateChannel($this->channel)];
     }
 
     public function broadcastAs(): string

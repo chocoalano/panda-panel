@@ -671,3 +671,95 @@ it('clears a remembered search when the request says the search is empty', funct
     expect(namesForQueryString($schema, 'search=Orphan', $key))->toBe(['Orphan'])
         ->and(namesForQueryString($schema, 'page=1', $key))->toBe(['Orphan']);
 });
+
+/*
+ * Incomplete query-builder rules — the server half of PP-27
+ *
+ * A rule the user has only just added carries no value yet. The server is
+ * right to refuse it: a comparison with nothing to compare against is not a
+ * condition, and running it anyway would filter by something nobody asked
+ * for. The fix for the disappearing editor row is entirely client-side, so
+ * these exist to hold this behaviour still while that changes around it.
+ */
+
+// `sanitize()` answers null rather than an empty list when nothing survives:
+// a filter with no runnable rule is not applied at all.
+it('drops a rule whose operator needs a value it was not given', function (): void {
+    $filter = QueryBuilderFilter::make('conditions')
+        ->constraints([TextConstraint::make('name')]);
+
+    expect($filter->sanitize([
+        ['column' => 'name', 'operator' => 'equals', 'value' => null],
+    ]))->toBeNull();
+});
+
+it('drops a rule whose value is an empty string', function (): void {
+    $filter = QueryBuilderFilter::make('conditions')
+        ->constraints([TextConstraint::make('name')]);
+
+    expect($filter->sanitize([
+        ['column' => 'name', 'operator' => 'equals', 'value' => ''],
+    ]))->toBeNull();
+});
+
+it('keeps a rule whose operator needs no value', function (): void {
+    $filter = QueryBuilderFilter::make('conditions')
+        ->constraints([TextConstraint::make('name')]);
+
+    // `is_filled` is complete on its own — the client treats it the same way.
+    expect($filter->sanitize([
+        ['column' => 'name', 'operator' => 'is_filled', 'value' => null],
+    ]))->toHaveCount(1);
+});
+
+it('keeps the complete rules and drops the incomplete one beside them', function (): void {
+    Task::query()->create(['name' => 'Alpha', 'project_id' => null]);
+    Task::query()->create(['name' => 'Beta', 'project_id' => null]);
+
+    // The mixed state an editor is in while somebody adds a second condition.
+    $names = filteredNames(queryBuilderSchema(), [
+        'filters' => [
+            'conditions' => [
+                ['column' => 'name', 'operator' => 'starts_with', 'value' => 'Al'],
+                ['column' => 'name', 'operator' => 'equals', 'value' => null],
+            ],
+        ],
+    ]);
+
+    // Narrowed by the complete rule only, not by both and not by neither.
+    expect($names)->toBe(['Alpha']);
+});
+
+it('still refuses a column this filter never declared', function (): void {
+    $filter = QueryBuilderFilter::make('conditions')
+        ->constraints([TextConstraint::make('name')]);
+
+    expect($filter->sanitize([
+        ['column' => 'password', 'operator' => 'equals', 'value' => 'x'],
+    ]))->toBeNull();
+});
+
+it('still refuses an operator that is not one', function (): void {
+    $filter = QueryBuilderFilter::make('conditions')
+        ->constraints([TextConstraint::make('name')]);
+
+    expect($filter->sanitize([
+        ['column' => 'name', 'operator' => 'drop_table', 'value' => 'x'],
+    ]))->toBeNull();
+});
+
+it('still refuses a value of the wrong shape', function (): void {
+    $filter = QueryBuilderFilter::make('conditions')
+        ->constraints([NumberConstraint::make('id')]);
+
+    expect($filter->sanitize([
+        ['column' => 'id', 'operator' => 'equals', 'value' => ['nested']],
+    ]))->toBeNull();
+});
+
+it('answers nothing for a forged payload that is not a list of rules', function (): void {
+    $filter = QueryBuilderFilter::make('conditions')
+        ->constraints([TextConstraint::make('name')]);
+
+    expect($filter->sanitize('not-an-array'))->toBeNull();
+});

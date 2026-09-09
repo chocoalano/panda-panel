@@ -25,6 +25,10 @@ final class RelationSchema
         Schema::create('fixture_projects', function (Blueprint $table): void {
             $table->id();
             $table->string('name');
+            // Enum-backed columns, nullable so an untouched-edit test can
+            // tell "left alone" from "overwritten with null".
+            $table->string('employment_type')->nullable();
+            $table->integer('priority')->nullable();
         });
 
         Schema::create('fixture_tasks', function (Blueprint $table): void {

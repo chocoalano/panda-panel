@@ -142,6 +142,13 @@ final class FormFixtureResource extends Resource
                     default => [],
                 }),
 
+            // PP-02 — an int-backed enum select on the resource's real edit
+            // page. `employment_type` below is the string-backed half; both
+            // columns are cast to enums on the model, and the value a Select
+            // holds must be the enum's backing value or an ordinary edit of
+            // some other field submits null over it.
+            Select::make('priority')->options([1 => 'Low', 2 => 'High']),
+
             // Part N — visibility decided on the server from the form state.
             // `hiddenWhen()` covers a comparison the browser can make; this
             // covers a rule it cannot, and is re-evaluated when a live field
