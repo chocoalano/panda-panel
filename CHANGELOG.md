@@ -9,6 +9,67 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A relation group can decide who may write it.** `FormSchema::saveRelations()` wrote every
+  `Relationship` group a form declared, so the form's own permission was the permission for all of
+  them. Embedding a salary in an employee form is a layout decision; who may write it is not — and
+  the group did not even have to be rendered, because a crafted body carrying `salary[amount]` was
+  enough. `Relationship::authorize()` answers per group, on the server, asked once per write. A
+  refusal reaches the validation rules as well as the writer, so somebody who may not supply a
+  value is not blocked by it being required. Groups without it behave exactly as before.
+- **A field can refuse writes, not just look like it does.** `disabled()` is presentation and is
+  documented as such: the browser does not submit a disabled control, and a request the browser
+  never made can carry anything. Guarding a field therefore took two declarations, and forgetting
+  the second left a form that looked locked over a column that was open. `immutable()` and
+  `immutableOn()` say both at once — rendered disabled, never dehydrated, and not required on the
+  pages where they apply. `disabled()` and `dehydrated(false)` are unchanged.
+- **Notification channels can tell two tenants apart.** The channel was named after a row id, which
+  is unique inside one database; an application with a database per tenant has a user 1 in each of
+  them and broadcasting is one shared namespace, so they shared a private channel. A panel using
+  this package's tenancy is now isolated without configuration, a central context gets a namespace
+  of its own rather than falling back to the bare id, and `Panel::broadcastChannelUsing()` covers
+  tenancy this package cannot see. Producer, subscriber and `NotificationChannel::authorize()` read
+  one resolver, and the channel is captured when a notification is created so a queued broadcast
+  keeps the tenant that sent it. A panel without tenancy keeps the name it had.
+- **An action that declared modal copy waits to be confirmed.** `modalHeading()` and
+  `modalDescription()` were accepted, serialized, and then ignored: the handler ran on the first
+  click and neither sentence was shown. Destructive actions were written believing that guard was
+  there. Every entry point — resource, relation, bulk, infolist — now shares one predicate.
+
+### Fixed
+
+- **A `Select` bound to a cast enum no longer loses the value.** The form cast tested for string
+  and int, and an enum case is neither, so it read as null: the control came up blank, the browser
+  posted the blank back, and an edit meant to change some other field wrote null over it. Backed
+  enums are unwrapped to their backing value — an int-backed enum stays an int on the wire.
+- **Clearing a persisted filter clears it.** A query string cannot spell an empty array, so an
+  explicit clear is sent as `filters=`, and `ConvertEmptyStringsToNull` rewrote that to null before
+  the table read it — making "I cleared everything" indistinguishable from "I said nothing", which
+  with persistence on means the opposite. Presence of the key is now what is asked, so all three
+  states are distinct. Persisted column overrides shared the reader and the fix.
+- **"Add condition" works on a table that filters immediately.** A rule with no value yet is not a
+  condition and the server rightly refused it — but its answer then replaced the editor, deleting
+  the row the user had just added. The editor keeps what is still being written and sends only what
+  can run; the sanitizer is unchanged.
+- Relation manager actions can carry forms, on rows, in bulk, and in the header — including file
+  uploads, validation, and dehydration — without an application controller or routes.
+- `recordTitle()` falls back to the record key instead of assuming a `name` attribute.
+
+### Added
+
+- `live()` works on every surface that renders a form: create, edit, an action's form, a relation
+  form, and a relation action's form, through one context and one endpoint. `visible()` and
+  `hidden()` can read the form state, so a rebuild can change which fields exist.
+- `FormState`, `Get` and `Set` for reactive callbacks, with an explicit state patch so a server can
+  clear a child field that its parent has invalidated. Callbacks asking for none of them are called
+  exactly as before.
+- `Select::optionsUsing()` and `Select::modifyOptionsQueryUsing()` receive the form state, so a
+  searchable select can be scoped by a sibling field.
+- `Panel::brandName()` accepts a closure, and `Panel::tenantLabel()` names the current tenant —
+  both evaluated per render, and tenant identity is shown whether or not there is a switcher.
+- `ResourcePage::$submitLabel`, duplicate state-path detection, and a frontend/backend contract
+  version that reports drift with the command that fixes it.
+
+
 - **`package.json` reaches the Composer archive, so `panel:install` can see the frontend
   dependencies again.** `.gitattributes` carried `/package.json export-ignore`, and
   `FrontendRequirements::npmPackages()` reads that file at runtime from inside `vendor/` to tell an
