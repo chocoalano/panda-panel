@@ -7,6 +7,7 @@ namespace PandaPanel\Widgets\Support;
 use PandaPanel\Support\Format;
 use PandaPanel\Support\SafeUrl;
 use PandaPanel\Widgets\Enums\StatColor;
+use PandaPanel\Widgets\Enums\StatSentiment;
 
 /**
  * One figure on a stats widget.
@@ -37,6 +38,14 @@ final readonly class Stat
         public ?string $prefix = null,
         public ?string $suffix = null,
         public ?int $decimals = null,
+        /**
+         * What the movement means, when the author said.
+         *
+         * Separate from the trend array because it answers a different
+         * question — see `StatSentiment`. Null until stated, and null
+         * serializes as `neutral`.
+         */
+        public ?StatSentiment $sentiment = null,
     ) {}
 
     public static function make(string $label, string|int|float $value): self
@@ -60,11 +69,62 @@ final readonly class Stat
     }
 
     /**
+     * Which way the number moved, and by how much.
+     *
+     * Direction only. What the movement *means* is a separate statement —
+     * `higherIsBetter()`, `lowerIsBetter()` or `sentiment()` — because a rise
+     * in revenue and a rise in error rate are the same arithmetic and
+     * opposite news.
+     *
      * @param  'up'|'down'|'neutral'  $direction
      */
     public function trend(string $direction, float $value): self
     {
         return $this->with(trend: ['direction' => $direction, 'value' => $value]);
+    }
+
+    /**
+     * This metric is doing well when it rises. Revenue, signups, uptime.
+     */
+    public function higherIsBetter(): self
+    {
+        return $this->withSentiment(true);
+    }
+
+    /**
+     * This metric is doing well when it falls. Cost, churn, error rate,
+     * time-to-resolution — the figures the old "up is green" assumption got
+     * exactly backwards.
+     */
+    public function lowerIsBetter(): self
+    {
+        return $this->withSentiment(false);
+    }
+
+    /**
+     * The meaning, stated outright.
+     *
+     * For a figure whose direction does not determine whether the news is
+     * good — a deliberate reduction in headcount, a planned drawdown — where
+     * "higher is better" is not a property of the metric at all.
+     */
+    public function sentiment(StatSentiment $sentiment): self
+    {
+        return $this->with(sentiment: $sentiment);
+    }
+
+    /**
+     * Resolves the meaning now rather than at render, so the frontend is
+     * handed an answer instead of a rule and a direction to apply it to.
+     */
+    private function withSentiment(bool $higherIsBetter): self
+    {
+        /** @var string $direction */
+        $direction = $this->trend['direction'] ?? 'neutral';
+
+        return $this->with(
+            sentiment: StatSentiment::forDirection($direction, $higherIsBetter),
+        );
     }
 
     /**
@@ -144,7 +204,15 @@ final readonly class Stat
             'description' => $this->description,
             'icon' => $this->icon,
             'color' => $this->color->value,
-            'trend' => $this->trend,
+            // The meaning travels inside the trend rather than beside it:
+            // there is nothing to mean when nothing moved, and a consumer
+            // reading `trend` gets the whole statement in one place.
+            'trend' => $this->trend === null
+                ? null
+                : [
+                    ...$this->trend,
+                    'sentiment' => ($this->sentiment ?? StatSentiment::Neutral)->value,
+                ],
             'chart' => $this->chart,
             'url' => $this->url,
         ];
@@ -167,6 +235,7 @@ final readonly class Stat
         ?string $prefix = null,
         ?string $suffix = null,
         ?int $decimals = null,
+        ?StatSentiment $sentiment = null,
     ): self {
         return new self(
             $this->label,
@@ -180,6 +249,7 @@ final readonly class Stat
             $prefix ?? $this->prefix,
             $suffix ?? $this->suffix,
             $decimals ?? $this->decimals,
+            $sentiment ?? $this->sentiment,
         );
     }
 }

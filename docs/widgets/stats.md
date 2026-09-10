@@ -151,7 +151,56 @@ Renders a badge next to the figure: an arrow, the value with a `%` sign appended
 Stat::make('Revenue', 12_045)->trend('up', 12.4);     // "↗ 12.4% Increased"
 ```
 
-The direction decides the colour, not the sign of the value — a *down* trend is red whether the number is `12.4` or `-12.4`. Pass the magnitude and say which way it went.
+Pass the magnitude and say which way it went — a *down* trend of `12.4` and one of `-12.4` are the same trend, and the sign is not read.
+
+The direction decides the **arrow and the wording**. It no longer decides the colour.
+
+> **Behaviour change.** Until this release, `up` was green and `down` was red. That
+> is right for revenue and signups and exactly backwards for cost, churn, error
+> rate, downtime and complaints — a rising error rate was reported as good news,
+> in green. Direction is arithmetic; whether a movement is welcome is a
+> statement the widget cannot derive. **A trend that does not say what it means
+> is now neutral rather than green or red.** Nothing else changed: the arrow,
+> the value and the wording are as they were, and no existing declaration needs
+> editing. To get the colour back, say what the figure means — below.
+
+### `higherIsBetter()` / `lowerIsBetter()`
+
+```php
+public function higherIsBetter(): self
+public function lowerIsBetter(): self
+```
+
+Says which way is good for this metric. The widget combines that with the
+direction to decide whether *this* movement is welcome:
+
+```php
+Stat::make('Revenue', 12_045)->trend('up', 12.4)->higherIsBetter();   // ↗ green
+Stat::make('Cost', 8_400)->trend('up', 12.4)->lowerIsBetter();        // ↗ red
+Stat::make('Error rate', 0.4)->trend('down', 30.0)->lowerIsBetter();  // ↘ green
+Stat::make('Sessions', 1_204)->trend('up', 5.0);                      // ↗ neutral
+```
+
+Both are about the *metric*, not this week's number, so they read the same way
+whichever direction the figure happens to have moved.
+
+### `sentiment()`
+
+```php
+public function sentiment(StatSentiment $sentiment): self
+```
+
+For a figure where "higher is better" is not a property of the metric at all —
+a deliberate reduction in headcount, a planned drawdown — state the meaning
+outright:
+
+```php
+use PandaPanel\Widgets\Enums\StatSentiment;
+
+Stat::make('Contractors', 8)->trend('down', 20.0)->sentiment(StatSentiment::Positive);
+```
+
+`StatSentiment` is `Positive`, `Negative` or `Neutral`.
 
 ### `chart()`
 
@@ -251,7 +300,9 @@ public function toArray(): array
     'description' => null,
     'icon' => 'receipt',
     'color' => 'success',
-    'trend' => ['direction' => 'up', 'value' => 12.4],   // or null
+    // `sentiment` is 'positive', 'negative' or 'neutral'; a payload from
+    // before it existed has no key and is read as neutral.
+    'trend' => ['direction' => 'up', 'value' => 12.4, 'sentiment' => 'neutral'],   // or null
     'chart' => [4, 9, 7],                                 // [] when none
     'url' => '/admin/orders',                             // or null
 ]

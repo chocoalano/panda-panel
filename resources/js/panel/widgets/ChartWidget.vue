@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, useId } from 'vue';
 
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -53,18 +53,77 @@ const GRID_LINES = 4;
 
 const activeIndex = ref<number | null>(null);
 
+/**
+ * Whether the data table under the chart is open.
+ *
+ * A disclosure rather than a permanently visible table, and rather than a
+ * visually hidden one. Visible-on-demand serves both readers: somebody who
+ * cannot use the picture can reach the numbers, and somebody who can is not
+ * given a second copy of the dashboard they did not ask for. A visually hidden
+ * table would serve only the first and would be invisible to a sighted user
+ * who simply wants the exact figures.
+ */
+const showData = ref(false);
+
+/**
+ * What a series is drawn in.
+ *
+ * The stylesheet already ships a category palette — `--chart-1` through
+ * `--chart-5` — and this widget was not using it. It was mapping the *status*
+ * vocabulary onto data series instead: a series called `danger` was red
+ * because the name said danger, not because the data meant anything bad.
+ *
+ * Those are two different jobs. A status colour answers "is this good?"; a
+ * category colour answers "which line is this?". Using the first for the
+ * second means a dashboard of four neutral metrics reads as one alarm and one
+ * warning, and it leaves nothing to say when a series genuinely *is* an alarm.
+ *
+ * The declared colour still chooses the hue, so an application that said
+ * `success` still gets a green line — the names are kept, the tokens behind
+ * them are now the category palette.
+ */
 const SERIES_CLASSES: Record<StatColor, string> = {
-    default: 'text-foreground/70',
-    success: 'text-emerald-500',
-    warning: 'text-amber-500',
-    danger: 'text-red-500',
-    info: 'text-sky-500',
+    default: 'text-chart-1',
+    success: 'text-chart-2',
+    warning: 'text-chart-4',
+    danger: 'text-chart-5',
+    info: 'text-chart-3',
 };
+
+/**
+ * A second distinction, for anyone who cannot use the first.
+ *
+ * Colour alone separated the series. Dashes are the conventional companion for
+ * lines and are applied only where they mean something: a bar or an area has
+ * no stroke to dash, so they get nothing rather than a decorative pattern.
+ */
+const SERIES_DASH: string[] = ['', '6 3', '2 3', '8 3 2 3', '1 4'];
+
+function dashFor(index: number): string | undefined {
+    if (props.variant === 'bar' || props.series.length < 2) {
+        return undefined;
+    }
+
+    return SERIES_DASH[index % SERIES_DASH.length] || undefined;
+}
 
 const plot = computed(() => ({
     width: WIDTH - PADDING.left - PADDING.right,
     height: HEIGHT - PADDING.top - PADDING.bottom,
 }));
+
+const isLine = computed(
+    () => props.variant === 'line' || props.variant === 'area',
+);
+
+/**
+ * Whether this chart stacks.
+ *
+ * `stacked` is a bar concept and the bar branch of the template is the only
+ * thing that reads it, so this has to mean exactly what that branch means: a
+ * line or an area is drawn at its own values whatever the option says.
+ */
+const isStackedBar = computed(() => !isLine.value && props.options.stacked);
 
 const allValues = computed(() =>
     props.series.flatMap((item) =>
@@ -77,6 +136,59 @@ const pointCount = computed(() =>
         props.labels.length,
         ...props.series.map((item) => item.values.length),
     ),
+);
+
+/**
+ * The running total a stacked column reaches, step by step.
+ *
+ * `stacks[pointIndex][seriesIndex]` is where that segment begins, and the
+ * entry after the last series is the whole column. Every entry is therefore a
+ * height the column actually reaches — which is what makes this one table
+ * enough for both jobs below: the axis is scaled from it and the rectangles
+ * are drawn from it, so the scale and the drawing cannot disagree. Computing
+ * the same accumulation twice is exactly how they used to.
+ *
+ * A missing value contributes nothing and does not advance the total, which
+ * keeps a gap a gap rather than a zero.
+ */
+const stacks = computed(() => {
+    const table: number[][] = [];
+
+    for (let point = 0; point < pointCount.value; point++) {
+        const running = [0];
+        let total = 0;
+
+        for (const item of props.series) {
+            const value = item.values[point];
+
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                total += value;
+            }
+
+            running.push(total);
+        }
+
+        table.push(running);
+    }
+
+    return table;
+});
+
+/**
+ * The values the axis has to reach.
+ *
+ * Grouped bars, lines and areas are each drawn at their own value, so the
+ * values are the domain. A stacked column is drawn at a running total, and a
+ * total is bigger than the parts it is made of — two series of 60 and 120
+ * make a column 180 tall, and an axis that stopped at 120 put the upper
+ * segment at y = -59, above the plot and over whatever was drawn there.
+ *
+ * Every step of the total counts, not only the last one: a stack that climbs
+ * to 100 before coming back down to 80 still reached 100, and the segment
+ * drawn there has to fit.
+ */
+const domainValues = computed(() =>
+    isStackedBar.value ? stacks.value.flat() : allValues.value,
 );
 
 const isEmpty = computed(
@@ -107,8 +219,8 @@ const domain = computed(() => {
         };
     }
 
-    const rawMin = props.options.min ?? Math.min(...allValues.value);
-    const rawMax = props.options.max ?? Math.max(...allValues.value);
+    const rawMin = props.options.min ?? Math.min(...domainValues.value);
+    const rawMax = props.options.max ?? Math.max(...domainValues.value);
 
     let min = Math.min(0, rawMin);
     let max = Math.max(0, rawMax);
@@ -237,22 +349,27 @@ function areaPath(values: number[]): string {
  * ended rather than at the baseline.
  */
 function stackBase(seriesIndex: number, pointIndex: number): number {
-    let total = 0;
-
-    for (let index = 0; index < seriesIndex; index++) {
-        const value = props.series[index]?.values[pointIndex];
-
-        if (typeof value === 'number' && Number.isFinite(value)) {
-            total += value;
-        }
-    }
-
-    return total;
+    return stacks.value[pointIndex]?.[seriesIndex] ?? 0;
 }
 
-const isLine = computed(
-    () => props.variant === 'line' || props.variant === 'area',
-);
+/**
+ * The top edge of one stacked segment.
+ *
+ * A segment spans from where the stack had reached to where it reaches after
+ * this value, and SVG measures a rectangle down from its top. For a positive
+ * value the top is the end of that span; for a negative one it is the start.
+ * Taking the end regardless drew every negative segment one whole segment too
+ * low, and the error accumulated down the column.
+ */
+function stackY(
+    seriesIndex: number,
+    pointIndex: number,
+    value: number,
+): number {
+    const base = stackBase(seriesIndex, pointIndex);
+
+    return y(Math.max(base, base + value));
+}
 
 /** Stacked series share one column, so it takes the whole group's width. */
 const stackedBarWidth = computed(() => categoryWidth.value * 0.72);
@@ -378,6 +495,100 @@ const tooltipStyle = computed(() => {
     };
 });
 
+/**
+ * One row per category, derived once.
+ *
+ * The category index used to be recomputed at five separate places — the
+ * point, the label, the hit area, the tooltip and the accessible name — and
+ * two of them computed it differently. `v-for="(_, index) in pointCount"`
+ * yields a *0-based* `index` alongside a 1-based value, so `labels[index - 1]`
+ * read `labels[-1]` for the first category: the first hit area was drawn off
+ * the left edge and named "Data 0", every label was shifted one place, and the
+ * last category had no hit area at all — its label existed in the data and was
+ * unreachable by pointer or keyboard.
+ *
+ * Deriving the model once is what makes that class of bug impossible rather
+ * than fixed: there is one index, and everything that needs a category reads
+ * this.
+ */
+const categories = computed(() =>
+    Array.from({ length: pointCount.value }, (_, index) => ({
+        index,
+        label:
+            props.labels[index] ?? t('widgets.category', { number: index + 1 }),
+        x: categoryX(index),
+        hitX: hitAreaX(index),
+        /** Only the series that actually have a number here. */
+        points: props.series
+            .map((item) => ({ series: item, value: item.values[index] }))
+            .filter(
+                (
+                    point,
+                ): point is { series: ChartSeriesDefinition; value: number } =>
+                    typeof point.value === 'number' &&
+                    Number.isFinite(point.value),
+            ),
+    })),
+);
+
+/**
+ * What a category is called when it is read rather than looked at.
+ *
+ * The same formatted values the tooltip shows, from the same function — a
+ * tooltip saying "Rp 1.000.000" beside an accessible name saying "1000000"
+ * is two answers to one question.
+ */
+function categoryDescription(
+    category: (typeof categories.value)[number],
+): string {
+    if (category.points.length === 0) {
+        return t('widgets.category_empty', { category: category.label });
+    }
+
+    const values = category.points
+        .map((point) => `${point.series.label}: ${formatValue(point.value)}`)
+        .join(', ');
+
+    return `${category.label} — ${values}`;
+}
+
+/**
+ * What the picture is, said once.
+ *
+ * It used to be `${variant} chart` — "line chart", built in Vue, in English,
+ * whatever the panel's locale. It named the drawing technique and nothing
+ * about the data: which series, how many periods, what any of it is.
+ *
+ * This is a summary, not an insight. It says what is there and stops: the data
+ * itself is in the table below, and inventing "sales are improving strongly"
+ * from an array of numbers is a claim the widget cannot support.
+ */
+const chartSummary = computed(() =>
+    t('widgets.chart_summary', {
+        type: t(`widgets.chart_${props.variant}`),
+        series: props.series.length,
+        categories: pointCount.value,
+    }),
+);
+
+/** Unique per instance, so two charts on a dashboard do not share an id. */
+const dataTableId = `${useId()}-data`;
+
+/**
+ * One cell of the table.
+ *
+ * Empty rather than zero when the series has no number here: a gap and a zero
+ * are different readings, and `values[index] || '—'` would turn every zero
+ * into a gap.
+ */
+function cellValue(item: ChartSeriesDefinition, index: number): string {
+    const value = item.values[index];
+
+    return typeof value === 'number' && Number.isFinite(value)
+        ? formatValue(value)
+        : '';
+}
+
 function activate(index: number): void {
     activeIndex.value = index;
 }
@@ -485,7 +696,7 @@ function deactivate(): void {
                     class="w-full overflow-visible select-none"
                     :style="{ height: `${maxHeight}px` }"
                     role="img"
-                    :aria-label="`${variant} chart`"
+                    :aria-label="chartSummary"
                     preserveAspectRatio="none"
                     @pointerleave="deactivate"
                 >
@@ -537,7 +748,7 @@ function deactivate(): void {
                         </g>
 
                         <path
-                            v-for="item in series"
+                            v-for="(item, seriesIndex) in series"
                             :key="item.label"
                             :d="linePath(item.values)"
                             fill="none"
@@ -545,6 +756,7 @@ function deactivate(): void {
                             stroke-width="2"
                             stroke-linejoin="round"
                             stroke-linecap="round"
+                            :stroke-dasharray="dashFor(seriesIndex)"
                             :class="SERIES_CLASSES[item.color]"
                             vector-effect="non-scaling-stroke"
                         />
@@ -583,12 +795,7 @@ function deactivate(): void {
                                 "
                                 :y="
                                     options.stacked
-                                        ? y(
-                                              stackBase(
-                                                  seriesIndex,
-                                                  pointIndex,
-                                              ) + value,
-                                          )
+                                        ? stackY(seriesIndex, pointIndex, value)
                                         : barY(value)
                                 "
                                 :width="
@@ -615,22 +822,119 @@ function deactivate(): void {
                         These make interaction much easier than requiring
                         users to hit a 2px line or narrow bar exactly.
                     -->
+                    <!--
+                        `role="button"` was wrong: activating one of these does
+                        nothing. They reveal the tooltip on hover and on focus,
+                        which is what an image with a description does, not
+                        what a button does — and announcing "button" promises an
+                        action that pressing will not perform.
+
+                        The name carries the category *and* its values, from
+                        the same formatter the tooltip uses, so focusing a
+                        point tells you what the tooltip would have shown.
+                    -->
                     <rect
-                        v-for="(_, index) in pointCount"
-                        :key="`hit-area-${index}`"
-                        :x="hitAreaX(index - 1)"
+                        v-for="category in categories"
+                        :key="`hit-area-${category.index}`"
+                        :x="category.hitX"
                         :y="0"
                         :width="categoryWidth"
                         :height="HEIGHT"
                         fill="transparent"
                         tabindex="0"
-                        role="button"
-                        :aria-label="labels[index - 1] ?? `Data ${index}`"
-                        @pointerenter="activate(index - 1)"
-                        @focus="activate(index - 1)"
+                        role="img"
+                        :aria-label="categoryDescription(category)"
+                        @pointerenter="activate(category.index)"
+                        @pointerleave="deactivate"
+                        @focus="activate(category.index)"
                         @blur="deactivate"
                     />
                 </svg>
+
+                <!--
+                    The data, as data.
+
+                    A chart encodes values as position and colour, and neither
+                    survives being read aloud. Forty individual focus stops
+                    would technically expose the numbers and would be a worse
+                    way to read them than a table — which is why the points are
+                    focusable for inspection *and* the whole set is here in a
+                    structure built for reading across.
+                -->
+                <div class="mt-4">
+                    <button
+                        type="button"
+                        class="rounded-sm text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        :aria-expanded="showData"
+                        :aria-controls="dataTableId"
+                        @click="showData = !showData"
+                    >
+                        {{
+                            showData
+                                ? t('widgets.hide_data')
+                                : t('widgets.show_data')
+                        }}
+                    </button>
+
+                    <div
+                        v-show="showData"
+                        :id="dataTableId"
+                        class="mt-3 overflow-x-auto"
+                    >
+                        <table class="w-full text-left text-xs">
+                            <caption class="sr-only">
+                                {{
+                                    t('widgets.chart_data')
+                                }}
+                            </caption>
+                            <thead class="text-muted-foreground">
+                                <tr>
+                                    <th
+                                        scope="col"
+                                        class="py-1 pr-3 font-medium"
+                                    >
+                                        {{ t('widgets.period') }}
+                                    </th>
+                                    <th
+                                        v-for="item in series"
+                                        :key="`col-${item.label}`"
+                                        scope="col"
+                                        class="py-1 pr-3 text-right font-medium"
+                                    >
+                                        {{ item.label }}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="tabular-nums">
+                                <tr
+                                    v-for="category in categories"
+                                    :key="`row-${category.index}`"
+                                    class="border-t border-border/60"
+                                >
+                                    <th
+                                        scope="row"
+                                        class="py-1 pr-3 font-normal text-muted-foreground"
+                                    >
+                                        {{ category.label }}
+                                    </th>
+                                    <!--
+                                        Read straight from the series so a
+                                        zero renders as 0 and a gap renders as
+                                        blank — filtering on truthiness here
+                                        would delete every zero in the data.
+                                    -->
+                                    <td
+                                        v-for="item in series"
+                                        :key="`cell-${category.index}-${item.label}`"
+                                        class="py-1 pr-3 text-right"
+                                    >
+                                        {{ cellValue(item, category.index) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 <!-- X labels -->
                 <div
@@ -640,11 +944,11 @@ function deactivate(): void {
                     }"
                 >
                     <span
-                        v-for="(_, index) in pointCount"
-                        :key="`label-${index}`"
+                        v-for="category in categories"
+                        :key="`label-${category.index}`"
                         class="truncate px-1 text-center"
                     >
-                        {{ labels[index - 1] ?? '' }}
+                        {{ labels[category.index] ?? '' }}
                     </span>
                 </div>
             </div>

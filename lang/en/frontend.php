@@ -217,6 +217,18 @@ return [
      * Widgets: the chrome around whatever each one draws.
      */
     'widgets' => [
+        'chart_summary' => ':type, :series series across :categories periods',
+        'chart_line' => 'Line chart',
+        'chart_bar' => 'Bar chart',
+        'chart_area' => 'Area chart',
+        'category' => 'Period :number',
+        'category_empty' => ':category — no data',
+        'chart_data' => 'Chart data',
+        'show_data' => 'View data',
+        'hide_data' => 'Hide data',
+        'period' => 'Period',
+        'trend_positive' => 'an improvement',
+        'trend_negative' => 'a decline',
         'filters' => 'Filters',
         'unavailable' => 'This widget is unavailable.',
         'empty' => 'Nothing to show yet.',

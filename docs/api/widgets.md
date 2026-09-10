@@ -536,6 +536,9 @@ public function __construct(
 | `icon()` | `public function icon(string $icon): self` |
 | `color()` | `public function color(StatColor $color): self` |
 | `trend()` | `public function trend(string $direction, float $value): self` |
+| `higherIsBetter()` | `public function higherIsBetter(): self` — a rise is welcome |
+| `lowerIsBetter()` | `public function lowerIsBetter(): self` — a fall is welcome |
+| `sentiment()` | `public function sentiment(StatSentiment $sentiment): self` |
 | `chart()` | `public function chart(array $values): self` |
 | `url()` | `public function url(string $url): self` |
 | `format()` | `public function format(?string $prefix = null, ?string $suffix = null, ?int $decimals = null): self` |
@@ -552,6 +555,7 @@ Stat::make('Revenue', 12045)
     ->icon('receipt')
     ->color(StatColor::Success)
     ->trend('up', 12.4)                    // 'up' | 'down' | 'neutral'
+    ->higherIsBetter()                     // what the movement means; neutral without it
     ->chart([4, 9, 7, 12, 18, 21])         // a sparkline under the figure
     ->url(UserResource::url());
 ```

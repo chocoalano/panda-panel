@@ -135,6 +135,7 @@ public function stats(): array
             ->icon('users')
             ->color(StatColor::Info)
             ->trend('up', 12.5)
+            ->higherIsBetter()
             ->chart([4, 9, 6, 11, 14])
             ->format(suffix: ' accounts')
             ->url('/admin/users'),
@@ -148,7 +149,10 @@ public function stats(): array
 | `description` | `description(string $description): self` |
 | `icon` | `icon(string $icon): self` |
 | `color` | `color(StatColor $color): self` |
-| `trend` | `trend(string $direction, float $value): self` |
+| `trend` | `trend(string $direction, float $value): self` — the arrow and the wording |
+| `higherIsBetter` | `higherIsBetter(): self` — a rise is welcome |
+| `lowerIsBetter` | `lowerIsBetter(): self` — a fall is welcome |
+| `sentiment` | `sentiment(StatSentiment $sentiment): self` — the meaning, stated outright |
 | `chart` | `chart(array $values): self` |
 | `url` | `url(string $url): self` |
 | `format` | `format(?string $prefix = null, ?string $suffix = null, ?int $decimals = null): self` |

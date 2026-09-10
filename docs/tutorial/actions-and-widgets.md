@@ -203,11 +203,14 @@ covers that directory, so nothing needs registering.
 
 ::: details Two more things `Stat` can wear
 ```php
-Stat::make('Revenue', 12_045)->trend('up', 12.4);           // ↗ 12.4% Increased
-Stat::make('Sign-ups', 412)->chart([4, 9, 7, 12, 18, 21]);  // a sparkline, needs 2+ values
+Stat::make('Revenue', 12_045)->trend('up', 12.4)->higherIsBetter();  // ↗ 12.4% Increased
+Stat::make('Sign-ups', 412)->chart([4, 9, 7, 12, 18, 21]);           // a sparkline, needs 2+ values
 ```
-The direction decides the colour, not the sign of the value — pass the magnitude and say which way
-it went. And compute a sparkline in **one** query; six queries for decoration is not a trade worth
+The direction decides the arrow and the wording, not the sign of the value — pass the magnitude and
+say which way it went. The **colour** comes from what the movement means, which is a separate
+statement: `higherIsBetter()` for revenue and signups, `lowerIsBetter()` for cost and error rate. A
+trend that says neither is drawn neutral, because a rise is only good news if you know what is
+rising. And compute a sparkline in **one** query; six queries for decoration is not a trade worth
 making.
 :::
 

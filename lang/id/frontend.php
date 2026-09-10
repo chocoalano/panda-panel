@@ -216,6 +216,18 @@ return [
      * Widget: elemen bawaan di sekeliling apa pun yang digambarnya.
      */
     'widgets' => [
+        'chart_summary' => ':type, :series seri pada :categories periode',
+        'chart_line' => 'Diagram garis',
+        'chart_bar' => 'Diagram batang',
+        'chart_area' => 'Diagram area',
+        'category' => 'Periode :number',
+        'category_empty' => ':category — tidak ada data',
+        'chart_data' => 'Data diagram',
+        'show_data' => 'Lihat data',
+        'hide_data' => 'Sembunyikan data',
+        'period' => 'Periode',
+        'trend_positive' => 'peningkatan',
+        'trend_negative' => 'penurunan',
         'filters' => 'Filter',
         'unavailable' => 'Widget ini tidak tersedia.',
         'empty' => 'Belum ada yang dapat ditampilkan.',

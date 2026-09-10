@@ -22,9 +22,22 @@ export type Breakpoint = 'default' | 'md' | 'lg' | 'xl';
 
 export type ColumnSpan = Record<Breakpoint, SpanValue>;
 
+/**
+ * What a movement means, which is not which way it went.
+ *
+ * `direction` is arithmetic; `sentiment` is a statement the widget author
+ * made. Revenue rising and error rate rising are the same direction and
+ * opposite news, and nothing about `+8%` distinguishes them.
+ *
+ * Optional on the wire: a payload serialized before this existed has no
+ * `sentiment`, and is read as `neutral`.
+ */
+export type StatSentiment = 'positive' | 'negative' | 'neutral';
+
 export interface StatTrend {
     direction: 'up' | 'down' | 'neutral';
     value: number;
+    sentiment?: StatSentiment;
 }
 
 export interface StatDefinition {

@@ -10,6 +10,7 @@ import { resolveIcon } from '@/panel/icons/registry';
 import type {
     StatColor,
     StatDefinition,
+    StatSentiment,
     StatTrend,
 } from '@/panel/types/widget';
 import { useTranslator } from '@/composables/useTranslator';
@@ -20,6 +21,25 @@ const props = defineProps<{
     stats: StatDefinition[];
 }>();
 
+/**
+ * What a stat's declared colour draws.
+ *
+ * This one *is* the status vocabulary: a stat marked `success` is saying the
+ * figure is good news, and `danger` that it is not. So unlike the chart's
+ * series colours — which name categories and now use the category palette —
+ * these belong on the semantic tokens UI-1 introduced, and a panel that
+ * re-themes `--success` re-themes these with it.
+ *
+ * `info` has no semantic token of its own, and inventing one would mean
+ * adding a colour to the theme, the allowlist and the contrast tests for a
+ * single widget. It uses the panel's own accent instead, which is what
+ * "notable, not a status" already means everywhere else in the shell.
+ *
+ * The tinted backgrounds are fractional opacity over an unknown surface. UI-1
+ * recorded that class of value as not contrast-measurable by its opaque-pair
+ * maths, and that is still true here — these are decorative tints behind an
+ * icon, not text on a fill.
+ */
 const COLOR_CLASSES: Record<
     StatColor,
     {
@@ -37,64 +57,104 @@ const COLOR_CLASSES: Record<
     },
 
     success: {
-        icon: 'text-emerald-600 dark:text-emerald-400',
-        iconBackground: 'bg-emerald-500/10 ring-emerald-500/10',
-        accent: 'border-l-emerald-500',
-        dot: 'bg-emerald-500',
+        icon: 'text-success',
+        iconBackground: 'bg-success/10 ring-success/10',
+        accent: 'border-l-success',
+        dot: 'bg-success',
     },
 
     warning: {
-        icon: 'text-amber-600 dark:text-amber-400',
-        iconBackground: 'bg-amber-500/10 ring-amber-500/10',
-        accent: 'border-l-amber-500',
-        dot: 'bg-amber-500',
+        icon: 'text-warning',
+        iconBackground: 'bg-warning/10 ring-warning/10',
+        accent: 'border-l-warning',
+        dot: 'bg-warning',
     },
 
     danger: {
-        icon: 'text-red-600 dark:text-red-400',
-        iconBackground: 'bg-red-500/10 ring-red-500/10',
-        accent: 'border-l-red-500',
-        dot: 'bg-red-500',
+        icon: 'text-destructive',
+        iconBackground: 'bg-destructive/10 ring-destructive/10',
+        accent: 'border-l-destructive',
+        dot: 'bg-destructive',
     },
 
     info: {
-        icon: 'text-sky-600 dark:text-sky-400',
-        iconBackground: 'bg-sky-500/10 ring-sky-500/10',
-        accent: 'border-l-sky-500',
-        dot: 'bg-sky-500',
+        icon: 'text-primary',
+        iconBackground: 'bg-primary/10 ring-primary/10',
+        accent: 'border-l-primary',
+        dot: 'bg-primary',
     },
 };
 
-const TREND_CLASSES: Record<
+/**
+ * Which way the number went. Arrow and wording only — no colour.
+ *
+ * The two used to be one table: `up` meant an up arrow *and* green, `down`
+ * meant a down arrow *and* red. That reads correctly for revenue and signups
+ * and is exactly backwards for cost, churn, error rate and downtime — a
+ * rising error rate was reported as good news, in green, and the worse it got
+ * the greener it looked.
+ */
+const DIRECTION: Record<
     StatTrend['direction'],
-    {
-        icon: typeof ArrowUpRight;
-        text: string;
-        background: string;
-        label: string;
-    }
+    { icon: typeof ArrowUpRight; label: string }
 > = {
-    up: {
-        icon: ArrowUpRight,
-        text: 'text-emerald-700 dark:text-emerald-400',
-        background: 'bg-emerald-500/[0.08] ring-emerald-500/15',
-        label: 'widgets.increased',
-    },
+    up: { icon: ArrowUpRight, label: 'widgets.increased' },
+    down: { icon: ArrowDownRight, label: 'widgets.decreased' },
+    neutral: { icon: ArrowRight, label: 'widgets.unchanged' },
+};
 
-    down: {
-        icon: ArrowDownRight,
-        text: 'text-red-700 dark:text-red-400',
-        background: 'bg-red-500/[0.08] ring-red-500/15',
-        label: 'widgets.decreased',
+/**
+ * What the movement means. Colour and wording — no arrow.
+ *
+ * Semantic tokens rather than the literal emerald/red the direction table
+ * carried: this *is* the success/destructive vocabulary UI-1 introduced, used
+ * for the one thing in this widget that genuinely means good or bad.
+ *
+ * `neutral` is the default and is the whole point — a figure whose meaning
+ * nobody stated is a figure whose meaning is not known.
+ */
+const SENTIMENT: Record<
+    StatSentiment,
+    { text: string; background: string; label: string | null }
+> = {
+    positive: {
+        text: 'text-success',
+        background: 'bg-success/10 ring-success/20',
+        label: 'widgets.trend_positive',
     },
-
+    negative: {
+        text: 'text-destructive',
+        background: 'bg-destructive/10 ring-destructive/20',
+        label: 'widgets.trend_negative',
+    },
     neutral: {
-        icon: ArrowRight,
         text: 'text-muted-foreground',
         background: 'bg-muted/60 ring-border/60',
-        label: 'widgets.unchanged',
+        label: null,
     },
 };
+
+function sentimentOf(trend: StatTrend): StatSentiment {
+    // A payload serialized before sentiment existed says nothing, and
+    // "nothing" is neutral rather than "whatever the arrow points at".
+    return trend.sentiment ?? 'neutral';
+}
+
+/**
+ * What the badge is called.
+ *
+ * The direction always: "Increased 12.4%" is true whatever it means. The
+ * meaning only when one was stated — a neutral trend describes itself and
+ * claims nothing further.
+ */
+function trendLabel(trend: StatTrend): string {
+    const direction = t(DIRECTION[trend.direction].label);
+    const meaning = SENTIMENT[sentimentOf(trend)].label;
+
+    return meaning === null
+        ? `${direction} ${trend.value}%`
+        : `${direction} ${trend.value}% — ${t(meaning)}`;
+}
 
 const resolvedStats = computed(() =>
     props.stats.map((stat) => ({
@@ -195,15 +255,13 @@ function sparkline(values: number[]): string {
                         v-if="stat.trend"
                         class="inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs leading-none font-medium tabular-nums ring-1 ring-inset"
                         :class="[
-                            TREND_CLASSES[stat.trend.direction].text,
-                            TREND_CLASSES[stat.trend.direction].background,
+                            SENTIMENT[sentimentOf(stat.trend)].text,
+                            SENTIMENT[sentimentOf(stat.trend)].background,
                         ]"
-                        :aria-label="
-                            t(TREND_CLASSES[stat.trend.direction].label)
-                        "
+                        :aria-label="trendLabel(stat.trend)"
                     >
                         <component
-                            :is="TREND_CLASSES[stat.trend.direction].icon"
+                            :is="DIRECTION[stat.trend.direction].icon"
                             class="size-3"
                             :stroke-width="2"
                         />
