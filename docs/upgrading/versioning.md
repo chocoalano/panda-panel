@@ -25,12 +25,18 @@ itself reads when a plugin declares a constraint.
 The format follows Keep a Changelog, and this project adheres to Semantic Versioning.
 ```
 
-The published tags so far run from `v0.1.0` to `v0.1.8` and then `v0.2.0`, so the package is in its
-`0.x` series. (`v0.1.3` was never tagged — a gap in the sequence means a version that does not
-exist, not one you failed to find.) `git tag` in a checkout is the authoritative list; the one
-here is a snapshot. Semantic versioning treats `0.x` as the one range where the usual promise does not hold:
-**a `0.x` minor release is allowed to break things.** Composer knows that and adjusts the caret
-accordingly.
+The published tags so far run from `v0.1.0` to `v0.1.8`, then `v0.2.0`, then `v0.1.9` and `v0.3.0`,
+so the package is in its `0.x` series. That order is not a typo: `v0.1.9` was tagged after `v0.2.0`,
+from a commit that descends from it, so it contains everything `v0.2.0` does while sorting below it.
+An application on `^0.1` therefore resolves `0.1.9` and gets `0.2.0`'s changes with it — and
+`git push --tags` from a clone that has all of them would publish `v0.2.0` as though it were newer
+than it is. Push a release tag by name.
+
+(`v0.1.3` was never tagged — a gap in the sequence means a version that does not exist, not one you
+failed to find.) `git tag` in a checkout is the authoritative list; the one here is a snapshot.
+
+Semantic versioning treats `0.x` as the one range where the usual promise does not hold: **a `0.x`
+minor release is allowed to break things.** Composer knows that and adjusts the caret accordingly.
 
 ```bash
 git tag                      # in a checkout of the repository

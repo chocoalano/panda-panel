@@ -104,10 +104,12 @@ At release time, rename the heading and open a fresh one:
 
 Two things to do while you are in there:
 
-- **Merge duplicated section headings.** The current `[Unreleased]` block carries two separate `### Fixed` sections, appended by two batches of work. One section per type per release is what makes the file readable.
+- **Merge duplicated section headings.** A block that two batches of work appended to carries two `### Fixed` sections. One section per type per release is what makes the file readable, and the reconstruction described below merged the ones that had accumulated.
 - **Order the sections** `Security`, `Added`, `Changed`, `Fixed`, `Removed`, so `Security` is the first thing anybody upgrading sees.
 
-The file carries no link-reference definitions at the bottom and no released version headings yet — every tag so far was cut from the `[Unreleased]` block. Adding a compare link per version is a reasonable improvement; it is not the current format, so do not assume one is there.
+Every released version now has a heading, newest first, dated to the day its tag was cut. That was not true until `0.4.0`: `v0.1.0` through `v0.3.0` were all tagged straight out of the `[Unreleased]` block without renaming it, so the file had grown into one 800-line section covering eleven releases. The sections were reconstructed from the changelog as it stood at each tag — every one of those diffs was a pure insertion, so which release introduced a line is a fact the history states rather than a judgement somebody made. A tag that recorded nothing says so rather than being left out.
+
+Two consequences worth knowing about. `[0.1.9]` sits above `[0.2.0]` because it was released eight days later, from a commit that descends from it — the tags disagree with the versions, and the file follows the dates. And the file still carries **no link-reference definitions** at the bottom: adding a compare link per version is a reasonable improvement, it is not the current format, so do not assume one is there.
 
 `CHANGELOG.md` is `export-ignore`d, so `vendor/chocoalano/panel/CHANGELOG.md` does not exist in an installed application. It is read in the repository.
 
@@ -127,7 +129,8 @@ The file carries no link-reference definitions at the bottom and no released ver
 /examples           export-ignore
 /integration        export-ignore
 /tests              export-ignore
-/frontend           export-ignore
+/frontend/browser   export-ignore
+/frontend/entry.ts  export-ignore
 /.editorconfig      export-ignore
 /.gitattributes     export-ignore
 /.gitignore         export-ignore
@@ -196,7 +199,7 @@ git archive HEAD | tar -t | grep package.json    # must print package.json
 
 `/package-lock.json` stays ignored — nothing reads it, and an application installs from the ranges rather than from this repository's resolution of them.
 
-The rest of the frontend toolchain — the Vite config, the tsconfig, the lint configs, `frontend/` — genuinely does not ship. See [Frontend toolchain](frontend-toolchain.md).
+The rest of the frontend toolchain — the Vite config, the tsconfig, the lint configs, `frontend/browser` and `frontend/entry.ts` — genuinely does not ship. `frontend/host` is the exception and ships deliberately: it is the minimal stand-in for each module the published components import and do not provide, and `panel:install` copies the ones a blank application has none of. It used to be export-ignored with the rest, which left an application with no starter kit holding a build error and a list of files to write by hand. See [Frontend toolchain](frontend-toolchain.md).
 
 ## The rename lesson
 
@@ -221,6 +224,7 @@ npm run ci                                       # prettier, eslint, vue-tsc, vi
 
 git archive HEAD | tar -t | grep package.json    # must print package.json
 git archive HEAD | tar -t | grep 'docs/'         # must print nothing
+git archive HEAD | tar -t | grep 'frontend/'     # only frontend/host — see above
 ```
 
 The icon registry has no command to run here, because there is no `artisan` binary in this repository — `IconRegistryTest` is what checks it, and it is part of `composer ci`. In an application the equivalent is `php artisan panel:icons --check`.

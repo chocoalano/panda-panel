@@ -82,13 +82,13 @@ Keep a Changelog defines six. Five of them are in use here, and each means somet
 Two properties of the categories here are worth knowing before you scan for something.
 
 **`Security` comes first in the section, not in alphabetical or Keep a Changelog order.** The
-current `## [Unreleased]` section opens with four security entries — CSV formula injection in
-exports, and three about the upload endpoint's authorization — because an entry nobody scrolls to
-is an entry nobody reads.
+`[0.3.0]` section opens with its four security entries, and `[0.1.1]` with its own — because an
+entry nobody scrolls to is an entry nobody reads. A release with no security entries simply starts
+at `### Added`.
 
-**Category headings are not guaranteed to be unique within a section.** The current `Unreleased`
-section carries two separate `### Fixed` blocks. Search the file rather than assuming the first
-block you find is all of them:
+**Category headings are not guaranteed to be unique within a section.** A section two batches of
+work appended to can carry two `### Fixed` blocks; merging them is a release-time step rather than
+something enforced. Search the file rather than assuming the first block you find is all of them:
 
 ```bash
 grep -n '^### ' CHANGELOG.md
@@ -142,7 +142,15 @@ and why; the upgrade guide says what breaks and what to type. In this documentat
 is [Breaking changes](breaking-changes.md), and the order the edits fit into is
 [Upgrade guide](upgrade-guide.md).
 
-The current `Unreleased` section maps onto it like this:
+The one entry currently under `Unreleased` maps onto it like this:
+
+| Changelog entry | Category there | Breaking changes |
+| --- | --- | --- |
+| A stats trend with no declared meaning now renders neutral | `Changed` | [§1](breaking-changes.md) |
+
+The nine entries on that page's `0.1.0 – 0.1.4` block map onto the changelog like this. They are
+spread across two releases rather than one, which is the reason that block carries a range for a
+heading — the changelog says which release each landed in, and the upgrade guide does not:
 
 | Changelog entry | Category there | Breaking changes |
 | --- | --- | --- |
@@ -188,13 +196,20 @@ Which is a step on the [Release checklist](release-checklist.md) rather than som
 The published tags are the other half of the record, and they are what composer resolves against:
 
 ```bash
-git tag                                  # v0.1.0, v0.1.1, v0.1.2, v0.1.4 — v0.1.3 was never tagged
+git tag                                  # v0.1.0 … v0.1.9, v0.2.0, v0.3.0 — v0.1.3 was never tagged
 git log --oneline v0.1.1..v0.1.2         # what a tag actually contained
 composer show chocoalano/panel --all     # every version Packagist knows about
 ```
 
-A tag with no matching `## [x.y.z]` heading means the work is still filed under `Unreleased`; read
-the section, not the absence of a heading.
+Every published tag has a matching `## [x.y.z]` heading. Four of them — `0.1.2`, `0.1.7`, `0.1.8`
+and `0.1.9` — say outright that no entries were recorded, which is a different statement from an
+absent heading and is the honest one: those releases carried code and the changelog was not
+written. Read the section rather than inferring anything from a gap.
+
+`[0.1.9]` also sits **above** `[0.2.0]` in the file. It was tagged eight days later, from a commit
+that descends from it, so `v0.1.9` contains everything `v0.2.0` does while sorting below it. The
+file is ordered by release date; Composer orders by version. See
+[Versioning policy](versioning.md).
 
 ## Reading it for an upgrade
 

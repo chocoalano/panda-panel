@@ -20,6 +20,125 @@ last.
 
 ## Unreleased
 
+Two entries. The first is **silent**: nothing stops working, and a colour stops meaning what it
+used to. Neither needs a source edit.
+
+| # | Change | How it shows up |
+| --- | --- | --- |
+| 1 | A stat trend with no declared meaning renders neutral | silent — green and red disappear |
+| 2 | A repeater inside a repeater validates all the way down | a form that used to save is rejected |
+
+---
+
+### 1. A stat trend with no declared meaning renders neutral (silent)
+
+**What changed.** `trend()` used to decide two things from one argument. The direction set the
+arrow *and* the colour, on the assumption that up is good:
+
+```php
+use PandaPanel\Widgets\Support\Stat;
+
+Stat::make('Revenue', '$12,400')->trend('up', 12.4);      // arrow up, green
+Stat::make('Error rate', '2.4%')->trend('up', 12.4);      // arrow up, green
+```
+
+The second one is wrong, and it is wrong in green. Which way a number moved is arithmetic and the
+widget can work it out; whether the movement is welcome is a fact about the metric, and nothing
+about `+12.4%` distinguishes revenue from an error rate.
+
+Direction and meaning are now separate. Direction still drives the arrow and the wording. Meaning
+drives the colour, and a stat that does not state one is drawn neutral:
+
+```php
+Stat::make('Revenue', '$12,400')->trend('up', 12.4);      // arrow up, neutral
+```
+
+**What breaks.** Nothing raises and nothing stops compiling. Every existing `trend()` call renders
+exactly as before except for its colour, which becomes neutral — so a dashboard that used green and
+red to carry meaning silently stops carrying it.
+
+**The fix.** Say what the metric means. One method per stat, wherever it is declared:
+
+```php
+use PandaPanel\Widgets\Enums\StatSentiment;
+use PandaPanel\Widgets\Support\Stat;
+
+// Good when it rises: revenue, signups, uptime.
+Stat::make('Revenue', '$12,400')->trend('up', 12.4)->higherIsBetter();
+
+// Good when it falls: cost, churn, error rate, response time.
+Stat::make('Error rate', '2.4%')->trend('up', 12.4)->lowerIsBetter();
+
+// Or state the meaning outright, when it does not follow from the direction.
+Stat::make('Headcount', '48')->trend('up', 4.0)->sentiment(StatSentiment::Positive);
+```
+
+`higherIsBetter()` restores exactly what the old behaviour assumed, so a dashboard whose figures
+all read that way is one added call per stat.
+
+**Source migration required: no.** Existing code compiles and runs unchanged.
+
+**Visual-semantic migration: yes, if you relied on the colour.** A stat left alone is not broken —
+it is honestly neutral, which is what a figure whose meaning nobody stated actually is. Declare a
+sentiment on the ones whose colour was doing work.
+
+**How to find them.** Every call site is a `trend(`:
+
+```bash
+grep -rn '->trend(' app/
+```
+
+A stat with no `trend()` never had a colour and is unaffected.
+
+---
+
+### 2. A repeater inside a repeater validates all the way down
+
+**What changed.** `Repeater::schema()` takes any form component and a repeater is one, so a repeater
+inside a repeater is a shape the published signature accepts. Rule generation stopped one level in:
+
+```php
+Repeater::make('outer')->schema([
+    TextInput::make('title')->required(),
+    Repeater::make('inner')->schema([
+        TextInput::make('name')->required(),   // accepted, rendered — never enforced
+    ]),
+]);
+```
+
+`outer.*.inner` was declared `array` and nothing beneath it existed, so the inner `required()` was
+serialized to the browser and ignored by the server. Rules now recurse: `outer.*.inner.*.name` is
+generated, and so is the level below that.
+
+**What breaks.** Nothing raises, and nothing needs editing. A submission with an incomplete nested
+entry used to be accepted and is now rejected with a validation error on the field that is missing
+— which is what the schema always claimed. Only forms that actually nest a repeater are affected,
+and only where a rule was being missed.
+
+Dehydration is unchanged and always recursed, so nothing that used to be stored is stored
+differently. This closes a gap in *validation*, not in what is written.
+
+**The fix.** None, if the rules were declared honestly. If a nested field was marked `required()`
+without meaning it, remove the rule rather than relying on it not firing:
+
+```php
+Repeater::make('inner')->schema([
+    TextInput::make('name'),        // optional, and now says so
+]);
+```
+
+Existing rows are not revalidated — this applies to submissions, not to what is already stored.
+
+---
+
+## 0.1.0 – 0.1.4
+
+One heading for five releases, because that is how this page was written: everything below landed
+in one batch at `v0.1.4` and documents breaking changes released across `v0.1.0` and `v0.1.1`.
+Splitting it per release now would mean deciding by hand which sentence describes which tag, and
+the history does not say. The changelog does say, entry by entry — see
+[Changelog](../../CHANGELOG.md).
+
 Nine entries need an edit. Two are **silent**: the code keeps running and does the wrong thing.
 They are first.
 
