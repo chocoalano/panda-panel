@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useTranslator } from '@/composables/useTranslator';
 import { computed } from 'vue';
 import { Input } from '@/components/ui/input';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import type { ColorPickerFieldDefinition } from '@/panel/types/form';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: ColorPickerFieldDefinition;
@@ -45,7 +48,9 @@ const swatch = computed(() =>
                     class="size-9 shrink-0 cursor-pointer rounded-md border border-input bg-background p-1 disabled:cursor-not-allowed disabled:opacity-50"
                     :value="swatch"
                     :disabled="field.disabled"
-                    :aria-label="`${field.label} colour`"
+                    :aria-label="
+                        t('forms.color_for_field', { field: field.label })
+                    "
                     @input="
                         (event) =>
                             emit(

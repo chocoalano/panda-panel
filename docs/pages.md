@@ -406,6 +406,7 @@ Every artisan command, flag by flag.
 
 `config/panda-panel.php`, middleware, routes, redirects, environment.
 
+- [Localization](configuration/localization.md)
 - [config/panda-panel.php](configuration/panda-panel.md)
 - [Panel Config](configuration/panel-config.md)
 - [Frontend Paths](configuration/frontend-paths.md)
@@ -543,5 +544,5 @@ Working on the package itself.
 
 ---
 
-358 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
+359 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
 a navigation bar.

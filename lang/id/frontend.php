@@ -27,6 +27,7 @@ return [
      * awas melihat tanda ✕, selebihnya mendengar apa yang tertulis di sini.
      */
     'ui' => [
+        'copy_command' => 'Salin perintah :name',
         'close' => 'Tutup',
         'more' => 'Lainnya',
         'loading' => 'Memuat',
@@ -129,6 +130,8 @@ return [
         'column' => 'Kolom',
         'condition' => 'Kondisi',
         'add_condition' => 'Tambah kondisi',
+        'max_conditions' => 'Maksimal :count kondisi.',
+        'no_queryable_columns' => 'Tidak ada kolom yang tersedia untuk difilter.',
         'from' => 'Dari',
         'to' => 'Sampai',
         'layout' => 'Tata letak',
@@ -192,6 +195,7 @@ return [
         'expand_section' => 'Buka bagian',
 
         'pick_a_date' => 'Pilih tanggal',
+        'color_for_field' => 'Warna :field',
         'clear_date' => 'Hapus tanggal',
         'pick_a_time' => 'Pilih waktu',
         'clear_time' => 'Hapus waktu',

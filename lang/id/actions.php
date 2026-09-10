@@ -111,7 +111,7 @@ return [
         'completed_with_failures' => ':count baris berhasil diimpor. :failed baris gagal — unduh laporannya untuk melihat sebabnya.',
         'failed_title' => 'Impor gagal',
         'failed_body' => 'Berkas tidak dapat dibaca.',
-        'missing_columns' => 'Berkas ini tidak memiliki kolom untuk :missing, dan kolom tersebut wajib diisi. Judul kolom yang ada: :headings. Ubah nama kolom pada berkas, atau petakan secara manual sebelum mengimpor.',
+        'missing_columns' => 'Berkas ini tidak memiliki kolom untuk :missing, dan :verb wajib diisi. Judul kolom yang ada: :headings. Ubah nama kolom pada berkas, atau petakan secara manual sebelum mengimpor.',
         'missing_columns_verb' => '{1} kolom tersebut|[2,*] kolom-kolom tersebut',
         'no_headings' => '(tidak ada)',
     ],

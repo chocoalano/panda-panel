@@ -250,6 +250,36 @@ import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 ```
 
+## Building a panel component
+
+The panel's own components are Vue 3 built on [Reka UI](https://reka-ui.com) primitives styled the way shadcn-vue styles them. `resources/js/components/ui` is vendored from shadcn-vue and left as upstream wrote it; everything under `resources/js/panel` is this package's, and these are the rules it holds itself to.
+
+**Reach for the existing primitive.** `Select`, `Popover`, `Dialog`, `Checkbox`, `Button` and the rest already handle the focus trap, the escape key, the type-ahead and the portal. A hand-built dropdown is a hand-built list of bugs; a `<div @click>` is a control nobody can reach with a keyboard.
+
+**Keyboard before pointer.** Anything a click does, a key must do. Reka gives you this if you use its primitives and takes it away the moment you stop.
+
+**Focus has to be visible.** Use the panel's `focus-visible:ring-*` treatment so a focused control looks focused the same way everywhere.
+
+**State goes in attributes, not only in colour.** `aria-pressed`, `aria-invalid`, `aria-expanded`, `aria-sort` — a state conveyed only by a shade is a state somebody cannot perceive.
+
+**Colour comes from tokens.** `bg-destructive`, `text-muted-foreground`, `border-input`. A literal `bg-red-500` does not follow a panel's theme and does not switch with the appearance.
+
+**Portals inherit the theme from the document element**, which is why the palette is written there rather than on the shell. A popover or a select's listbox is teleported to `body`; test the theme with one open.
+
+**Assume 320px.** Controls wrap or stack; they do not push the page sideways.
+
+**Package copy is translated.** Any user-facing string the package owns ships with **both English and Indonesian** in the same change — including the ones nobody sees, like an `aria-label`. See [Localization](../configuration/localization.md).
+
+Three guards enforce the last point in the ordinary suite, and each names the file and key it failed on:
+
+| Guard | What fails it |
+| --- | --- |
+| Key parity | A key in one locale and not the other |
+| Placeholder parity | A string whose `:tokens` differ between locales |
+| Structural copy audit | A literal bound into rendered text, `aria-label`, `title`, `placeholder` or `alt` |
+
+The third scans the positions copy reaches a reader through rather than visible text alone — an `aria-label` is copy even though nobody sees it, and that is where the last two hardcoded English strings were found.
+
 ## Changes that are never one edit
 
 Some changes have a fixed set of places that must move together. Making half of one is the most common way a pull request comes back:

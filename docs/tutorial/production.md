@@ -167,7 +167,7 @@ everything else in this documentation is more of the same shapes.
 | Write your own Vue column or field | [Frontend customization](/frontend/component-tree) |
 | Export the table to CSV or XLSX | [Import and export](/import-export/export-action) |
 | Test all of it | [Test setup](/testing/setup) and [helpers](/testing/helpers) |
-| Read every page | [All 358 pages](/pages) |
+| Read every page | [All 359 pages](/pages) |
 
 ## See also
 

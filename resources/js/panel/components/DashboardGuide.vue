@@ -106,7 +106,7 @@ const destinations = computed(() =>
                         variant="ghost"
                         size="icon"
                         class="size-7 shrink-0"
-                        :aria-label="`Copy the ${step.title.toLowerCase()} command`"
+                        :aria-label="t('ui.copy_command', { name: step.title })"
                         @click="copy(step.command)"
                     >
                         <component

@@ -67,6 +67,82 @@ it('ships the same keys in every locale', function (): void {
     }
 });
 
+/**
+ * Every `:placeholder` a string carries, flattened alongside its key.
+ *
+ * @param  array<array-key, mixed>  $lines
+ * @return array<string, list<string>>
+ */
+function flattenPlaceholders(array $lines, string $prefix = ''): array
+{
+    $found = [];
+
+    foreach ($lines as $key => $value) {
+        $path = $prefix === '' ? (string) $key : $prefix.'.'.$key;
+
+        if (is_array($value)) {
+            $found = [...$found, ...flattenPlaceholders($value, $path)];
+
+            continue;
+        }
+
+        if (! is_string($value)) {
+            continue;
+        }
+
+        preg_match_all('/:([a-zA-Z_]+)/', $value, $matches);
+
+        $placeholders = array_values(array_unique($matches[1]));
+        sort($placeholders);
+
+        $found[$path] = $placeholders;
+    }
+
+    return $found;
+}
+
+/**
+ * A translation that drops a placeholder renders the literal `:count`.
+ *
+ * Key parity above proves both locales define the same strings. It cannot
+ * see inside them, and the failure it misses is the one a reader actually
+ * meets: "Maksimal :count kondisi." on screen, because the Indonesian
+ * translator wrote the sentence without the token the English one had. The
+ * reverse is quieter and worse — an extra placeholder in one locale is a
+ * value the caller never passes and never notices.
+ */
+it('carries the same placeholders in every locale', function (): void {
+    /**
+     * Groups whose strings are not sentences.
+     *
+     * `formats.php` holds PHP date format strings — `M j, Y g:ia` — where the
+     * colon separates hours from minutes and is not introducing a
+     * placeholder. Everything else in `lang/` is prose meant for a reader.
+     */
+    $notProse = ['formats'];
+
+    foreach (File::files(langPath('en')) as $file) {
+        $group = $file->getFilenameWithoutExtension();
+
+        if (in_array($group, $notProse, true)) {
+            continue;
+        }
+        $indonesian = langPath('id').'/'.$file->getFilename();
+
+        expect($indonesian)->toBeFile("lang/id/{$group}.php is missing");
+
+        $english = flattenPlaceholders(require $file->getPathname());
+        $translated = flattenPlaceholders(require $indonesian);
+
+        foreach ($english as $key => $placeholders) {
+            expect($translated[$key] ?? [])->toBe(
+                $placeholders,
+                "lang/id/{$group}.php: {$key} does not carry the same placeholders as English",
+            );
+        }
+    }
+});
+
 it('leaves no key untranslated in either locale', function (): void {
     $sources = File::allFiles(dirname(__DIR__, 3).'/src');
     $referenced = [];

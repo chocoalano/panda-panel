@@ -28,6 +28,7 @@ return [
      * an ✕, and everybody else hears whatever is written here.
      */
     'ui' => [
+        'copy_command' => 'Copy the :name command',
         'close' => 'Close',
         'more' => 'More',
         'loading' => 'Loading',
@@ -130,6 +131,8 @@ return [
         'column' => 'Column',
         'condition' => 'Condition',
         'add_condition' => 'Add condition',
+        'max_conditions' => 'Up to :count conditions.',
+        'no_queryable_columns' => 'No columns available to filter by.',
         'from' => 'From',
         'to' => 'To',
         'layout' => 'Layout',
@@ -193,6 +196,7 @@ return [
         'expand_section' => 'Expand section',
 
         'pick_a_date' => 'Pick a date',
+        'color_for_field' => ':field colour',
         'clear_date' => 'Clear date',
         'pick_a_time' => 'Pick a time',
         'clear_time' => 'Clear time',
