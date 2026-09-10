@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-10
+
 ### Added
 
 - **A panel's colours can say "good" and "careful" without hard-coding green and amber.**

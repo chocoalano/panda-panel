@@ -219,7 +219,26 @@ resources you expect, an icon renders, and the browser console is empty.
 
 ## Version-specific notes
 
-### Unreleased
+### 0.4.0
+
+Two changes need an edit, and both are silent — the code keeps running and does something
+different. Each is written out in full, with the fix, in [Breaking changes](breaking-changes.md):
+
+| # | Change | Silent |
+| --- | --- | --- |
+| 1 | A stat trend with no declared meaning renders neutral rather than green or red | yes |
+| 2 | A repeater inside a repeater validates all the way down | yes — a form that saved is now rejected |
+
+Neither needs a source edit. For the first, declare what the metric means —
+`higherIsBetter()`, `lowerIsBetter()` or `sentiment()` — on any stat whose colour was carrying
+meaning; `grep -rn '->trend(' app/` finds every one. For the second, nothing changes unless you
+nest a repeater, and then only where a rule was already being missed.
+
+### 0.1.0 – 0.1.4
+
+One heading for the releases this section was written across, for the same reason
+[Breaking changes](breaking-changes.md) carries a range there: it was written in one batch and
+documents changes that shipped in `v0.1.0` and `v0.1.1`.
 
 Seven changes need an edit, and two of them are silent — the code keeps running and does the wrong
 thing. Each one is written out in full, with the fix, in

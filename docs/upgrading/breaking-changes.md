@@ -18,7 +18,7 @@ A schema mistake raises at schema-build time, which is boot or first render — 
 before a user does. That is why `php artisan test` is the first line of this page rather than the
 last.
 
-## Unreleased
+## 0.4.0
 
 Two entries. The first is **silent**: nothing stops working, and a colour stops meaning what it
 used to. Neither needs a source edit.

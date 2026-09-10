@@ -142,11 +142,12 @@ and why; the upgrade guide says what breaks and what to type. In this documentat
 is [Breaking changes](breaking-changes.md), and the order the edits fit into is
 [Upgrade guide](upgrade-guide.md).
 
-The one entry currently under `Unreleased` maps onto it like this:
+The two entries in `[0.4.0]` map onto it like this:
 
 | Changelog entry | Category there | Breaking changes |
 | --- | --- | --- |
 | A stats trend with no declared meaning now renders neutral | `Changed` | [§1](breaking-changes.md) |
+| A repeater inside a repeater validates all the way down | `Fixed` | [§2](breaking-changes.md) |
 
 The nine entries on that page's `0.1.0 – 0.1.4` block map onto the changelog like this. They are
 spread across two releases rather than one, which is the reason that block carries a range for a
