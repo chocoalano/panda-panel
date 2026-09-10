@@ -176,7 +176,11 @@ function removeRule(index: number): void {
                 v-if="needsValue(rule)"
                 class="h-8 w-44"
                 :type="inputTypeFor(rule)"
-                :aria-label="`Value for ${constraintFor(rule)?.label ?? 'rule'}`"
+                :aria-label="
+                    t('tables.rule_value', {
+                        rule: constraintFor(rule)?.label ?? t('tables.rule'),
+                    })
+                "
                 :model-value="rule.value ?? ''"
                 @update:model-value="
                     (value) => updateRule(index, { value: String(value) })
@@ -186,7 +190,7 @@ function removeRule(index: number): void {
             <Button
                 variant="ghost"
                 size="icon-sm"
-                :aria-label="`Remove rule ${index + 1}`"
+                :aria-label="t('tables.remove_rule', { number: index + 1 })"
                 @click="removeRule(index)"
             >
                 <X />

@@ -361,7 +361,9 @@ const showsSortMenu = computed(
                 <button
                     type="button"
                     class="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    :aria-label="`Remove ${indicator.label}`"
+                    :aria-label="
+                        t('tables.remove_filter', { filter: indicator.label })
+                    "
                     @click="removeIndicator(indicator.name)"
                 >
                     <X class="size-3" />

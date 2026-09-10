@@ -61,7 +61,7 @@ const canGoForward = computed(
                         :key="option"
                         :value="String(option)"
                     >
-                        {{ option }} / page
+                        {{ t('tables.per_page', { count: option }) }}
                     </SelectItem>
                 </SelectContent>
             </Select>
@@ -77,8 +77,12 @@ const canGoForward = computed(
             </Button>
 
             <span class="text-sm whitespace-nowrap text-muted-foreground">
-                Page {{ pagination.page }} of
-                {{ Math.max(pagination.lastPage, 1) }}
+                {{
+                    t('tables.page_of', {
+                        page: pagination.page,
+                        pages: Math.max(pagination.lastPage, 1),
+                    })
+                }}
             </span>
 
             <Button

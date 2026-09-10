@@ -103,6 +103,21 @@ return [
      * The table: toolbar, header, rows, paging, and the two renderers.
      */
     'tables' => [
+        'move_column' => 'Move :column',
+        'sort_by' => 'Sort by :column',
+        'reorder_row' => 'Reorder :record, position :position of :total',
+        'reorder_announcement' => ':record moved to position :position of :total',
+        'move_up' => 'Move up',
+        'move_down' => 'Move down',
+        'select_row' => 'Select :record',
+        'per_page' => ':count / page',
+        'page_of' => 'Page :page of :pages',
+        'remove_filter' => 'Remove :filter',
+        'filter_from' => ':filter from',
+        'filter_to' => ':filter to',
+        'rule_value' => 'Value for :rule',
+        'remove_rule' => 'Remove rule :number',
+        'rule' => 'rule',
         'select_all_rows' => 'Select all rows on this page',
         'row_actions' => 'Row actions',
         'actions' => 'Actions',

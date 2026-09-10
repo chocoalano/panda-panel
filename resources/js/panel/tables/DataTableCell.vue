@@ -116,10 +116,7 @@ const customComponent = computed(() => {
 
     <template v-else-if="column.type === 'boolean'">
         <span class="inline-flex items-center gap-1.5">
-            <Check
-                v-if="boolean.value"
-                class="size-4 text-emerald-600 dark:text-emerald-400"
-            />
+            <Check v-if="boolean.value" class="size-4 text-success" />
             <X v-else class="size-4 text-muted-foreground" />
             <span class="sr-only">{{ boolean.label }}</span>
         </span>

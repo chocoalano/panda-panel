@@ -226,7 +226,9 @@ function onDate(
                     <PanelDatePicker
                         class="w-37.5"
                         :placeholder="t('tables.from')"
-                        :aria-label="`${filter.label} from`"
+                        :aria-label="
+                            t('tables.filter_from', { filter: filter.label })
+                        "
                         :model-value="dateValue(filter.name).from ?? null"
                         :max="dateValue(filter.name).to ?? null"
                         @update:model-value="
@@ -237,7 +239,9 @@ function onDate(
                     <PanelDatePicker
                         class="w-37.5"
                         :placeholder="t('tables.to')"
-                        :aria-label="`${filter.label} to`"
+                        :aria-label="
+                            t('tables.filter_to', { filter: filter.label })
+                        "
                         :model-value="dateValue(filter.name).to ?? null"
                         :min="dateValue(filter.name).from ?? null"
                         @update:model-value="

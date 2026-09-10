@@ -154,7 +154,9 @@ const hasChanges = computed(
                         v-if="manager.reorderable"
                         type="button"
                         class="cursor-grab rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:cursor-grabbing"
-                        :aria-label="`Move ${column.label}`"
+                        :aria-label="
+                            t('tables.move_column', { column: column.label })
+                        "
                         draggable="true"
                         @dragstart="dragging = column.name"
                     >
@@ -228,7 +230,9 @@ const hasChanges = computed(
                         v-if="manager.reorderable"
                         type="button"
                         class="cursor-grab rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:cursor-grabbing"
-                        :aria-label="`Move ${column.label}`"
+                        :aria-label="
+                            t('tables.move_column', { column: column.label })
+                        "
                         draggable="true"
                         @dragstart="dragging = column.name"
                     >

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, ChevronsUpDown, GripVertical } from '@lucide/vue';
+import { ArrowDown, ArrowUp, ChevronsUpDown } from '@lucide/vue';
 import { useDebounceFn } from '@vueuse/core';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import ActionButton from '@/panel/actions/ActionButton.vue';
 import ActionGroup from '@/panel/actions/ActionGroup.vue';
+import RowReorderControl from '@/panel/tables/RowReorderControl.vue';
 import EmptyState from '@/panel/components/EmptyState.vue';
 import type { CellEditValue } from '@/panel/composables/useActions';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
@@ -253,25 +254,164 @@ const ACTIONS_KEY = '@actions';
 
 const tableRoot = ref<HTMLElement | null>(null);
 
+/**
+ * The sort state of one header cell.
+ *
+ * `aria-sort` belongs on the `<th>`, not on the button inside it: the cell is
+ * what the table's own semantics attach to, and a screen reader reading a
+ * column announces the header, not the control. It was nowhere at all — the
+ * direction existed only as an arrow icon, which says nothing to anything not
+ * looking at it.
+ *
+ * `none` on a sortable column that is not currently sorted, and *nothing* on a
+ * column that cannot be sorted: `aria-sort="none"` is a claim that this column
+ * takes part in sorting, which a non-sortable one does not.
+ */
+function sortStateOf(
+    column: ColumnDefinition,
+): 'ascending' | 'descending' | 'none' | undefined {
+    if (!column.sortable) {
+        return undefined;
+    }
+
+    if (props.state.sort !== column.name) {
+        return 'none';
+    }
+
+    return props.state.direction === 'asc' ? 'ascending' : 'descending';
+}
+
+/**
+ * What a row is called, for the controls that act on it.
+ *
+ * The record key was being used as the accessible name — "Select row 4821" —
+ * which is an identifier, not a name. The first visible cell is what somebody
+ * reading the table would call the row, so it is used when it is text, and the
+ * key remains the fallback for a table whose first column is an image or a
+ * badge.
+ */
+function rowLabel(row: TableRowData): string {
+    for (const column of visibleColumns.value) {
+        const cell = row.cells[column.name];
+        const value =
+            typeof cell === 'object' && cell !== null
+                ? (cell as { value?: unknown }).value
+                : cell;
+
+        if (typeof value === 'string' && value.trim() !== '') {
+            return value;
+        }
+    }
+
+    return String(row.key);
+}
+
+/** 1-based, as a person counts, and as the announcement says it. */
+function rowPosition(key: string | number): number {
+    return props.rows.findIndex((row) => row.key === key) + 1;
+}
+
+/**
+ * The announcement after a keyboard move.
+ *
+ * A live region rather than an alert: it is a confirmation of something the
+ * user just did, not an interruption. Cleared and re-set so two moves in a row
+ * are both announced even when the sentence would be identical.
+ */
+const reorderAnnouncement = ref('');
+
+/**
+ * Moves one row and says where it went.
+ *
+ * The same operation the drag path performs: it produces the whole new order
+ * and hands it to the one `reorder` emit. Nothing here talks to a server.
+ */
+function moveRow(key: string | number, offset: number): void {
+    const keys = props.rows.map((row) => row.key);
+    const from = keys.indexOf(key);
+    const to = from + offset;
+
+    if (from === -1 || to < 0 || to >= keys.length) {
+        return;
+    }
+
+    const row = props.rows[from];
+
+    keys.splice(to, 0, ...keys.splice(from, 1));
+
+    emit('reorder', keys);
+
+    reorderAnnouncement.value = '';
+
+    void nextTick(() => {
+        reorderAnnouncement.value = t('tables.reorder_announcement', {
+            record: rowLabel(row),
+            position: to + 1,
+            total: keys.length,
+        });
+    });
+
+    // Focus follows the record, not the slot it used to occupy — the same
+    // correctness the repeater needed after a removal. Without it focus is
+    // left on whichever row has slid into the old position.
+    void nextTick(() => {
+        tableRoot.value
+            ?.querySelector<HTMLElement>(
+                `[data-reorder-row="${CSS.escape(String(key))}"]`,
+            )
+            ?.focus();
+    });
+}
+
+/**
+ * The structural cells that sit before and after the data columns.
+ *
+ * One list, consumed by every horizontal row in the table — the main header,
+ * the column-search header, the body and the summary footer. That is the whole
+ * of U14: each of those rows used to decide for itself which structural cells
+ * to draw, and two of them decided differently. The search row and the footer
+ * rendered the actions cell unconditionally at the *end*, so a table with
+ * `recordActions.position = before_columns` drew three leading cells in the
+ * header and two in the search row: every search input sat under the wrong
+ * column, and a stray cell hung off the right.
+ *
+ * Deriving them instead of repeating them is what makes that impossible rather
+ * than merely fixed. A row cannot disagree with the others about the order,
+ * because none of them owns an order.
+ */
+const leadingCells = computed<string[]>(() => {
+    const cells: string[] = [];
+
+    if (props.table.reorderable) {
+        cells.push(REORDER_KEY);
+    }
+
+    if (props.table.selectable) {
+        cells.push(SELECT_KEY);
+    }
+
+    if (hasActionsColumn.value && actionsPosition.value === 'before_columns') {
+        cells.push(ACTIONS_KEY);
+    }
+
+    return cells;
+});
+
+const trailingCells = computed<string[]>(() =>
+    hasActionsColumn.value && actionsPosition.value === 'after_columns'
+        ? [ACTIONS_KEY]
+        : [],
+);
+
 const frozenColumns = computed<FrozenColumn[]>(() => {
     const frozen: FrozenColumn[] = [];
 
-    const leading = props.table.frozen.start;
-
-    if (leading && props.table.reorderable) {
-        frozen.push({ key: REORDER_KEY, side: 'start' });
-    }
-
-    if (leading && props.table.selectable) {
-        frozen.push({ key: SELECT_KEY, side: 'start' });
-    }
-
-    if (
-        leading &&
-        hasActionsColumn.value &&
-        actionsPosition.value === 'before_columns'
-    ) {
-        frozen.push({ key: ACTIONS_KEY, side: 'start' });
+    // From the same list the rows draw, so a frozen table cannot pin cells in
+    // an order the header does not use.
+    if (props.table.frozen.start) {
+        for (const key of leadingCells.value) {
+            frozen.push({ key, side: 'start' });
+        }
     }
 
     for (const column of visibleColumns.value) {
@@ -344,44 +484,40 @@ const { hook } = usePanelStyling();
         ref="tableRoot"
         :class="[bordered ? 'rounded-lg border' : '', hook('table')]"
     >
+        <!--
+            Where a row went, after it was moved from the keyboard. Polite and
+            restrained: a confirmation of something the user just did, not an
+            interruption. A drag says nothing here — the pointer already showed
+            the result.
+        -->
+        <p role="status" aria-live="polite" class="sr-only">
+            {{ reorderAnnouncement }}
+        </p>
         <Table>
             <TableHeader>
                 <TableRow class="bg-background hover:bg-background">
                     <TableHead
-                        v-if="table.reorderable"
-                        :ref="measure(REORDER_KEY)"
-                        class="w-10"
-                        :class="frozenClass(REORDER_KEY)"
-                        :style="styleFor(REORDER_KEY, true)"
+                        v-for="key in leadingCells"
+                        :key="key"
+                        :ref="measure(key)"
+                        :class="[
+                            key === ACTIONS_KEY ? 'w-12' : 'w-10',
+                            ...frozenClass(key),
+                        ]"
+                        :style="styleFor(key, true)"
                     >
-                        <span class="sr-only">{{ t('tables.reorder') }}</span>
-                    </TableHead>
-                    <TableHead
-                        v-if="table.selectable"
-                        :ref="measure(SELECT_KEY)"
-                        class="w-10"
-                        :class="frozenClass(SELECT_KEY)"
-                        :style="styleFor(SELECT_KEY, true)"
-                    >
+                        <span v-if="key === REORDER_KEY" class="sr-only">
+                            {{ t('tables.reorder') }}
+                        </span>
                         <Checkbox
+                            v-else-if="key === SELECT_KEY"
                             :model-value="allSelected"
                             :aria-label="t('tables.select_all_rows')"
                             @update:model-value="
                                 (checked) => toggleAll(checked === true)
                             "
                         />
-                    </TableHead>
-                    <TableHead
-                        v-if="
-                            hasActionsColumn &&
-                            actionsPosition === 'before_columns'
-                        "
-                        :ref="measure(ACTIONS_KEY)"
-                        class="w-12"
-                        :class="frozenClass(ACTIONS_KEY)"
-                        :style="styleFor(ACTIONS_KEY, true)"
-                    >
-                        <span class="sr-only">
+                        <span v-else class="sr-only">
                             {{
                                 table.recordActions.label ?? t('tables.actions')
                             }}
@@ -391,6 +527,7 @@ const { hook } = usePanelStyling();
                         v-for="column in visibleColumns"
                         :key="column.name"
                         :ref="measure(column.name)"
+                        :aria-sort="sortStateOf(column)"
                         :class="[
                             ALIGNMENT_CLASSES[column.headerAlignment],
                             column.wrapHeader ? '' : 'whitespace-nowrap',
@@ -406,7 +543,9 @@ const { hook } = usePanelStyling();
                             v-if="column.sortable"
                             type="button"
                             class="inline-flex items-center gap-1 rounded-sm font-medium hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                            :aria-label="`Sort by ${column.label}`"
+                            :aria-label="
+                                t('tables.sort_by', { column: column.label })
+                            "
                             @click="emit('sort', column.name)"
                         >
                             {{ column.label }}
@@ -429,14 +568,12 @@ const { hook } = usePanelStyling();
                         <span v-else>{{ column.label }}</span>
                     </TableHead>
                     <TableHead
-                        v-if="
-                            hasActionsColumn &&
-                            actionsPosition === 'after_columns'
-                        "
-                        :ref="measure(ACTIONS_KEY)"
+                        v-for="key in trailingCells"
+                        :key="key"
+                        :ref="measure(key)"
                         class="w-12"
-                        :class="frozenClass(ACTIONS_KEY)"
-                        :style="styleFor(ACTIONS_KEY, true)"
+                        :class="frozenClass(key)"
+                        :style="styleFor(key, true)"
                     >
                         <span class="sr-only">
                             {{
@@ -456,16 +593,13 @@ const { hook } = usePanelStyling();
                     class="bg-background hover:bg-background"
                 >
                     <TableHead
-                        v-if="table.reorderable"
-                        class="w-10"
-                        :class="frozenClass(REORDER_KEY)"
-                        :style="styleFor(REORDER_KEY, true)"
-                    />
-                    <TableHead
-                        v-if="table.selectable"
-                        class="w-10"
-                        :class="frozenClass(SELECT_KEY)"
-                        :style="styleFor(SELECT_KEY, true)"
+                        v-for="key in leadingCells"
+                        :key="key"
+                        :class="[
+                            key === ACTIONS_KEY ? 'w-12' : 'w-10',
+                            ...frozenClass(key),
+                        ]"
+                        :style="styleFor(key, true)"
                     />
                     <TableHead
                         v-for="column in visibleColumns"
@@ -481,7 +615,7 @@ const { hook } = usePanelStyling();
                             type="search"
                             :placeholder="
                                 t('tables.search_column', {
-                                    column: column.label.toLowerCase(),
+                                    column: column.label,
                                 })
                             "
                             :aria-label="
@@ -496,10 +630,11 @@ const { hook } = usePanelStyling();
                         />
                     </TableHead>
                     <TableHead
-                        v-if="hasActionsColumn"
+                        v-for="key in trailingCells"
+                        :key="key"
                         class="w-12"
-                        :class="frozenClass(ACTIONS_KEY)"
-                        :style="styleFor(ACTIONS_KEY, true)"
+                        :class="frozenClass(key)"
+                        :style="styleFor(key, true)"
                     />
                 </TableRow>
             </TableHeader>
@@ -569,46 +704,38 @@ const { hook } = usePanelStyling();
                         @dragend="dragging = null"
                     >
                         <TableCell
-                            v-if="table.reorderable"
-                            class="w-10"
-                            :class="frozenClass(REORDER_KEY)"
-                            :style="styleFor(REORDER_KEY)"
+                            v-for="key in leadingCells"
+                            :key="key"
+                            :class="[
+                                key === ACTIONS_KEY ? 'w-12' : 'w-10',
+                                ...frozenClass(key),
+                            ]"
+                            :style="styleFor(key)"
                         >
-                            <button
-                                type="button"
-                                class="cursor-grab rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:cursor-grabbing"
-                                :aria-label="`Reorder row ${row.key}`"
-                                draggable="true"
+                            <RowReorderControl
+                                v-if="key === REORDER_KEY"
+                                :label="rowLabel(row)"
+                                :position="rowPosition(row.key)"
+                                :total="rows.length"
+                                :row-key="row.key"
                                 @dragstart="dragging = row.key"
-                            >
-                                <GripVertical class="size-4" />
-                            </button>
-                        </TableCell>
-                        <TableCell
-                            v-if="table.selectable"
-                            class="w-10"
-                            :class="frozenClass(SELECT_KEY)"
-                            :style="styleFor(SELECT_KEY)"
-                        >
+                                @move="(offset) => moveRow(row.key, offset)"
+                            />
                             <Checkbox
+                                v-else-if="key === SELECT_KEY"
                                 :model-value="isRowSelected(row.key)"
-                                :aria-label="`Select row ${row.key}`"
+                                :aria-label="
+                                    t('tables.select_row', {
+                                        record: rowLabel(row),
+                                    })
+                                "
                                 @update:model-value="
                                     (checked) =>
                                         toggleRow(row.key, checked === true)
                                 "
                             />
-                        </TableCell>
-                        <TableCell
-                            v-if="
-                                hasActionsColumn &&
-                                actionsPosition === 'before_columns'
-                            "
-                            class="w-12"
-                            :class="frozenClass(ACTIONS_KEY)"
-                            :style="styleFor(ACTIONS_KEY)"
-                        >
                             <ActionGroup
+                                v-else
                                 :actions="row.actions"
                                 @run="
                                     (action) =>
@@ -708,13 +835,11 @@ const { hook } = usePanelStyling();
                             />
                         </TableCell>
                         <TableCell
-                            v-if="
-                                hasActionsColumn &&
-                                actionsPosition === 'after_columns'
-                            "
+                            v-for="key in trailingCells"
+                            :key="key"
                             class="w-12 text-right"
-                            :class="frozenClass(ACTIONS_KEY)"
-                            :style="styleFor(ACTIONS_KEY)"
+                            :class="frozenClass(key)"
+                            :style="styleFor(key)"
                         >
                             <ActionGroup
                                 :actions="row.actions"
@@ -735,16 +860,13 @@ const { hook } = usePanelStyling();
                             class="bg-muted/30 hover:bg-muted/30"
                         >
                             <TableCell
-                                v-if="table.reorderable"
-                                class="w-10"
-                                :class="frozenClass(REORDER_KEY)"
-                                :style="styleFor(REORDER_KEY)"
-                            />
-                            <TableCell
-                                v-if="table.selectable"
-                                class="w-10"
-                                :class="frozenClass(SELECT_KEY)"
-                                :style="styleFor(SELECT_KEY)"
+                                v-for="key in leadingCells"
+                                :key="key"
+                                :class="[
+                                    key === ACTIONS_KEY ? 'w-12' : 'w-10',
+                                    ...frozenClass(key),
+                                ]"
+                                :style="styleFor(key)"
                             />
                             <TableCell
                                 v-for="column in visibleColumns"
@@ -780,7 +902,13 @@ const { hook } = usePanelStyling();
                                     </span>
                                 </template>
                             </TableCell>
-                            <TableCell v-if="hasActionsColumn" class="w-12" />
+                            <TableCell
+                                v-for="key in trailingCells"
+                                :key="key"
+                                class="w-12"
+                                :class="frozenClass(key)"
+                                :style="styleFor(key)"
+                            />
                         </TableRow>
                     </template>
                 </template>
@@ -797,16 +925,13 @@ const { hook } = usePanelStyling();
                     class="bg-background hover:bg-background"
                 >
                     <TableCell
-                        v-if="table.reorderable"
-                        class="w-10"
-                        :class="frozenClass(REORDER_KEY)"
-                        :style="styleFor(REORDER_KEY)"
-                    />
-                    <TableCell
-                        v-if="table.selectable"
-                        class="w-10"
-                        :class="frozenClass(SELECT_KEY)"
-                        :style="styleFor(SELECT_KEY)"
+                        v-for="key in leadingCells"
+                        :key="key"
+                        :class="[
+                            key === ACTIONS_KEY ? 'w-12' : 'w-10',
+                            ...frozenClass(key),
+                        ]"
+                        :style="styleFor(key)"
                     />
                     <TableCell
                         v-for="column in visibleColumns"
@@ -826,7 +951,13 @@ const { hook } = usePanelStyling();
                             </span>
                         </template>
                     </TableCell>
-                    <TableCell v-if="hasRowActions" class="w-12" />
+                    <TableCell
+                        v-for="key in trailingCells"
+                        :key="key"
+                        class="w-12"
+                        :class="frozenClass(key)"
+                        :style="styleFor(key)"
+                    />
                 </TableRow>
             </TableFooter>
         </Table>

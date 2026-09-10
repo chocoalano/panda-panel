@@ -102,6 +102,21 @@ return [
      * Tabel: toolbar, kepala tabel, baris, penomoran halaman, dua renderer.
      */
     'tables' => [
+        'move_column' => 'Pindahkan :column',
+        'sort_by' => 'Urutkan menurut :column',
+        'reorder_row' => 'Ubah urutan :record, posisi :position dari :total',
+        'reorder_announcement' => ':record dipindahkan ke posisi :position dari :total',
+        'move_up' => 'Naikkan',
+        'move_down' => 'Turunkan',
+        'select_row' => 'Pilih :record',
+        'per_page' => ':count / halaman',
+        'page_of' => 'Halaman :page dari :pages',
+        'remove_filter' => 'Hapus :filter',
+        'filter_from' => ':filter dari',
+        'filter_to' => ':filter sampai',
+        'rule_value' => 'Nilai untuk :rule',
+        'remove_rule' => 'Hapus aturan :number',
+        'rule' => 'aturan',
         'select_all_rows' => 'Pilih semua baris di halaman ini',
         'row_actions' => 'Action baris',
         'actions' => 'Action',

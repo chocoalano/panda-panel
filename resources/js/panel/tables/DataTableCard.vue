@@ -15,6 +15,9 @@ import DataTableCell from '@/panel/tables/DataTableCell.vue';
 import { ALIGNMENT_CLASSES, cellUrl } from '@/panel/tables/tableCells';
 import type { ActionDefinition } from '@/panel/types/action';
 import type { ColumnDefinition, TableRow } from '@/panel/types/table';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 /**
  * One record, drawn as a card.
@@ -116,7 +119,9 @@ function action(column: ColumnDefinition): ActionDefinition | undefined {
             <CardAction v-if="selectable">
                 <Checkbox
                     :model-value="selected"
-                    :aria-label="`Select record ${row.key}`"
+                    :aria-label="
+                        t('tables.select_row', { record: String(row.key) })
+                    "
                     @update:model-value="
                         (checked) => emit('select', checked === true)
                     "
