@@ -1,4 +1,5 @@
 import { defineComponent, h, reactive } from 'vue';
+import { translations } from './translations';
 import type { PropType } from 'vue';
 
 /**
@@ -24,7 +25,12 @@ const page = reactive({
         panel: null,
         navigation: [],
         panels: [],
-        translations: {},
+        // The real English strings, copied from `lang/en/frontend.php` at
+        // build time by `frontend/browser/translations.ts`. A fixture with no
+        // dictionary falls back to a humanised key — "Remove item" for every
+        // entry in a repeater — and a browser check that looked for a control
+        // by name would be looking for the wrong name.
+        translations,
     } as Record<string, unknown>,
 });
 

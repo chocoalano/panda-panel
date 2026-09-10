@@ -271,9 +271,36 @@ The table half of `RelationManagerPanel` is stubbed by name. Mounting the data-t
 
 This is not a browser test runner and ADR 001 stands — see [Architecture decisions](architecture-decisions.md).
 
+## Evidence levels
+
+Say what an assertion actually rests on. The words below mean specific things, and a report that uses one it has not earned is worse than one that admits a gap.
+
+| Level | What was run | What it can show | What it cannot |
+| --- | --- | --- | --- |
+| **SOURCE VERIFIED** | Reading, grep, a source assertion in a test | That a class, attribute or literal is present or absent | Anything a browser decides — layout, cascade, focus |
+| **UNIT VERIFIED** | Vitest in the `node` environment | Pure functions: arithmetic, narrowing, ordering | Anything involving a DOM |
+| **VUE RUNTIME VERIFIED** | Vitest with `@vitest-environment happy-dom`, `@vue/test-utils` | That a component renders, reacts, emits, and carries the attributes it should | That a stylesheet applied, what anything measures, whether a real key press lands |
+| **BROWSER VERIFIED** | `tests/browser`, driving a real Chrome | Computed style, box measurements in CSS pixels, breakpoints, focus after a mutation, `contenteditable`, media preferences | Whether a screen reader says anything useful; other engines |
+| **REAL AT VERIFIED** | A person and a screen reader | Announcement, order, whether it is comprehensible | — |
+
+`BROWSER VERIFIED` is **not** `REAL AT VERIFIED`. Driving Chrome proves a name is on an element; it proves nothing about what VoiceOver reads out or in what order. No assertion in this repository is `REAL AT VERIFIED`.
+
 ## The one thing a PHP test cannot see
 
-`tests/browser/frozen-columns.mjs` is a script, not a runner. ADR 001 records that this package ships no browser test runner and that stands — nothing installs, nothing is added to `npm run ci`, and the suite is unaffected.
+`tests/browser/` holds scripts, not a runner. ADR 001 records that this package ships no browser test runner and that stands — **nothing installs**, **nothing is added to `npm run ci`**, and the suite is unaffected. Node's own WebSocket client speaks the DevTools protocol, and Chrome is the one already on the machine.
+
+```bash
+npm run test:browser          # frozen columns, at 360×800
+npm run test:browser:verify   # the verification foundation and its baselines
+npm run test:browser:all      # both
+PANDA_CHROME=/path/to/chromium npm run test:browser:all
+```
+
+`tests/browser/chrome.mjs` is the shared driver: it builds the fixture, serves it on an OS-allocated port, launches a headless Chrome with a throwaway profile, and hands back a small page object — `go`, `evaluate`, `setViewport`, `press`, `type`, `emulateMedia`. Deliberately small. A wider surface is a runner, and a runner is the thing that needs an ADR.
+
+`frontend/browser` is the host. One build serves every fixture, selected by `?fixture=`; each mounts a real published component against the real stylesheet, with the real English strings a page carries. A fixture that restyled or reimplemented anything would be measuring itself.
+
+`tests/browser/verify.mjs` exists because two findings could not be honestly verified without it — a focus ring and a measurement in CSS pixels. It proves the instrument by re-measuring two fixes whose answers are already known (a breakpoint, and where focus lands after a row is removed), then records the current, unfixed measurements the next session will work from.
 
 What it exists for is the one behaviour that is decided entirely by a layout engine: frozen columns are offset by widths the browser measured, and on a narrow screen a side unpins itself when it would swallow the scroll lane. No amount of string assertion over `useFrozenColumns.ts` can say whether Chrome agrees.
 

@@ -11,7 +11,7 @@ and falls through to this directory only when the file is genuinely not part of
 the package.
 
 Its second job is a blank application. `php artisan panel:install` copies the
-stand-ins an application has *no module of its own* for — which is nineteen of
+stand-ins an application has _no module of its own_ for — which is nineteen of
 them on a `laravel new`, and none of them on a Laravel Vue starter kit. Nothing
 here is in a publish map, and nothing here ever overwrites: an application that
 has a `UserMenuContent` keeps it, however it is spelled on disk.

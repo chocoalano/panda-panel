@@ -55,6 +55,8 @@ Written down so they are not re-argued as bugs:
 
 The action layer is the one place components are mounted, and it does not reverse that trade-off: `happy-dom` is not a browser, nothing is driven, and `tests/browser` remains the only place a layout engine is asked anything. What it covers is a class of failure the row above could not — a relation action carrying a form once ran immediately, with no dialog and no values, while every server-side test stayed green, because the bug was that the request was never made. A payload assertion cannot see a request that does not happen. See [Testing](testing.md).
 
+`tests/browser` does not reverse it either, and D19 did not change that. It began as one script for frozen columns and is now a shared driver with several — because a focus ring and a target's size in CSS pixels are the same kind of question as a sticky offset, and asking them anywhere else produces a confident wrong answer. The two properties that make it a script rather than a runner are the ones being preserved on purpose: **nothing installs** — Node's own WebSocket client speaks the DevTools protocol and Chrome is the one already on the machine — and **nothing joins `npm run ci`**, so a contributor without Chrome runs the whole suite unaffected. Adding Playwright or Cypress would reverse the row above and would need its own ADR; this does not, and deliberately stops short of the surface that would. See [Testing](testing.md) for the evidence levels the scripts do and do not earn.
+
 ## The decisions table
 
 The ADR ends with eighteen smaller decisions recorded during implementation, `D1` to `D18`. They are the ones that changed an API without changing the architecture:
@@ -79,6 +81,7 @@ The ADR ends with eighteen smaller decisions recorded during implementation, `D1
 | D16 | `render`/`handle` routing, with `store` and `update` route names |
 | D17 | Delete hooks live on `Action`, not on the page trait, because the endpoint runs without a page instance |
 | D18 | `Field::dehydrateTo()` maps a field onto a different attribute |
+| D19 | `tests/browser` generalised into a shared driver — still scripts, still no runner |
 
 Three of them corrected an earlier mistake rather than choosing between options: D17 replaced two documented hooks that could never have been called, D14 replaced a shell that could never have been reached, and the phase 8 work replaced a `PanelContext` that leaked between requests. A row that records a correction is more useful than a quiet fix, because the next person to have the same idea reads why it did not work.
 

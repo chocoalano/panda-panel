@@ -1,43 +1,54 @@
-import { createApp, h } from 'vue';
-import DataTable from '@/panel/tables/DataTable.vue';
-import { rows, state, table } from './fixture';
+import { createApp, defineAsyncComponent, h } from 'vue';
+import { FIXTURES } from './fixtures';
 import './fixture.css';
 
 /**
- * The frozen-column fixture, mounted for a real browser to lay out.
+ * The fixture host, mounted for a real browser to lay out.
  *
- * Everything freezing does is decided by widths a layout engine produces, so
- * the only place the behaviour can be asserted is one. `tests/browser` drives
- * this page; nothing else imports it and no application ever sees it.
+ * One build serves every fixture: `index.html?fixture=rich-editor` mounts the
+ * rich editor, `?fixture=touch-targets` the controls U18 measures. Everything
+ * mounted here is a *real* published component compiled against the *real*
+ * stylesheet — a fixture that restyled anything would be measuring itself.
  *
- * A recursive-update loop surfaces here as a Vue warning on the console,
- * which the runner reads and fails on — the unit tests assert the three
- * things that prevent the loop, and this asserts that it does not happen.
+ * Nothing else imports this page and no application ever sees it. Vue's
+ * warnings and errors are collected on `window` so the driver can fail on a
+ * recursive-update loop, which is a class of bug that produces no exception
+ * and no wrong value — only a console line.
  */
-const app = createApp({
-    render: () => h(DataTable, { table, rows, state, bordered: true }),
-});
+const requested =
+    new URL(window.location.href).searchParams.get('fixture') ??
+    'frozen-columns';
 
-app.config.errorHandler = (error: unknown) => {
-    const errors = ((window as unknown as Record<string, unknown>).__errors ??
-        []) as string[];
+const loader = FIXTURES[requested];
 
-    errors.push(String((error as Error)?.stack ?? error));
+if (loader === undefined) {
+    document.body.textContent = `Unknown fixture: ${requested}. Known: ${Object.keys(FIXTURES).join(', ')}`;
+} else {
+    const app = createApp({
+        render: () => h(defineAsyncComponent(loader)),
+    });
 
-    (window as unknown as Record<string, unknown>).__errors = errors;
+    app.config.errorHandler = (error: unknown) => {
+        const errors = ((window as unknown as Record<string, unknown>)
+            .__errors ?? []) as string[];
 
-    console.error(error);
-};
+        errors.push(String((error as Error)?.stack ?? error));
 
-app.config.warnHandler = (message: string) => {
-    const warnings = ((window as unknown as Record<string, unknown>)
-        .__vueWarnings ?? []) as string[];
+        (window as unknown as Record<string, unknown>).__errors = errors;
 
-    warnings.push(message);
+        console.error(error);
+    };
 
-    (window as unknown as Record<string, unknown>).__vueWarnings = warnings;
+    app.config.warnHandler = (message: string) => {
+        const warnings = ((window as unknown as Record<string, unknown>)
+            .__vueWarnings ?? []) as string[];
 
-    console.warn(message);
-};
+        warnings.push(message);
 
-app.mount('#app');
+        (window as unknown as Record<string, unknown>).__vueWarnings = warnings;
+
+        console.warn(message);
+    };
+
+    app.mount('#app');
+}
