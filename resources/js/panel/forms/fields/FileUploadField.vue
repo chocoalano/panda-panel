@@ -142,6 +142,7 @@ function remove(path: string): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -188,7 +189,9 @@ function remove(path: string): void {
                         size="sm"
                         class="ml-auto shrink-0"
                         :disabled="field.disabled"
-                        :aria-label="`Remove ${displayName(path)}`"
+                        :aria-label="
+                            t('forms.remove_file', { file: displayName(path) })
+                        "
                         @click="remove(path)"
                     >
                         {{ t('forms.remove') }}
@@ -198,13 +201,14 @@ function remove(path: string): void {
 
             <div class="flex items-center gap-3">
                 <input
-                    :id="field.name"
+                    :id="controlId"
+                    :aria-describedby="describedBy"
                     type="file"
                     class="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-sm file:text-foreground hover:file:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                     :multiple="field.multiple"
                     :accept="accept"
                     :disabled="field.disabled || (atLimit && paths.length > 0)"
-                    :aria-invalid="error ? true : undefined"
+                    :aria-invalid="invalid"
                     @change="onFiles"
                 />
                 <Spinner v-if="uploading > 0" class="size-4 shrink-0" />

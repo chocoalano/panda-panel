@@ -43,36 +43,44 @@ defineProps<{
                 <Label for="name">{{ t('auth.name') }}</Label>
                 <Input
                     id="name"
+                    aria-describedby="name-error"
+                    :aria-invalid="errors.name ? true : undefined"
                     name="name"
                     required
                     autofocus
                     autocomplete="name"
                 />
-                <InputError :message="errors.name" />
+                <InputError id="name-error" :message="errors.name" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="email">{{ t('auth.email') }}</Label>
                 <Input
                     id="email"
+                    aria-describedby="email-error"
+                    :aria-invalid="errors.email ? true : undefined"
                     type="email"
                     name="email"
                     required
                     autocomplete="email"
                 />
-                <InputError :message="errors.email" />
+                <InputError id="email-error" :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="password">{{ t('auth.password') }}</Label>
                 <PasswordInput
                     id="password"
+                    aria-describedby="password-rules password-error"
+                    :aria-invalid="errors.password ? true : undefined"
                     name="password"
                     required
                     autocomplete="new-password"
                 />
-                <p class="text-xs text-muted-foreground">{{ passwordRules }}</p>
-                <InputError :message="errors.password" />
+                <p id="password-rules" class="text-xs text-muted-foreground">
+                    {{ passwordRules }}
+                </p>
+                <InputError id="password-error" :message="errors.password" />
             </div>
 
             <div class="grid gap-2">
@@ -81,11 +89,18 @@ defineProps<{
                 </Label>
                 <PasswordInput
                     id="password_confirmation"
+                    aria-describedby="password_confirmation-error"
+                    :aria-invalid="
+                        errors.password_confirmation ? true : undefined
+                    "
                     name="password_confirmation"
                     required
                     autocomplete="new-password"
                 />
-                <InputError :message="errors.password_confirmation" />
+                <InputError
+                    id="password_confirmation-error"
+                    :message="errors.password_confirmation"
+                />
             </div>
 
             <Button type="submit" class="w-full" :disabled="processing">

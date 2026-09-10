@@ -32,9 +32,9 @@ const passwordInput = useTemplateRef('passwordInput');
             :description="t('settings.delete_account_description')"
         />
         <div
-            class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10"
+            class="space-y-4 rounded-lg border border-destructive/20 bg-destructive/5 p-4"
         >
-            <div class="relative space-y-0.5 text-red-600 dark:text-red-100">
+            <div class="relative space-y-0.5 text-destructive">
                 <p class="font-medium">
                     {{ t('settings.delete_account_warning_heading') }}
                 </p>
@@ -78,10 +78,17 @@ const passwordInput = useTemplateRef('passwordInput');
                             <PasswordInput
                                 id="password"
                                 ref="passwordInput"
+                                aria-describedby="password-error"
+                                :aria-invalid="
+                                    errors.password ? true : undefined
+                                "
                                 name="password"
                                 :placeholder="t('settings.password')"
                             />
-                            <InputError :message="errors.password" />
+                            <InputError
+                                id="password-error"
+                                :message="errors.password"
+                            />
                         </div>
 
                         <DialogFooter class="gap-2">

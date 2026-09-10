@@ -57,6 +57,8 @@ const user = computed(() => inertiaPage.props.auth.user);
                         <Label for="name">{{ t('settings.name') }}</Label>
                         <Input
                             id="name"
+                            aria-describedby="name-error"
+                            :aria-invalid="errors.name ? true : undefined"
                             class="block w-full"
                             name="name"
                             :default-value="user.name"
@@ -64,13 +66,15 @@ const user = computed(() => inertiaPage.props.auth.user);
                             autocomplete="name"
                             :placeholder="t('settings.full_name')"
                         />
-                        <InputError :message="errors.name" />
+                        <InputError id="name-error" :message="errors.name" />
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="email">{{ t('settings.email') }}</Label>
                         <Input
                             id="email"
+                            aria-describedby="email-error"
+                            :aria-invalid="errors.email ? true : undefined"
                             type="email"
                             class="block w-full"
                             name="email"
@@ -79,7 +83,7 @@ const user = computed(() => inertiaPage.props.auth.user);
                             autocomplete="username"
                             :placeholder="t('settings.email')"
                         />
-                        <InputError :message="errors.email" />
+                        <InputError id="email-error" :message="errors.email" />
                     </div>
 
                     <div v-if="mustVerifyEmail && !user.email_verified_at">
@@ -96,7 +100,7 @@ const user = computed(() => inertiaPage.props.auth.user);
 
                         <div
                             v-if="status === 'verification-link-sent'"
-                            class="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400"
+                            class="mt-2 text-sm font-medium text-success"
                         >
                             {{ t('settings.email_resent') }}
                         </div>

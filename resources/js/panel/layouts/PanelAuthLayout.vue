@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import { Toaster } from '@/components/ui/sonner';
 import PanelLocaleSwitcher from '@/panel/components/PanelLocaleSwitcher.vue';
 import { usePanelBranding } from '@/panel/composables/usePanelBranding';
+import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 import { resolveIcon } from '@/panel/icons/registry';
 import type { PanelDefinition } from '@/panel/types/panel';
 
@@ -28,6 +29,20 @@ const props = defineProps<{
 
 const { iconName, logo } = usePanelBranding(() => props.panel);
 const icon = computed(() => resolveIcon(iconName.value));
+
+/**
+ * The panel's palette applies here too.
+ *
+ * This layout exists because "a panel has a front door of its own rather than
+ * sharing the application's" — and the brand mark below is drawn with
+ * `bg-primary`. Without this the door was the package's default indigo
+ * whatever the panel had configured, so the one screen whose entire purpose
+ * is the panel's identity was the one screen that did not carry it.
+ *
+ * Called for its effect: the composable writes the palette onto the document
+ * element, which is what the toaster teleported out of this layout needs.
+ */
+usePanelStyling();
 </script>
 
 <template>

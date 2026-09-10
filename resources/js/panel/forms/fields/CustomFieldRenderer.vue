@@ -32,6 +32,7 @@ const component = computed(() => {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -39,6 +40,14 @@ const component = computed(() => {
         :helper-text="field.helperText"
         :error="error"
     >
+        <!--
+            The identity is passed on rather than applied here: this component
+            does not know what the host renders, so it cannot know which
+            element is the control. A registered component that binds
+            `controlId` and `describedBy` to its own input gets the same
+            label and description association every built-in field has; one
+            that ignores them is no worse off than before.
+        -->
         <component
             :is="component"
             v-if="component"
@@ -47,6 +56,9 @@ const component = computed(() => {
             :config="field.config"
             :error="error"
             :disabled="field.disabled"
+            :control-id="controlId"
+            :described-by="describedBy"
+            :invalid="invalid"
             @update:model-value="
                 (value: FormValue) => emit('update:modelValue', value)
             "

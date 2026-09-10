@@ -20,6 +20,7 @@ function onInput(value: string | number): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -28,7 +29,8 @@ function onInput(value: string | number): void {
         :error="error"
     >
         <Input
-            :id="field.name"
+            :id="controlId"
+            :aria-describedby="describedBy"
             type="number"
             :model-value="typeof modelValue === 'number' ? modelValue : ''"
             :placeholder="field.placeholder ?? undefined"
@@ -36,7 +38,7 @@ function onInput(value: string | number): void {
             :min="field.min ?? undefined"
             :max="field.max ?? undefined"
             :step="field.step ?? undefined"
-            :aria-invalid="error ? true : undefined"
+            :aria-invalid="invalid"
             @update:model-value="onInput"
         />
     </FieldWrapper>

@@ -127,18 +127,31 @@ return [
      * Elemen bawaan formulir, dan isian yang menggambar kontrolnya sendiri.
      */
     'forms' => [
+        'create_record' => 'Buat :resource',
+        'confirm_field' => 'Konfirmasi :field',
+        'search_field_placeholder' => 'Cari :field…',
+        'remove_file' => 'Hapus :file',
+        'move_item_up' => 'Naikkan :item',
+        'move_item_down' => 'Turunkan :item',
+        'remove_item' => 'Hapus :item',
         'save' => 'Simpan',
         'cancel' => 'Batal',
         'back' => 'Kembali',
         'next' => 'Lanjut',
         'loading' => 'Memuat',
         'load_failed' => 'Formulir ini tidak dapat dimuat.',
+        'error_summary' => 'Formulir ini memiliki :count kesalahan. Perbaiki lalu coba lagi.',
         'tab_has_errors' => 'Tab ini memiliki kesalahan',
         'no_renderer' => 'Isian ini tidak memiliki renderer.',
         'create_another' => 'Buat & buat lagi',
 
         'select_placeholder' => 'Pilih...',
         'select_empty' => 'Tidak ada pilihan.',
+        'search_field' => 'Cari :field',
+        'select_no_matches' => 'Tidak ada yang cocok dengan pencarian itu.',
+        'select_failed' => 'Daftar tidak dapat dimuat.',
+        'select_stale' => 'Menampilkan hasil sebelumnya — pembaruan gagal.',
+        'retry' => 'Coba lagi',
         'checkbox_select_all' => 'Pilih semua',
         'checkbox_deselect_all' => 'Batalkan semua pilihan',
 

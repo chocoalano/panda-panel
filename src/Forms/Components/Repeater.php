@@ -194,19 +194,41 @@ final class Repeater extends Field
     }
 
     /**
+     * The rules for everything inside one entry.
+     *
+     * A field of an entry lives at `items.*.title`, a key only the field that
+     * owns the entries can produce — which is why `FormSchema` delegates here
+     * rather than deriving it.
+     *
+     * A child that owns entries of its own is asked the same question and its
+     * answer is prefixed, so a repeater inside a repeater reaches
+     * `outer.*.inner.*.name`. Depth is not a parameter anywhere: each level
+     * delegates to the one below it, exactly as the schema delegates to the
+     * top level. Before this, generation stopped at the nested field, so a
+     * `required()` below it was accepted, rendered, serialized — and never
+     * enforced.
+     *
      * @return array<string, list<mixed>>
      */
     public function nestedRules(?Model $record = null): array
     {
         $rules = [];
+        $prefix = $this->getName().'.*.';
 
         foreach ($this->itemFields() as $field) {
-            $rules[$this->getName().'.*.'.$field->getName()] = $field->validationRules($record);
+            $rules[$prefix.$field->getName()] = $field->validationRules($record);
 
             $elementRules = $field->elementRules();
 
             if ($elementRules !== []) {
-                $rules[$this->getName().'.*.'.$field->getName().'.*'] = $elementRules;
+                $rules[$prefix.$field->getName().'.*'] = $elementRules;
+            }
+
+            // The child answers with paths relative to itself, so prefixing
+            // is the whole of the recursion. A field that owns nothing
+            // answers with an empty array and costs one call.
+            foreach ($field->nestedRules($record) as $path => $nested) {
+                $rules[$prefix.$path] = $nested;
             }
         }
 

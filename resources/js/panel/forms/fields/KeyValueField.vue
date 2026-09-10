@@ -86,14 +86,23 @@ function remove(index: number): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid, labelledBy }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
         :required="field.required"
         :helper-text="field.helperText"
         :error="error"
+        group
     >
-        <div class="flex flex-col gap-2">
+        <div
+            :id="controlId"
+            role="group"
+            :aria-labelledby="labelledBy"
+            :aria-describedby="describedBy"
+            :aria-invalid="invalid"
+            class="flex flex-col gap-2"
+        >
             <div
                 v-if="pairs.length > 0"
                 class="grid grid-cols-[1fr_1fr_auto] gap-2 text-xs text-muted-foreground"
@@ -129,7 +138,11 @@ function remove(index: number): void {
                     size="sm"
                     class="w-8"
                     :disabled="field.disabled"
-                    :aria-label="`Remove ${pair[0] || field.keyLabel}`"
+                    :aria-label="
+                        t('forms.remove_item', {
+                            item: pair[0] || field.keyLabel,
+                        })
+                    "
                     @click="remove(index)"
                 >
                     &times;

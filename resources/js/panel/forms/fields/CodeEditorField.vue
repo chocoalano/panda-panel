@@ -89,6 +89,7 @@ function onTab(event: KeyboardEvent): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -108,7 +109,8 @@ function onTab(event: KeyboardEvent): void {
             </div>
 
             <Textarea
-                :id="field.name"
+                :id="controlId"
+                :aria-describedby="describedBy"
                 class="rounded-none border-0 font-mono text-sm shadow-none focus-visible:ring-0"
                 spellcheck="false"
                 autocapitalize="off"
@@ -119,7 +121,7 @@ function onTab(event: KeyboardEvent): void {
                 :placeholder="field.placeholder ?? undefined"
                 :disabled="field.disabled"
                 :maxlength="field.maxLength ?? undefined"
-                :aria-invalid="error ? true : undefined"
+                :aria-invalid="invalid"
                 @keydown.tab="onTab"
                 @update:model-value="
                     (value) => emit('update:modelValue', String(value))

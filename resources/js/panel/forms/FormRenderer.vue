@@ -5,6 +5,11 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
+import {
+    createFieldRegistry,
+    provideFieldRegistry,
+} from '@/panel/forms/fieldIdentity';
+import { focusFirstInvalid } from '@/panel/forms/focusInvalid';
 import { useUnsavedChangesAlert } from '@/panel/composables/useUnsavedChangesAlert';
 import FormGrid from '@/panel/forms/FormGrid.vue';
 import {
@@ -69,6 +74,15 @@ const props = defineProps<{
 provideOptionsUrl(() => props.optionsUrl ?? null);
 provideUploadUrl(() => props.uploadUrl ?? null);
 provideFormStateUrl(() => props.formStateUrl ?? null);
+
+/**
+ * Every field registers itself here as it renders, so a rejected submit can
+ * find the control an error belongs to — including one inside a repeater,
+ * whose DOM id is nothing like the path the server keyed the message by.
+ */
+const registry = createFieldRegistry();
+
+provideFieldRegistry(registry);
 
 /**
  * `saved` lets a host close itself once the write went through. A page
@@ -233,6 +247,60 @@ provideFormValues(() => values.value);
 const label = computed(() => props.submitLabel ?? t('forms.save'));
 
 /**
+ * What was refused, in the order it appears on screen.
+ *
+ * A long form that is rejected used to look like a form that did nothing: the
+ * page did not move, and the messages were beside fields that could be a
+ * screen away or inside a tab that was not open. This says how many there are
+ * and offers a way to each one.
+ *
+ * The field's *label* rather than its message: the message is already on the
+ * field, and repeating all of them here is a second wall of text to read
+ * before reaching the first one.
+ */
+const summary = computed(() => {
+    const listed = registry
+        .paths()
+        .filter((path) => errors.value[path] !== undefined)
+        .map((path) => ({
+            path,
+            label: registry.get(path)?.label ?? path,
+            controlId: registry.get(path)?.controlId ?? path,
+        }));
+
+    // Anything the registry does not know about is still counted. A message
+    // keyed to something that is not a rendered field — a schema-level rule —
+    // is not linkable, but pretending it does not exist would make the count
+    // disagree with the form.
+    const unlisted = Object.keys(errors.value).filter(
+        (path) => !listed.some((entry) => entry.path === path),
+    );
+
+    return { listed, count: listed.length + unlisted.length };
+});
+
+/** Focused after a failed submit, so the summary is where the user lands. */
+const summaryRef = ref<HTMLElement | null>(null);
+
+async function reportErrors(): Promise<void> {
+    const focused = await focusFirstInvalid(registry, errors.value, document);
+
+    // Nothing could take focus — every invalid field is hidden by a condition,
+    // or the errors name nothing rendered. The summary is then the only thing
+    // that can tell the user the submit was answered at all.
+    if (focused === null) {
+        summaryRef.value?.focus();
+    }
+}
+
+function jumpTo(controlId: string): void {
+    const element = document.getElementById(controlId);
+
+    element?.scrollIntoView({ block: 'center' });
+    element?.focus();
+}
+
+/**
  * A wizard owns the whole form when present: it renders the steps and its
  * own controls, so this component's buttons would be a second way to submit.
  */
@@ -374,9 +442,14 @@ function scheduleLive(field: FieldDefinition, previous: FormValue): void {
 }
 
 /**
- * The controls all carry the field name as their `id`, so one listener on the
- * form catches every blur without each of twenty-five renderers having to
- * emit one.
+ * One listener on the form catches every blur, so twenty-five renderers do not
+ * each have to emit one.
+ *
+ * The blurred element is turned back into a field through the registry. It
+ * used to be read straight off `target.id`, which worked only while the id and
+ * the state path were the same string — they are not: a relation group names
+ * its fields `profile.bio`, and a field inside a repeater is one control among
+ * several with that name.
  */
 function onFocusOut(event: FocusEvent): void {
     const target = event.target;
@@ -385,8 +458,10 @@ function onFocusOut(event: FocusEvent): void {
         return;
     }
 
-    if (pendingBlur.delete(target.id)) {
-        void sendState(target.id);
+    const path = registry.pathFor(target.id);
+
+    if (path !== null && pendingBlur.delete(path)) {
+        void sendState(path);
     }
 }
 
@@ -421,6 +496,8 @@ function submit(createAnother = false): void {
     if (Object.keys(clientErrors).length > 0) {
         errors.value = clientErrors;
 
+        void reportErrors();
+
         return;
     }
 
@@ -443,6 +520,8 @@ function submit(createAnother = false): void {
         },
         onError: (received) => {
             errors.value = received;
+
+            void reportErrors();
         },
         onFinish: () => {
             processing.value = false;
@@ -460,6 +539,34 @@ const { hook } = usePanelStyling();
         @submit.prevent="submit()"
         @focusout="onFocusOut"
     >
+        <!--
+            Only after a refusal, and only then. `role="alert"` announces it
+            when it appears, and `tabindex="-1"` makes it a place focus can be
+            sent when no invalid field can take it.
+        -->
+        <div
+            v-if="summary.count > 0"
+            ref="summaryRef"
+            role="alert"
+            tabindex="-1"
+            class="flex flex-col gap-1 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+        >
+            <p class="font-medium">
+                {{ t('forms.error_summary', { count: summary.count }) }}
+            </p>
+            <ul v-if="summary.listed.length > 0" class="flex flex-wrap gap-x-3">
+                <li v-for="entry in summary.listed" :key="entry.path">
+                    <button
+                        type="button"
+                        class="underline underline-offset-2"
+                        @click="jumpTo(entry.controlId)"
+                    >
+                        {{ entry.label }}
+                    </button>
+                </li>
+            </ul>
+        </div>
+
         <FormWizard
             v-if="wizard"
             :wizard="wizard"
@@ -505,9 +612,20 @@ const { hook } = usePanelStyling();
             an action dialog, where the dialog already owns its footer and a
             second pinned bar inside it would be two.
         -->
+        <!--
+            Wrapping, not scrolling. `flex items-center` with three buttons and
+            long labels — "Simpan & buat lainnya" is half again the width of
+            "Save & create another" — pushed the row past the viewport, and a
+            sticky bar cannot be scrolled sideways to reach what fell off it.
+
+            `flex-wrap` rather than a stacked mobile variant: the hierarchy is
+            carried by the button variants, and it survives wrapping. Turning
+            all three into full-width blocks would make Cancel look as
+            important as Save.
+        -->
         <div
             v-if="!wizard"
-            class="flex items-center gap-2"
+            class="flex flex-wrap items-center gap-2"
             :class="
                 stickyActions
                     ? 'panel-form-actions sticky bottom-0 z-10 -mx-1 border-t bg-background px-1 py-3'

@@ -26,18 +26,23 @@ function selected(): string {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid, labelledBy }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
         :required="field.required"
         :helper-text="field.helperText"
         :error="error"
+        group
     >
         <RadioGroup
+            :id="controlId"
+            :aria-labelledby="labelledBy"
+            :aria-describedby="describedBy"
             :model-value="selected()"
             :disabled="field.disabled"
             :class="field.inline ? 'flex flex-wrap gap-x-6 gap-y-3' : 'gap-3'"
-            :aria-invalid="error ? true : undefined"
+            :aria-invalid="invalid"
             @update:model-value="
                 (value) => emit('update:modelValue', String(value ?? ''))
             "
@@ -48,13 +53,13 @@ function selected(): string {
                 class="flex items-start gap-2"
             >
                 <RadioGroupItem
-                    :id="`${field.name}-${option.value}`"
+                    :id="`${controlId}-${option.value}`"
                     :value="option.value"
                     class="mt-0.5"
                 />
                 <div class="flex flex-col gap-0.5">
                     <Label
-                        :for="`${field.name}-${option.value}`"
+                        :for="`${controlId}-${option.value}`"
                         class="font-normal"
                     >
                         {{ option.label }}

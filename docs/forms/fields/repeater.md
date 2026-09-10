@@ -157,6 +157,40 @@ public function nestedRules(?Model $record = null): array
 
 A child that itself validates a list contributes a third level, `items.*.labels.*`, from its own `elementRules()`.
 
+### Nesting
+
+`schema()` takes `FormComponent` and a repeater is one, so a repeater may hold a repeater. Rules are generated all the way down, because each level asks its children the same question and prefixes their answer:
+
+```php
+use PandaPanel\Forms\Components\Repeater;
+use PandaPanel\Forms\Components\TextInput;
+use PandaPanel\Forms\FormSchema;
+
+FormSchema::make()
+    ->schema([
+        Repeater::make('invoices')->schema([
+            TextInput::make('reference')->required(),
+            Repeater::make('lines')->schema([
+                TextInput::make('description')->required(),
+            ]),
+        ]),
+    ])
+    ->validationRules();
+
+// [
+//     'invoices'                       => ['nullable', 'array'],
+//     'invoices.*.reference'           => ['required', 'string', 'max:255'],
+//     'invoices.*.lines'               => ['nullable', 'array'],
+//     'invoices.*.lines.*.description' => ['required', 'string', 'max:255'],
+// ]
+```
+
+Depth is not a parameter anywhere, so a third level works the same way and needs no declaration to say so.
+
+Dehydration recurses too, and always did: each entry is filtered by the schema that describes it, at every level, so a key no schema declared is discarded rather than written.
+
+One thing nesting does not change is the note below about `live()`. A field inside an entry is not one of the form's flat values, and that is as true two levels down as one.
+
 Errors come back keyed the same way, and `RepeaterField.vue` strips the `items.0.` prefix before handing them to the entry, so a message lands on the field that produced it rather than on the repeater as a whole.
 
 ## Dehydration
@@ -275,6 +309,8 @@ Repeater::make('items')->schema([
 **`live()` on a child field is not wired.** The form-state endpoint rebuilds from the form's flat values, and a field inside an entry is not one of them. Declarative conditions do work, because they are evaluated against the entry in the browser.
 
 **`hiddenOn()` inside an entry does nothing useful.** The item schema is always serialized for the `create` page, whatever page the repeater is on. Page-aware visibility belongs on the repeater itself.
+
+**A repeater's own name must be unique among its siblings, at every level.** Two nested repeaters sharing a name under one parent would generate the same rule paths, and the second would win — the same trap as two children sharing a name, one level down.
 
 **Duplicate names are checked at the top level only.** `FormSchema` asserts unique field names across the components it holds, and a repeater reports only itself — so two children of one repeater with the same name are not caught there. Keep them distinct anyway: the entry is a map, and the second would win.
 

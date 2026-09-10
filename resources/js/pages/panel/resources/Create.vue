@@ -67,7 +67,8 @@ const props = withDefaults(
             :validate-step-url="validateStepUrl"
             method="post"
             :submit-label="
-                submitLabel ?? `Create ${resource.label.toLowerCase()}`
+                submitLabel ??
+                t('forms.create_record', { resource: resource.label })
             "
             :create-another-label="
                 props.canCreateAnother ? t('forms.create_another') : undefined

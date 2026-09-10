@@ -17,6 +17,21 @@ const props = defineProps<{
 const showPassword = ref(false);
 const inputRef = useTemplateRef('inputRef');
 
+/*
+ * The toggle is a control, so it is in the tab order.
+ *
+ * It carried `tabindex="-1"`, which is the one attribute that takes a working
+ * feature away from exactly the people most likely to want it: somebody typing
+ * a long generated password on a keyboard could not reach the button that
+ * lets them check it. The usual argument for `-1` here is that the button sits
+ * between the password field and the submit — but that is an argument about
+ * one extra Tab press, against a feature being unreachable.
+ *
+ * `aria-pressed` rather than only a changing label: the label says what
+ * pressing it will do next, and this says what state it is in now. Together
+ * they answer both "what does this do" and "is it on".
+ */
+
 defineExpose({
     $el: inputRef,
     focus: () => inputRef.value?.$el?.focus(),
@@ -41,7 +56,7 @@ defineExpose({
             :aria-label="
                 showPassword ? t('ui.hide_password') : t('ui.show_password')
             "
-            :tabindex="-1"
+            :aria-pressed="showPassword"
             @click="showPassword = !showPassword"
         >
             <EyeOff v-if="showPassword" class="size-4" />

@@ -32,7 +32,7 @@ defineProps<{
 
         <div
             v-if="status"
-            class="mb-4 text-center text-sm font-medium text-emerald-600"
+            class="mb-4 text-center text-sm font-medium text-success"
         >
             {{ status }}
         </div>
@@ -46,12 +46,14 @@ defineProps<{
                 <Label for="email">{{ t('auth.email') }}</Label>
                 <Input
                     id="email"
+                    aria-describedby="email-error"
+                    :aria-invalid="errors.email ? true : undefined"
                     type="email"
                     name="email"
                     required
                     autofocus
                 />
-                <InputError :message="errors.email" />
+                <InputError id="email-error" :message="errors.email" />
             </div>
 
             <Button type="submit" class="w-full" :disabled="processing">

@@ -14,6 +14,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -28,7 +29,8 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
             space, and a column would rather not hold the `T`.
         -->
         <Input
-            :id="field.name"
+            :id="controlId"
+            :aria-describedby="describedBy"
             type="datetime-local"
             :step="field.seconds ? 1 : undefined"
             :model-value="
@@ -39,7 +41,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
             :disabled="field.disabled"
             :min="field.minDate?.replace(' ', 'T') ?? undefined"
             :max="field.maxDate?.replace(' ', 'T') ?? undefined"
-            :aria-invalid="error ? true : undefined"
+            :aria-invalid="invalid"
             @update:model-value="
                 (value) =>
                     emit(

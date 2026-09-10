@@ -3,6 +3,9 @@ import { computed, ref } from 'vue';
 import { Input } from '@/components/ui/input';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import type { TagsInputFieldDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
+
+const { t } = useTranslator();
 
 const props = defineProps<{
     field: TagsInputFieldDefinition;
@@ -84,6 +87,7 @@ function onBackspace(): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -103,7 +107,7 @@ function onBackspace(): void {
                         type="button"
                         class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="field.disabled"
-                        :aria-label="`Remove ${tag}`"
+                        :aria-label="t('forms.remove_item', { item: tag })"
                         @click="remove(tag)"
                     >
                         &times;
@@ -112,15 +116,16 @@ function onBackspace(): void {
             </div>
 
             <Input
-                :id="field.name"
+                :id="controlId"
+                :aria-describedby="describedBy"
                 :model-value="draft"
                 :placeholder="field.placeholder ?? undefined"
                 :disabled="field.disabled || atLimit"
                 :maxlength="field.maxLength ?? undefined"
-                :aria-invalid="error ? true : undefined"
+                :aria-invalid="invalid"
                 :list="
                     available.length > 0
-                        ? `${field.name}-suggestions`
+                        ? `${controlId}-suggestions`
                         : undefined
                 "
                 @update:model-value="(next) => (draft = String(next))"
@@ -131,7 +136,7 @@ function onBackspace(): void {
 
             <datalist
                 v-if="available.length > 0"
-                :id="`${field.name}-suggestions`"
+                :id="`${controlId}-suggestions`"
             >
                 <option
                     v-for="suggestion in available"

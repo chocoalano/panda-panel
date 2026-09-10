@@ -1,10 +1,20 @@
 <script setup lang="ts">
+import { TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui';
 import { ref, watch } from 'vue';
 import { resolveIcon } from '@/panel/icons/registry';
 import InfolistNode from '@/panel/infolists/InfolistNode.vue';
 import type { ActionDefinition } from '@/panel/types/action';
 import type { InfolistTabsDefinition } from '@/panel/types/infolist';
 
+/**
+ * The read-only twin of `FormTabs`, and on the same primitive for the same
+ * reason: the hand-written version had the ARIA attributes and none of the
+ * keyboard behaviour, so arrow keys did nothing and every tab was a tab stop.
+ *
+ * The ids were also global — `infolist-tab-details` — so a record showing an
+ * infolist tab set beside a form tab set could produce the same id twice.
+ * Reka generates them per instance.
+ */
 const props = defineProps<{ tabs: InfolistTabsDefinition }>();
 
 const emit = defineEmits<{ run: [action: ActionDefinition] }>();
@@ -41,23 +51,17 @@ if (props.tabs.persistTab && typeof window !== 'undefined') {
 </script>
 
 <template>
-    <div class="flex flex-col gap-4">
-        <div class="flex flex-wrap gap-1 border-b" role="tablist">
-            <button
+    <TabsRoot
+        v-model="active"
+        :unmount-on-hide="false"
+        class="flex flex-col gap-4"
+    >
+        <TabsList class="flex flex-wrap gap-1 border-b">
+            <TabsTrigger
                 v-for="tab in tabs.tabs"
-                :id="`infolist-tab-${tab.key}`"
                 :key="tab.key"
-                type="button"
-                role="tab"
-                :aria-selected="active === tab.key"
-                :aria-controls="`infolist-panel-${tab.key}`"
-                class="-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors"
-                :class="
-                    active === tab.key
-                        ? 'border-primary text-foreground'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                "
-                @click="active = tab.key"
+                :value="tab.key"
+                class="-mb-px flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
             >
                 <component
                     :is="resolveIcon(tab.icon)"
@@ -71,17 +75,14 @@ if (props.tabs.persistTab && typeof window !== 'undefined') {
                 >
                     {{ tab.badge }}
                 </span>
-            </button>
-        </div>
+            </TabsTrigger>
+        </TabsList>
 
-        <div
+        <TabsContent
             v-for="tab in tabs.tabs"
-            v-show="active === tab.key"
-            :id="`infolist-panel-${tab.key}`"
             :key="tab.key"
-            role="tabpanel"
-            :aria-labelledby="`infolist-tab-${tab.key}`"
-            class="flex flex-col gap-4"
+            :value="tab.key"
+            class="flex flex-col gap-4 focus-visible:outline-none"
         >
             <InfolistNode
                 v-for="(child, index) in tab.schema"
@@ -90,6 +91,6 @@ if (props.tabs.persistTab && typeof window !== 'undefined') {
                 :columns="tab.columns"
                 @run="(action) => emit('run', action)"
             />
-        </div>
-    </div>
+        </TabsContent>
+    </TabsRoot>
 </template>

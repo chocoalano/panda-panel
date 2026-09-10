@@ -128,6 +128,13 @@ return [
      * Form chrome, and the fields that draw controls of their own.
      */
     'forms' => [
+        'create_record' => 'Create :resource',
+        'confirm_field' => 'Confirm :field',
+        'search_field_placeholder' => 'Search :field…',
+        'remove_file' => 'Remove :file',
+        'move_item_up' => 'Move :item up',
+        'move_item_down' => 'Move :item down',
+        'remove_item' => 'Remove :item',
         'save' => 'Save',
         'cancel' => 'Cancel',
         'back' => 'Back',
@@ -135,11 +142,17 @@ return [
         'loading' => 'Loading',
         'load_failed' => 'This form could not be loaded.',
         'tab_has_errors' => 'This tab has errors',
+        'error_summary' => 'This form has :count error(s). Fix them and try again.',
         'no_renderer' => 'This field has no renderer.',
         'create_another' => 'Create & create another',
 
         'select_placeholder' => 'Select...',
         'select_empty' => 'Nothing to choose from.',
+        'search_field' => 'Search :field',
+        'select_no_matches' => 'Nothing matches that search.',
+        'select_failed' => 'The list could not be loaded.',
+        'select_stale' => 'Showing earlier results — the update failed.',
+        'retry' => 'Try again',
         'checkbox_select_all' => 'Select all',
         'checkbox_deselect_all' => 'Deselect all',
 

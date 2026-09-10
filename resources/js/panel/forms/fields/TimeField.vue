@@ -14,6 +14,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -27,12 +28,13 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
             seconds would be quietly truncated on the first edit.
         -->
         <Input
-            :id="field.name"
+            :id="controlId"
+            :aria-describedby="describedBy"
             type="time"
             :step="field.seconds ? 1 : undefined"
             :model-value="typeof modelValue === 'string' ? modelValue : ''"
             :disabled="field.disabled"
-            :aria-invalid="error ? true : undefined"
+            :aria-invalid="invalid"
             @update:model-value="
                 (value) =>
                     emit(

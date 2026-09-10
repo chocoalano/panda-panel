@@ -63,17 +63,23 @@ function press(value: string): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid, labelledBy }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
         :required="field.required"
         :helper-text="field.helperText"
         :error="error"
+        group
     >
         <div
+            :id="controlId"
             class="flex gap-2"
             :class="field.inline ? 'flex-wrap' : 'flex-col items-start'"
             role="group"
+            :aria-labelledby="labelledBy"
+            :aria-describedby="describedBy"
+            :aria-invalid="invalid"
         >
             <button
                 v-for="option in field.options"

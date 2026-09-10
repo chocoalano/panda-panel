@@ -49,7 +49,7 @@ defineProps<{
 
         <div
             v-if="status"
-            class="mb-4 text-center text-sm font-medium text-emerald-600"
+            class="text-success mb-4 text-center text-sm font-medium"
         >
             {{ status }}
         </div>
@@ -66,6 +66,8 @@ defineProps<{
                 <Label for="email">{{ t('auth.email') }}</Label>
                 <Input
                     id="email"
+                    aria-describedby="email-error"
+                    :aria-invalid="errors.email ? true : undefined"
                     type="email"
                     name="email"
                     required
@@ -73,7 +75,7 @@ defineProps<{
                     autocomplete="email"
                     :placeholder="t('auth.email_placeholder')"
                 />
-                <InputError :message="errors.email" />
+                <InputError id="email-error" :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
@@ -89,12 +91,14 @@ defineProps<{
                 </div>
                 <PasswordInput
                     id="password"
+                    aria-describedby="password-error"
+                    :aria-invalid="errors.password ? true : undefined"
                     name="password"
                     required
                     autocomplete="current-password"
                     :placeholder="t('auth.password')"
                 />
-                <InputError :message="errors.password" />
+                <InputError id="password-error" :message="errors.password" />
             </div>
 
             <Label for="remember" class="flex items-center space-x-3">

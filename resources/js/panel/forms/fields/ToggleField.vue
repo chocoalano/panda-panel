@@ -14,6 +14,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>();
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         inline
         :name="field.name"
         :inline-label="field.inlineLabel"
@@ -23,7 +24,9 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>();
         :error="error"
     >
         <Switch
-            :id="field.name"
+            :id="controlId"
+            :aria-describedby="describedBy"
+            :aria-invalid="invalid"
             :model-value="modelValue === true"
             :disabled="field.disabled"
             @update:model-value="

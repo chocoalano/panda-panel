@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
+import {
+    focusAfterRemoval,
+    survivorAfterRemoval,
+} from '@/panel/forms/focusAfterRemoval';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
-import FormComponentRenderer from '@/panel/forms/FormComponentRenderer.vue';
+import RepeatedEntry from '@/panel/forms/fields/RepeatedEntry.vue';
 import { resolveIcon } from '@/panel/icons/registry';
 import type {
     BlockDefinition,
@@ -33,7 +37,15 @@ const emit = defineEmits<{
  * the block up by, and a type it does not recognise is dropped there — so the
  * picker below can only ever offer what the schema declared.
  */
-const collapsed = ref<Set<number>>(new Set());
+/**
+ * Which blocks are folded up, by identity rather than by position — see the
+ * same state in `RepeaterField` for why. A `Set` of indices leaves the collapse
+ * behind on the slot when a block moves, so the block that slid into it is
+ * drawn folded and the one the user folded springs open.
+ */
+const root = ref<HTMLElement | null>(null);
+
+const collapsed = ref<Set<string>>(new Set());
 const picking = ref(false);
 
 const entries = computed<Array<{ type: string; data: FormValues }>>(() => {
@@ -87,6 +99,61 @@ const canDelete = computed(
             entries.value.length > props.field.minItems),
 );
 
+/**
+ * A DOM identity per block, stable across reordering — the same list, kept the
+ * same way, as `RepeaterField`, and for the same two reasons. Every block of a
+ * given type renders the same sub-schema, so without this two blocks of one
+ * type produce two controls with one id; and it cannot be derived from the
+ * block itself, because the form narrows every value it is given and that
+ * rebuilds the objects on each edit.
+ */
+let counter = 0;
+
+const blockIds = ref<string[]>([]);
+
+watch(
+    () => entries.value.length,
+    (length) => {
+        while (blockIds.value.length < length) {
+            counter += 1;
+            blockIds.value.push(String(counter));
+        }
+
+        if (blockIds.value.length > length) {
+            // Blocks can disappear from underneath — a rebuilt schema, or a
+            // shorter answer from the server. What was remembered about them
+            // goes too, or the next block created would inherit it.
+            for (const id of blockIds.value.splice(length)) {
+                forget(id);
+            }
+        }
+    },
+    { immediate: true },
+);
+
+function identity(index: number): string {
+    return blockIds.value[index] ?? String(index);
+}
+
+function domScope(index: number): string {
+    return `${props.field.name}-${identity(index)}-`;
+}
+
+function isCollapsed(index: number): boolean {
+    return collapsed.value.has(identity(index));
+}
+
+function forget(id: string): void {
+    if (!collapsed.value.has(id)) {
+        return;
+    }
+
+    const next = new Set(collapsed.value);
+
+    next.delete(id);
+    collapsed.value = next;
+}
+
 function block(type: string): BlockDefinition | null {
     return props.field.blocks.find((entry) => entry.name === type) ?? null;
 }
@@ -128,10 +195,20 @@ function add(definition: BlockDefinition): void {
 }
 
 function remove(index: number): void {
+    // Worked out before the removal, while the identities still line up with
+    // what is on screen.
+    const target = survivorAfterRemoval(blockIds.value, index);
+
+    forget(identity(index));
+
+    blockIds.value.splice(index, 1);
+
     emit(
         'update:modelValue',
         entries.value.filter((_, position) => position !== index),
     );
+
+    void focusAfterRemoval(root.value, target);
 }
 
 function move(index: number, offset: number): void {
@@ -145,16 +222,23 @@ function move(index: number, offset: number): void {
 
     [next[index], next[target]] = [next[target], next[index]];
 
+    // The identity follows the block, so the controls the user was looking at
+    // keep their ids after the move.
+    const ids = blockIds.value;
+
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+
     emit('update:modelValue', next);
 }
 
 function toggle(index: number): void {
+    const id = identity(index);
     const next = new Set(collapsed.value);
 
-    if (next.has(index)) {
-        next.delete(index);
+    if (next.has(id)) {
+        next.delete(id);
     } else {
-        next.add(index);
+        next.add(id);
     }
 
     collapsed.value = next;
@@ -163,18 +247,29 @@ function toggle(index: number): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid, labelledBy }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
         :required="field.required"
         :helper-text="field.helperText"
         :error="error"
+        group
     >
-        <div class="flex flex-col gap-3">
+        <div
+            :id="controlId"
+            ref="root"
+            role="group"
+            :aria-labelledby="labelledBy"
+            :aria-describedby="describedBy"
+            :aria-invalid="invalid"
+            class="flex flex-col gap-3"
+        >
             <div
                 v-for="(entry, index) in entries"
                 :key="index"
-                class="rounded-md border border-input"
+                :data-repeat-entry="identity(index)"
+                class="rounded-md border border-input focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
                 <div
                     class="flex items-center gap-2 border-b border-input bg-muted/40 px-3 py-2"
@@ -188,8 +283,9 @@ function toggle(index: number): void {
                     <button
                         v-if="field.collapsible"
                         type="button"
+                        data-repeat-focus
                         class="text-sm font-medium"
-                        :aria-expanded="!collapsed.has(index)"
+                        :aria-expanded="!isCollapsed(index)"
                         @click="toggle(index)"
                     >
                         {{ block(entry.type)?.label ?? entry.type }}
@@ -243,22 +339,18 @@ function toggle(index: number): void {
                     lose content nobody asked to remove.
                 -->
                 <div
-                    v-show="!collapsed.has(index)"
+                    v-show="!isCollapsed(index)"
                     class="flex flex-col gap-4 p-3"
                 >
-                    <template v-if="block(entry.type)">
-                        <FormComponentRenderer
-                            v-for="(node, position) in block(entry.type)
-                                ?.schema ?? []"
-                            :key="position"
-                            :node="node"
-                            :values="entry.data"
-                            :errors="errorsFor(index)"
-                            @change="
-                                (name, value) => change(index, name, value)
-                            "
-                        />
-                    </template>
+                    <RepeatedEntry
+                        v-if="block(entry.type)"
+                        :schema="block(entry.type)?.schema ?? []"
+                        :values="entry.data"
+                        :errors="errorsFor(index)"
+                        :dom-scope="domScope(index)"
+                        :path-scope="`${field.name}.${index}.data.`"
+                        @change="(name, value) => change(index, name, value)"
+                    />
                     <p v-else class="text-sm text-muted-foreground">
                         {{ t('forms.block_unavailable') }}
                     </p>
@@ -277,6 +369,7 @@ function toggle(index: number): void {
                     type="button"
                     variant="outline"
                     size="sm"
+                    data-repeat-add
                     class="w-fit"
                     :aria-expanded="picking"
                     @click="picking = !picking"

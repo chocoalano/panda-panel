@@ -14,6 +14,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -22,13 +23,14 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
         :error="error"
     >
         <Textarea
-            :id="field.name"
+            :id="controlId"
+            :aria-describedby="describedBy"
             :model-value="typeof modelValue === 'string' ? modelValue : ''"
             :placeholder="field.placeholder ?? undefined"
             :disabled="field.disabled"
             :rows="field.rows"
             :maxlength="field.maxLength ?? undefined"
-            :aria-invalid="error ? true : undefined"
+            :aria-invalid="invalid"
             @update:model-value="
                 (value) => emit('update:modelValue', String(value))
             "

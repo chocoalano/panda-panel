@@ -67,14 +67,23 @@ function toggleAll(): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid, labelledBy }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
         :required="field.required"
         :helper-text="field.helperText"
         :error="error"
+        group
     >
-        <div class="flex flex-col gap-2">
+        <div
+            :id="controlId"
+            role="group"
+            :aria-labelledby="labelledBy"
+            :aria-describedby="describedBy"
+            :aria-invalid="invalid"
+            class="flex flex-col gap-2"
+        >
             <Button
                 v-if="field.bulkToggleable && field.options.length > 1"
                 type="button"
@@ -101,7 +110,7 @@ function toggleAll(): void {
                     class="flex items-start gap-2"
                 >
                     <Checkbox
-                        :id="`${field.name}-${option.value}`"
+                        :id="`${controlId}-${option.value}`"
                         :model-value="selected.includes(option.value)"
                         :disabled="field.disabled"
                         class="mt-0.5"
@@ -111,7 +120,7 @@ function toggleAll(): void {
                     />
                     <div class="flex flex-col gap-0.5">
                         <Label
-                            :for="`${field.name}-${option.value}`"
+                            :for="`${controlId}-${option.value}`"
                             class="font-normal"
                         >
                             {{ option.label }}

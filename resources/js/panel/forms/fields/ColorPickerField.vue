@@ -29,6 +29,7 @@ const swatch = computed(() =>
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -39,7 +40,7 @@ const swatch = computed(() =>
         <div class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
                 <input
-                    :id="`${field.name}-swatch`"
+                    :id="`${controlId}-swatch`"
                     type="color"
                     class="size-9 shrink-0 cursor-pointer rounded-md border border-input bg-background p-1 disabled:cursor-not-allowed disabled:opacity-50"
                     :value="swatch"
@@ -54,11 +55,12 @@ const swatch = computed(() =>
                     "
                 />
                 <Input
-                    :id="field.name"
+                    :id="controlId"
+                    :aria-describedby="describedBy"
                     :model-value="value"
                     :placeholder="field.placeholder ?? '#000000'"
                     :disabled="field.disabled"
-                    :aria-invalid="error ? true : undefined"
+                    :aria-invalid="invalid"
                     @update:model-value="
                         (next) => emit('update:modelValue', String(next))
                     "

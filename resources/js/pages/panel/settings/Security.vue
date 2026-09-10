@@ -57,12 +57,19 @@ const props = defineProps<Props>();
                         </Label>
                         <PasswordInput
                             id="current_password"
+                            aria-describedby="current_password-error"
+                            :aria-invalid="
+                                errors.current_password ? true : undefined
+                            "
                             name="current_password"
                             class="block w-full"
                             autocomplete="current-password"
                             :placeholder="t('settings.current_password')"
                         />
-                        <InputError :message="errors.current_password" />
+                        <InputError
+                            id="current_password-error"
+                            :message="errors.current_password"
+                        />
                     </div>
 
                     <div class="grid gap-2">
@@ -71,13 +78,18 @@ const props = defineProps<Props>();
                         }}</Label>
                         <PasswordInput
                             id="password"
+                            aria-describedby="password-error"
+                            :aria-invalid="errors.password ? true : undefined"
                             name="password"
                             class="block w-full"
                             autocomplete="new-password"
                             :placeholder="t('settings.new_password')"
                             :passwordrules="props.passwordRules"
                         />
-                        <InputError :message="errors.password" />
+                        <InputError
+                            id="password-error"
+                            :message="errors.password"
+                        />
                     </div>
 
                     <div class="grid gap-2">
@@ -86,13 +98,20 @@ const props = defineProps<Props>();
                         </Label>
                         <PasswordInput
                             id="password_confirmation"
+                            aria-describedby="password_confirmation-error"
+                            :aria-invalid="
+                                errors.password_confirmation ? true : undefined
+                            "
                             name="password_confirmation"
                             class="block w-full"
                             autocomplete="new-password"
                             :placeholder="t('settings.confirm_password')"
                             :passwordrules="props.passwordRules"
                         />
-                        <InputError :message="errors.password_confirmation" />
+                        <InputError
+                            id="password_confirmation-error"
+                            :message="errors.password_confirmation"
+                        />
                     </div>
 
                     <Button

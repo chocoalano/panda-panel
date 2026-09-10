@@ -25,6 +25,7 @@ const value = computed(() => {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -34,7 +35,8 @@ const value = computed(() => {
     >
         <div class="flex items-center gap-3">
             <input
-                :id="field.name"
+                :id="controlId"
+                :aria-describedby="describedBy"
                 type="range"
                 class="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary disabled:cursor-not-allowed disabled:opacity-50"
                 :min="field.min"
@@ -42,7 +44,7 @@ const value = computed(() => {
                 :step="field.step"
                 :value="value"
                 :disabled="field.disabled"
-                :aria-invalid="error ? true : undefined"
+                :aria-invalid="invalid"
                 @input="
                     (event) =>
                         emit(
