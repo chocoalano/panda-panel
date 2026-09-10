@@ -7,6 +7,83 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **A table can say something before its rows.** `TableSchema::description()`
+  is standing context — what the list covers, what it leaves out, how current
+  it is — and `callout()` is for what is true today: a locked period, records
+  needing attention, a sync that runs every fifteen minutes. Callouts stack,
+  and they are the same `Callout` a form section uses rather than a
+  table-shaped copy of it, so a warning looks the same wherever the panel
+  shows one. Both render in relation managers too.
+- **A table's columns are the things it can be filtered by.** A query builder
+  that declares no `constraints()` now offers the columns already on screen,
+  with the operators each type supports. Declaring `TextColumn::make('email')`
+  and `TextConstraint::make('email')` meant keeping two lists in step, and the
+  failure was quiet — a column added to one and not the other was a column the
+  reader could see and could not filter by. `queryable(false)` opts a column
+  out and `queryConstraint()` gives one a comparison its type cannot express.
+- **A time is picked from the panel's own controls.** `PanelTimePicker` —
+  hour, minute, and seconds only when the field asks for them. The datetime
+  field composes it with the calendar.
+- **Indonesian is a first-class locale, and stays that way.** Key parity,
+  placeholder parity and a structural audit of package-owned copy all run in
+  the ordinary suite. See [Localization](docs/configuration/localization.md).
+
+### Changed
+
+- **Time and datetime fields no longer render browser-native controls.**
+  `<input type="time">` and `<input type="datetime-local">` are drawn by the
+  browser rather than by the panel: three engines draw three different things,
+  none themeable, none matching the form around them, and some of them round a
+  value carrying seconds to the minute on the first edit.
+
+  **Behaviour change:** the controls look and behave differently. No source
+  edit is needed — the value crossing the boundary is unchanged, and the
+  validation rules are untouched.
+- **A datetime bound is enforced to the minute on the boundary day.** A
+  `min` of `2026-09-10 09:30` used to constrain only the calendar once the
+  control became a calendar, so `2026-09-10 08:00` was still reachable. Times
+  before the bound are now unselectable on that date.
+
+  **Behaviour change:** a time that was previously reachable on a boundary day
+  is not. That is the rule the server was already applying.
+- **New query-builder conditions follow the visible columns.** Hiding a column
+  takes it out of the choices "Add condition" offers, and showing it puts it
+  back. A condition already built is left alone — hiding a display column
+  changes what you are looking at, not what you asked the table for.
+
+  **Behaviour change:** a table with a query builder and no declared
+  `constraints()` used to offer nothing and now offers its columns.
+- Touch targets on the switch, the dialog close and the icon-small button meet
+  44×44 below the `sm` breakpoint, by growing the target rather than the glyph.
+
+### Fixed
+
+- **A date field's helper and error reach the control that takes focus.**
+  `PanelDatePicker` has a wrapper for its clear button to sit against, and
+  `aria-describedby` was landing there — described text announced to nobody.
+- **The query builder no longer produces a native date input.** Its `:type`
+  binding resolved to `date` at runtime from a date constraint's semantic
+  metadata, with no literal attribute anywhere for a search to find.
+- **Two accessible names were hardcoded English.** The dashboard guide's copy
+  button and the colour field's swatch announced English in every language;
+  one of them also lower-cased a label, which produces nothing meaningful in a
+  language that does not work that way.
+- **The Indonesian import error pluralises.** It omitted the `:verb`
+  placeholder English uses, so it read "kolom tersebut" whether one column was
+  missing or six.
+- Editor content is styled by the panel rather than the browser, motion
+  respects `prefers-reduced-motion`, and stacked bar charts are scaled to
+  their stacks.
+
+## [0.4.1] - 2026-09-10
+
+_No entries were recorded for this tag, and none are owed: it carried three
+working documents into `PandaPanel_UIUX_Audit/` and changed no source, no
+translation and no test. Reconstructed from the tag rather than written from
+memory — `git diff v0.4.0 v0.4.1` is three added Markdown files._
+
 ## [0.4.0] - 2026-09-10
 
 ### Added
