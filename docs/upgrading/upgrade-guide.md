@@ -219,6 +219,40 @@ resources you expect, an icon renders, and the browser console is empty.
 
 ## Version-specific notes
 
+### 0.5.0
+
+Nothing needs a source edit. Three things behave differently, and all three are worth knowing
+before somebody reports them as bugs:
+
+| # | Change | What you notice |
+| --- | --- | --- |
+| 1 | Date, time and datetime fields use the panel's own controls | The browser's native pickers are gone |
+| 2 | A datetime `minDate`/`maxDate` is enforced to the time of day, not only the calendar date | A time that was reachable on a boundary day no longer is |
+| 3 | A `QueryBuilderFilter` with no declared `constraints()` offers the table's columns | Conditions appear where a filter previously offered none |
+
+**1.** `<input type="date">`, `type="time"` and `type="datetime-local"` were drawn by the browser
+rather than by the panel — three engines drew three different controls, none themeable, and some
+of them rounded a value carrying seconds to the minute on the first edit. The values, formats and
+validation rules are unchanged; only the control is.
+
+**2.** A `min` of `2026-09-10 09:30` used to constrain the calendar alone, so `2026-09-10 08:00`
+was still selectable. Times before the bound are now unselectable on that date. This is the rule
+the server was already applying to the submitted value.
+
+**3.** New conditions follow the columns currently on screen: hiding a column takes it out of the
+choices, showing it puts it back, and a condition already built is left alone. If a table
+deliberately exposed a narrow set of constraints, it keeps exactly those — a constraint you
+declared always wins over one derived from a column of the same name. To keep a visible column out
+of the list entirely:
+
+```php
+TextColumn::make('internal_reference')->queryable(false)
+```
+
+See [Query builder](../tables/query-builder.md) for the full capability matrix, and
+[Localization](../configuration/localization.md) for the English and Indonesian coverage this
+release hardened.
+
 ### 0.4.0
 
 Two changes need an edit, and both are silent — the code keeps running and does something
