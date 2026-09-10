@@ -39,6 +39,84 @@ final class UsersTable
 
 The table now offers an "Advanced" filter where the user adds rules such as `Name contains ada`. Rules are ANDed and applied inside their own group, so they narrow whatever the search and the other filters already left.
 
+The `constraints()` call above is optional. A filter that declares none offers the table's own columns, which is usually what you want:
+
+```php
+->filters([
+    QueryBuilderFilter::make('conditions')->label('Advanced'),
+])
+```
+
+## Conditions come from the columns
+
+A table's columns are the things its reader can see, so they are the things it makes sense to filter by. Every column that has a comparison the package knows how to build offers itself as a condition, with its own label and the operators its type supports.
+
+That replaces a second list. Declaring `TextColumn::make('email')` and `TextConstraint::make('email')` meant keeping two lists in step, and the failure was quiet: a column added to one and not the other is a column the reader can see and cannot filter by, with nothing to say so.
+
+### Which columns become conditions
+
+| Column | Condition | Input | Operators |
+| --- | --- | --- | --- |
+| `TextColumn`, `BadgeColumn`, `TextInputColumn`, `SelectColumn` | `TextConstraint` | `text` | contains, does not contain, starts with, ends with, is, is not, is filled, is blank |
+| `NumberColumn` | `NumberConstraint` | `number` | numeric comparisons |
+| `DateColumn`, `DateTimeColumn` | `DateConstraint` | `date` | date comparisons, entered with the panel's calendar |
+| `BooleanColumn`, `ToggleColumn`, `CheckboxColumn` | `BooleanConstraint` | `none` | is true, is false |
+| `ImageColumn`, `IconColumn`, `ColorColumn` | none | — | — |
+| `CustomColumn` | none by default | — | — |
+
+The last two rows are the interesting ones. An image, an icon and a colour swatch draw something *from* a value rather than showing it, so there is nothing to compare against; offering a text filter over them would match nothing and say nothing about why. A custom column's value is whatever your component decided, and the package cannot know — so it asks rather than guesses.
+
+### What "visible" means
+
+The condition list follows the columns that are **on screen right now**. Hiding a column in the column manager takes it out of the choices offered by "Add condition", and showing it again puts it back, with no reload.
+
+A condition you have already built is left alone:
+
+```text
+Email contains example.com     ← an existing rule
+hide the Email column          → still there, still filtering
+                               → "Add condition" no longer offers Email
+remove the rule                → Email can no longer be chosen
+show the Email column          → Email is offered again
+```
+
+Hiding a display column changes what you are looking at. Silently deleting a filter would change what the table is *showing you*, which is a different thing and not what was asked for.
+
+### Opting a column out
+
+```php
+TextColumn::make('internal_reference')->queryable(false)
+```
+
+### Giving a column a different comparison
+
+For a column whose data means something its type cannot express — a text column holding an enum, or a custom column only your application understands:
+
+```php
+use PandaPanel\Tables\Filters\Constraints\TextConstraint;
+
+CustomColumn::make('health', 'HealthCell')
+    ->queryConstraint(TextConstraint::make('health'))
+```
+
+The name comes from the column, so a constraint written for one column cannot end up describing another. `queryConstraint()` implies `queryable(true)`.
+
+### Constraints you declare yourself still win
+
+A constraint passed to `constraints()` replaces the derived one of the same name outright:
+
+```php
+QueryBuilderFilter::make('conditions')->constraints([
+    TextConstraint::make('email')->label('Work address'),
+])
+```
+
+That is the whole compatibility story. A table written before columns could describe themselves keeps every constraint it declared, and gains the columns it did not. A constraint whose name matches no column — something you filter by but do not show — is always offered, because there is no column of that name to hide.
+
+### When nothing can be filtered by
+
+If every queryable column is hidden, the filter says so rather than offering a dropdown with nothing in it. The sentence is the package's own and follows the reader's locale.
+
 ## How a rule is checked
 
 Every part of a submitted rule is looked up against a declaration before it reaches the builder. Nothing is concatenated from the request: the column string comes from the `Constraint` object and the comparison from a closed enum.

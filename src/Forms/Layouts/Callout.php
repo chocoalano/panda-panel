@@ -95,6 +95,29 @@ final class Callout extends FormComponent
     }
 
     /**
+     * The same notice, without a form around it.
+     *
+     * A table's callout carries no nested schema: there is no record being
+     * edited and nothing to render inside it. Everything else — the body, the
+     * heading, the tone and the icon that tone resolves to — is identical, so
+     * `FormCallout.vue` draws both and a warning looks the same wherever the
+     * panel shows one.
+     *
+     * @return array<string, mixed>
+     */
+    public function toTableArray(): array
+    {
+        return [
+            'component' => 'callout',
+            'body' => $this->body,
+            'heading' => $this->heading,
+            'tone' => $this->tone->value,
+            'icon' => $this->icon ?? $this->tone->icon(),
+            'schema' => [],
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(?Model $record, string $page): array

@@ -32,6 +32,20 @@ final class QueryBuilderFilter extends Filter
     /** @var list<Constraint> */
     private array $constraints = [];
 
+    /**
+     * Constraints derived from the table's own columns.
+     *
+     * Kept apart from the declared ones so precedence is a property of the
+     * data rather than of the order somebody happened to call things in: a
+     * constraint the developer wrote always wins over one this package
+     * inferred from a column type. `TableSchema` fills this in at
+     * serialization time, because a filter does not know which table it is
+     * attached to and should not have to.
+     *
+     * @var list<Constraint>
+     */
+    private array $derived = [];
+
     /** So one filter cannot become an unbounded pile of joins. */
     private int $maxRules = 10;
 
@@ -50,6 +64,52 @@ final class QueryBuilderFilter extends Filter
         return $this;
     }
 
+    /**
+     * Offers the table's columns as conditions.
+     *
+     * A column the table already lists is a thing the reader can see, and
+     * asking them to declare it a second time as a `Constraint` to filter by
+     * it is asking them to keep two lists in step. The columns are the list;
+     * this reads it.
+     *
+     * @param  array<array-key, Constraint>  $constraints
+     */
+    public function derivedConstraints(array $constraints): self
+    {
+        $this->derived = array_values($constraints);
+
+        return $this;
+    }
+
+    /**
+     * Every constraint this filter offers, declared ones first.
+     *
+     * A declared constraint replaces a derived one of the same name outright.
+     * That is the whole compatibility story for tables written before columns
+     * could describe themselves: they keep the constraints they declared, and
+     * gain the columns they did not.
+     *
+     * @return list<Constraint>
+     */
+    public function allConstraints(): array
+    {
+        $declared = [];
+
+        foreach ($this->constraints as $constraint) {
+            $declared[$constraint->getName()] = $constraint;
+        }
+
+        $merged = $this->constraints;
+
+        foreach ($this->derived as $constraint) {
+            if (! array_key_exists($constraint->getName(), $declared)) {
+                $merged[] = $constraint;
+            }
+        }
+
+        return $merged;
+    }
+
     public function maxRules(int $max): self
     {
         $this->maxRules = max(1, $max);
@@ -57,9 +117,17 @@ final class QueryBuilderFilter extends Filter
         return $this;
     }
 
+    /**
+     * Looks a constraint up by name, derived ones included.
+     *
+     * This is the gate every incoming rule passes through — a column the
+     * filter cannot name here is a rule that never reaches the query. It has
+     * to see the derived constraints or a condition on an ordinary column
+     * would be silently dropped after the user built it.
+     */
     public function constraint(string $name): ?Constraint
     {
-        foreach ($this->constraints as $constraint) {
+        foreach ($this->allConstraints() as $constraint) {
             if ($constraint->getName() === $name) {
                 return $constraint;
             }
@@ -182,7 +250,7 @@ final class QueryBuilderFilter extends Filter
         return [
             'constraints' => array_map(
                 static fn (Constraint $constraint): array => $constraint->toArray(),
-                $this->constraints,
+                $this->allConstraints(),
             ),
             'maxRules' => $this->maxRules,
         ];

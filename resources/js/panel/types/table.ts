@@ -1,6 +1,6 @@
 import type { BadgeColorName } from '@/panel/palette';
 import type { ActionDefinition } from '@/panel/types/action';
-import type { FormDefinition } from '@/panel/types/form';
+import type { CalloutDefinition, FormDefinition } from '@/panel/types/form';
 
 /**
  * Mirrors the PHP table schema.
@@ -357,6 +357,10 @@ export interface TableDefinition {
     defaultGroup: string | null;
     columns: ColumnDefinition[];
     columnManager: ColumnManager;
+    /** A sentence about the table, shown before its rows. Null for none. */
+    description: string | null;
+    /** Notices shown above the table, in declaration order. */
+    callouts: CalloutDefinition[];
     filters: FilterDefinition[];
     filterBehaviour: FilterBehaviour;
     searchable: boolean;

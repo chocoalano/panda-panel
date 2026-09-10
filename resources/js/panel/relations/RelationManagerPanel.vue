@@ -10,6 +10,7 @@ import DataTable from '@/panel/tables/DataTable.vue';
 import DataTableBulkActions from '@/panel/tables/DataTableBulkActions.vue';
 import DataTableColumnManager from '@/panel/tables/DataTableColumnManager.vue';
 import DataTablePagination from '@/panel/tables/DataTablePagination.vue';
+import DataTableIntro from '@/panel/tables/DataTableIntro.vue';
 import DataTableToolbar from '@/panel/tables/DataTableToolbar.vue';
 import type { ActionDefinition } from '@/panel/types/action';
 import type { RelationDefinition } from '@/panel/types/relation';
@@ -150,6 +151,11 @@ const headerActions = computed(() => props.relation.headerActions);
         </CardHeader>
 
         <CardContent class="flex flex-col gap-4">
+            <DataTableIntro
+                :description="relation.table.description"
+                :callouts="relation.table.callouts"
+            />
+
             <DataTableToolbar
                 :table="relation.table"
                 :state="relation.state"

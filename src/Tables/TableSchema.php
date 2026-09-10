@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 use PandaPanel\Actions\Action;
 use PandaPanel\Exceptions\PanelSchemaException;
+use PandaPanel\Forms\Layouts\Callout;
 use PandaPanel\Support\EagerLoadPaths;
 use PandaPanel\Tables\Columns\Column;
 use PandaPanel\Tables\Enums\ColumnPin;
@@ -17,6 +18,7 @@ use PandaPanel\Tables\Enums\RecordActionsPosition;
 use PandaPanel\Tables\Enums\SortDirection;
 use PandaPanel\Tables\Enums\TableLayout;
 use PandaPanel\Tables\Filters\Filter;
+use PandaPanel\Tables\Filters\QueryBuilderFilter;
 
 /**
  * The declarative description of a resource table.
@@ -157,6 +159,22 @@ final class TableSchema
      * evaluated before the translator can answer. What "no default" means is
      * decided where it is read, not where it is declared.
      */
+    /**
+     * A sentence about the table, shown above it.
+     *
+     * For what a reader needs to know before reading the rows — what the
+     * list covers, what it deliberately leaves out, how current it is. Not
+     * for anything conditional or urgent: that is what a callout is.
+     */
+    private ?string $description = null;
+
+    /**
+     * Notices shown above the table.
+     *
+     * @var list<Callout>
+     */
+    private array $callouts = [];
+
     private ?string $emptyStateHeading = null;
 
     private ?string $emptyStateDescription = null;
@@ -638,6 +656,63 @@ final class TableSchema
         $column = $this->getColumn($name);
 
         return $column?->isIndividuallySearchable() === true ? $column : null;
+    }
+
+    /**
+     * A sentence shown with the table, before its rows.
+     *
+     * Plain text rather than a closure: it describes the table, not a
+     * record, so there is nothing per-render for a closure to read. Pass a
+     * translated string — `__()` in the resource is where the application's
+     * own copy belongs, and the package translates only its own.
+     */
+    public function description(?string $description): self
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    /**
+     * Adds a notice above the table.
+     *
+     * The same `Callout` a form section uses, so a warning looks the same
+     * wherever the panel shows one and there is one component to keep
+     * accessible rather than two that drift.
+     *
+     * Callouts accumulate. A table that has something to say usually has one
+     * thing to say, but "the period is locked" and "3 records need attention"
+     * are two facts and stacking them is better than an API that has to be
+     * replaced the first time both are true.
+     */
+    public function callout(Callout $callout): self
+    {
+        $this->callouts[] = $callout;
+
+        return $this;
+    }
+
+    /**
+     * @param  array<array-key, Callout>  $callouts
+     */
+    public function callouts(array $callouts): self
+    {
+        $this->callouts = array_values($callouts);
+
+        return $this;
+    }
+
+    /**
+     * @return list<Callout>
+     */
+    public function getCallouts(): array
+    {
+        return $this->callouts;
     }
 
     public function emptyState(string $heading, ?string $description = null, ?string $icon = null): self
@@ -1128,18 +1203,51 @@ final class TableSchema
      */
     public function getFilters(): array
     {
-        return $this->filters;
+        return array_map(fn (Filter $filter): Filter => $this->prepareFilter($filter), $this->filters);
     }
 
     public function getFilter(string $name): ?Filter
     {
         foreach ($this->filters as $filter) {
             if ($filter->getName() === $name) {
-                return $filter;
+                return $this->prepareFilter($filter);
             }
         }
 
         return null;
+    }
+
+    /**
+     * Gives a query-builder filter the table's own columns to offer.
+     *
+     * A filter is declared on its own and does not know which table it was
+     * attached to, so the table hands its columns over here rather than the
+     * filter reaching for them. Every other filter type passes through
+     * untouched.
+     *
+     * Applied on every read rather than once at serialization: the browser
+     * learns which conditions exist from `toArray()`, and the query layer
+     * decides whether an incoming rule is one of them through `getFilter()`.
+     * If only the first knew about the columns, every condition the user
+     * built from one would be offered and then silently dropped.
+     */
+    private function prepareFilter(Filter $filter): Filter
+    {
+        if (! $filter instanceof QueryBuilderFilter) {
+            return $filter;
+        }
+
+        $derived = [];
+
+        foreach ($this->columns as $column) {
+            $constraint = $column->toQueryConstraint();
+
+            if ($constraint !== null) {
+                $derived[] = $constraint;
+            }
+        }
+
+        return $filter->derivedConstraints($derived);
     }
 
     public function getDefaultSortColumn(): ?string
@@ -1493,7 +1601,7 @@ final class TableSchema
                 $this->columns,
             ),
             'filters' => array_map(
-                static fn (Filter $filter): array => $filter->toArray(),
+                fn (Filter $filter): array => $this->prepareFilter($filter)->toArray(),
                 $this->filters,
             ),
             'groups' => array_map(
@@ -1557,6 +1665,11 @@ final class TableSchema
             ],
             'headerActions' => $this->serializeActions($this->headerActions),
             'toolbarActions' => $this->serializeActions($this->toolbarActions),
+            'description' => $this->description,
+            'callouts' => array_map(
+                static fn (Callout $callout): array => $callout->toTableArray(),
+                $this->callouts,
+            ),
             'emptyState' => [
                 'heading' => $this->emptyStateHeading
                     ?? __('panda-panel::tables.empty_state.heading'),

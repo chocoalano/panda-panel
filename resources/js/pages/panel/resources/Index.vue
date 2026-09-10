@@ -11,6 +11,7 @@ import DataTableBulkActions from '@/panel/tables/DataTableBulkActions.vue';
 import DataTableColumnManager from '@/panel/tables/DataTableColumnManager.vue';
 import DataTableGrid from '@/panel/tables/DataTableGrid.vue';
 import DataTableLayoutToggle from '@/panel/tables/DataTableLayoutToggle.vue';
+import DataTableIntro from '@/panel/tables/DataTableIntro.vue';
 import DataTablePagination from '@/panel/tables/DataTablePagination.vue';
 import DataTableTabs from '@/panel/tables/DataTableTabs.vue';
 import DataTableToolbar from '@/panel/tables/DataTableToolbar.vue';
@@ -183,6 +184,16 @@ const headerActions = computed(() => [
         </PageHeader>
 
         <PageWidgets :widgets="headerWidgets" :widget-data="widgetData" />
+
+        <!--
+            Standing context, then notices, then the controls. A reader meets
+            what the list is and what is unusual about it today before the
+            things that change what they are looking at.
+        -->
+        <DataTableIntro
+            :description="table.description"
+            :callouts="table.callouts"
+        />
 
         <!--
             Tabs, controls, rows and paging are one object, so they are drawn

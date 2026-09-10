@@ -168,6 +168,69 @@ $table
 
 Grouping bands rows under headings; it does not change which records the query returns. Tabs are declared on the list page rather than the schema, because a tab is a named scope on the resource's own query. See [Grouping](grouping.md) and [Tabs](tabs.md).
 
+## Saying something about the table
+
+Two things a table can say before its rows, and they are not the same thing.
+
+### `description()`
+
+Standing context — what the list covers, what it deliberately leaves out, how current it is:
+
+```php
+$table->description('Excludes archived records.');
+```
+
+It renders above the toolbar in muted type, and nothing is added to the DOM when there is none. Plain text rather than a closure: it describes the table, not a record, so there is nothing per-render for a closure to read. Wrap it in `__()` if your application translates its own copy — the package translates only its own.
+
+### `callout()`
+
+A notice: something conditional or time-bound that the reader should meet before the data rather than discover from it.
+
+```php
+use PandaPanel\Forms\Enums\CalloutTone;
+use PandaPanel\Forms\Layouts\Callout;
+
+$table
+    ->description('Excludes archived records.')
+    ->callout(
+        Callout::make('Payroll period is locked.')
+            ->tone(CalloutTone::Warning),
+    );
+```
+
+This is the same `Callout` a form section uses, drawn by the same component. A warning above a table and a warning inside a form are the same thing to a reader, and one component is one place to keep the tones, the icons and the semantics honest. The tones are `Info`, `Success`, `Warning` and `Danger`; each resolves an icon unless you set one with `icon()`.
+
+Callouts accumulate, and render in declaration order:
+
+```php
+$table
+    ->callout(Callout::make('Synchronised every 15 minutes.'))
+    ->callout(Callout::make('3 records need attention.')->tone(CalloutTone::Warning));
+```
+
+`callouts([...])` replaces the list instead of appending to it.
+
+Conditional notices are a matter of building the table:
+
+```php
+if ($period->isLocked()) {
+    $table->callout(Callout::make('Payroll period is locked.')->tone(CalloutTone::Warning));
+}
+```
+
+### Reading order
+
+```text
+page heading
+description
+callouts
+toolbar — search, filters, column manager
+rows
+pagination
+```
+
+Context, then anything unusual about today, then the controls that change what you are looking at, then the data. A callout is deliberately not announced as an alert: it is standing copy, and `role="alert"` would make every table load interrupt somebody using a screen reader.
+
 ## The empty state
 
 ```php

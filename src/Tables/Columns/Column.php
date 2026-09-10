@@ -17,6 +17,11 @@ use PandaPanel\Tables\Enums\Alignment;
 use PandaPanel\Tables\Enums\ColumnPin;
 use PandaPanel\Tables\Enums\ColumnType;
 use PandaPanel\Tables\Enums\SortDirection;
+use PandaPanel\Tables\Filters\Constraints\BooleanConstraint;
+use PandaPanel\Tables\Filters\Constraints\Constraint;
+use PandaPanel\Tables\Filters\Constraints\DateConstraint;
+use PandaPanel\Tables\Filters\Constraints\NumberConstraint;
+use PandaPanel\Tables\Filters\Constraints\TextConstraint;
 use PandaPanel\Tables\Summaries\Summarizer;
 
 /**
@@ -221,6 +226,111 @@ abstract class Column
         if ($this->sortUsing !== null) {
             ($this->sortUsing)($query, $direction);
         }
+    }
+
+    /**
+     * Whether this column can be used as a query-builder condition.
+     *
+     * Null means "decide from the type", which is what makes an ordinary
+     * `TextColumn::make('name')` queryable without a second declaration
+     * beside it. Set explicitly to force the answer either way.
+     */
+    private ?bool $queryable = null;
+
+    /**
+     * A constraint supplied by the developer for this column.
+     *
+     * The escape hatch for a column whose data means something the type
+     * cannot express — a text column holding an enum, or a custom column
+     * whose value only the application understands.
+     */
+    private ?Constraint $queryConstraint = null;
+
+    /**
+     * Whether this column offers itself as a query-builder condition.
+     *
+     * A column is queryable when its type maps onto a constraint the package
+     * knows how to build a query from. Display-only types — an image, an
+     * icon, a colour swatch — are not, because there is nothing behind them
+     * to compare against; a custom column is not either, because its value is
+     * whatever the application decided and guessing at it would produce a
+     * filter that silently matches nothing.
+     */
+    public function queryable(bool $queryable = true): static
+    {
+        $this->queryable = $queryable;
+
+        return $this;
+    }
+
+    /**
+     * Replaces the constraint derived from this column's type.
+     *
+     * The name is taken from the column, so a constraint made for one column
+     * cannot end up describing another.
+     */
+    public function queryConstraint(Constraint $constraint): static
+    {
+        $this->queryConstraint = $constraint;
+        $this->queryable = true;
+
+        return $this;
+    }
+
+    /**
+     * The constraint this column contributes, or null for none.
+     *
+     * Derived rather than declared, so the columns a table already lists are
+     * the conditions it can be filtered by. `QueryBuilderFilter` merges these
+     * under any constraint the developer declared explicitly, which keeps one
+     * list authoritative instead of two that drift.
+     */
+    public function toQueryConstraint(): ?Constraint
+    {
+        if ($this->queryable === false) {
+            return null;
+        }
+
+        if ($this->queryConstraint !== null) {
+            return $this->queryConstraint->label($this->getLabel());
+        }
+
+        $constraint = $this->defaultQueryConstraint();
+
+        if ($constraint === null) {
+            return null;
+        }
+
+        return $constraint->label($this->getLabel());
+    }
+
+    /**
+     * What this column's type means as a comparison.
+     *
+     * A closed match rather than a lookup table with a fallback: a type that
+     * is not listed contributes nothing, and adding a column type is then a
+     * decision about whether it can be queried rather than an accident.
+     */
+    private function defaultQueryConstraint(): ?Constraint
+    {
+        $name = $this->name;
+
+        return match ($this->type()) {
+            ColumnType::Text,
+            ColumnType::Badge,
+            ColumnType::TextInput,
+            ColumnType::Select => TextConstraint::make($name),
+            ColumnType::Number => NumberConstraint::make($name),
+            ColumnType::Date,
+            ColumnType::DateTime => DateConstraint::make($name),
+            ColumnType::Boolean,
+            ColumnType::Toggle,
+            ColumnType::Checkbox => BooleanConstraint::make($name),
+            // Image, Icon, Color and Custom draw something from a value
+            // rather than showing it, so there is no comparison to offer.
+            // A custom column can still opt in with `queryConstraint()`.
+            default => null,
+        };
     }
 
     public function visible(bool $visible = true): static

@@ -32,10 +32,23 @@ const { t } = useTranslator();
  * sides and a UI to match; a flat list answers the question most tables are
  * actually asked.
  */
-const props = defineProps<{
-    filter: QueryBuilderFilterDefinition;
-    rules: QueryBuilderRule[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        filter: QueryBuilderFilterDefinition;
+        rules: QueryBuilderRule[];
+        /**
+         * Every column the table declares, visible or not.
+         *
+         * What separates a constraint that belongs to a column from one the
+         * developer declared on its own: the second kind has no column to be
+         * hidden, so it is always offered.
+         */
+        columnNames?: string[];
+        /** The columns on screen right now, from the table's own state. */
+        visibleColumns?: string[];
+    }>(),
+    { columnNames: () => [], visibleColumns: () => [] },
+);
 
 const emit = defineEmits<{ change: [rules: QueryBuilderRule[]] }>();
 
@@ -93,14 +106,65 @@ function dateValueOf(rule: QueryBuilderRule): string | null {
         : null;
 }
 
+/**
+ * Which conditions can be *chosen* right now.
+ *
+ * A table's columns are the things its reader can see, so they are the things
+ * it makes sense to filter by — hiding a column takes it out of this list.
+ *
+ * A constraint with no column of that name is left alone: the developer
+ * declared it deliberately, there is nothing on screen to hide, and dropping
+ * it would break every table written before columns described themselves.
+ */
+const selectableConstraints = computed(() => {
+    const columns = new Set(props.columnNames);
+    const visible = new Set(props.visibleColumns);
+
+    return props.filter.constraints.filter(
+        (constraint) =>
+            !columns.has(constraint.name) || visible.has(constraint.name),
+    );
+});
+
+/**
+ * What one rule's column select offers.
+ *
+ * Its own column is always among them, even after that column is hidden.
+ * Hiding a column changes what can be *added*; it does not silently rewrite a
+ * filter the user already built, and a select that could not show its own
+ * value would render blank and lose the rule on the next change.
+ */
+function constraintsFor(rule: QueryBuilderRule): ConstraintDefinition[] {
+    const selectable = selectableConstraints.value;
+
+    if (selectable.some((constraint) => constraint.name === rule.column)) {
+        return selectable;
+    }
+
+    const own = constraintsByName.value.get(rule.column);
+
+    return own === undefined ? selectable : [own, ...selectable];
+}
+
 const canAdd = computed(
     () =>
-        props.filter.constraints.length > 0 &&
+        selectableConstraints.value.length > 0 &&
         props.rules.length < props.filter.maxRules,
 );
 
+/**
+ * Whether there is nothing left to filter by.
+ *
+ * Distinguished from "the button is disabled because the rule limit is
+ * reached": a reader who has hidden every queryable column should be told
+ * that, not shown a control that does nothing.
+ */
+const noColumns = computed(
+    () => selectableConstraints.value.length === 0 && props.rules.length === 0,
+);
+
 function addRule(): void {
-    const constraint = props.filter.constraints[0];
+    const constraint = selectableConstraints.value[0];
 
     if (constraint === undefined) {
         return;
@@ -164,7 +228,7 @@ function removeRule(index: number): void {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem
-                        v-for="constraint in filter.constraints"
+                        v-for="constraint in constraintsFor(rule)"
                         :key="constraint.name"
                         :value="constraint.name"
                     >
@@ -239,11 +303,20 @@ function removeRule(index: number): void {
                 <Plus />
                 {{ t('tables.add_condition') }}
             </Button>
+            <!--
+                Three states, not two. A reader who has hidden every queryable
+                column is told so rather than shown a dropdown with nothing in
+                it, and the rule ceiling is a different sentence from having
+                nothing to filter by.
+            -->
+            <p v-else-if="noColumns" class="text-xs text-muted-foreground">
+                {{ t('tables.no_queryable_columns') }}
+            </p>
             <p
                 v-else-if="rules.length > 0"
                 class="text-xs text-muted-foreground"
             >
-                Up to {{ filter.maxRules }} conditions.
+                {{ t('tables.max_conditions', { count: filter.maxRules }) }}
             </p>
         </div>
     </div>

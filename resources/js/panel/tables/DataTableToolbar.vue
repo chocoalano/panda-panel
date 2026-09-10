@@ -375,6 +375,7 @@ const showsSortMenu = computed(
             :filters="table.filters"
             :state="state"
             :values="filterValues"
+            :column-names="table.columns.map((column) => column.name)"
             @change="onFilter"
         />
 

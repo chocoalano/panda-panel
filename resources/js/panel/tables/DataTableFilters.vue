@@ -28,6 +28,11 @@ const props = defineProps<{
     filters: FilterDefinition[];
     state: TableState;
     /**
+     * Every column the table declares, so the query builder can tell a
+     * constraint that belongs to a column from one that does not.
+     */
+    columnNames?: string[];
+    /**
      * What the controls show. The same as the applied state for a live table;
      * the state plus whatever is being composed for a deferred one.
      */
@@ -214,6 +219,8 @@ function onDate(
                 <DataTableQueryBuilder
                     :filter="filter"
                     :rules="ruleValue(filter.name)"
+                    :column-names="columnNames ?? []"
+                    :visible-columns="state.columns.visible"
                     @change="(rules) => onRules(filter.name, rules)"
                 />
             </div>
