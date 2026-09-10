@@ -25,7 +25,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
         <PanelDatePicker
             :id="controlId"
             :described-by="describedBy"
-            class="w-full max-w-60"
+            class="w-full"
             :model-value="typeof modelValue === 'string' ? modelValue : null"
             :disabled="field.disabled"
             :min="field.minDate"

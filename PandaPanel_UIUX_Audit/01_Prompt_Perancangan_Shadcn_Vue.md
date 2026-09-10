@@ -4,6 +4,8 @@ Dokumen ini merupakan keluaran audit, bukan instruksi yang sudah dieksekusi untu
 
 Semua prompt di bawah meminta **rancangan dan spesifikasi**, bukan perubahan kode. Implementasi merupakan tahap terpisah setelah ada instruksi untuk mengerjakannya.
 
+Ketentuan tambahan 10 September 2026: seluruh pemilih tanggal/waktu harus memakai komponen yang sudah ada. Lihat [audit khusus input temporal](03_Audit_Input_Tanggal_Waktu.md). Larangan mencakup `input[type=date]`, `input[type=time]`, `input[type=datetime]`, dan `input[type=datetime-local]`, termasuk hasil `<Input :type>` dinamis.
+
 ## A. Master prompt — siap disalin
 
 ```text
@@ -14,6 +16,7 @@ TUGAS
 Susun rancangan UI/UX lengkap untuk PandaPanel berdasarkan source frontend dan:
 - PandaPanel_UIUX_Audit/00_Audit_UIUX_Frontend.md
 - PandaPanel_UIUX_Audit/02_Inventaris_Vue.md
+- PandaPanel_UIUX_Audit/03_Audit_Input_Tanggal_Waktu.md
 
 Pada tahap ini hasilkan dokumen perancangan, wireframe tekstual, spesifikasi
 komponen, dan acceptance criteria. Jangan mengubah source, dependency, route,
@@ -156,6 +159,13 @@ AKSESIBILITAS
 - Pilih live-region secara proporsional; hindari seluruh layar menjadi alert.
 
 BATAS ARSITEKTUR
+- Dilarang menghasilkan input native type=date/time/datetime/datetime-local,
+  termasuk melalui wrapper Input, binding dinamis, atau elemen hidden. Gunakan
+  PanelDatePicker existing untuk date; susun waktu dari Select dan primitive
+  existing di TimeField/DateTimeField. Query-builder date juga wajib memakai
+  picker existing. Pertahankan null, seconds, batas datetime lengkap, format
+  waktu lokal, dan light/dark. Metadata type=date/time/datetime tetap boleh
+  digunakan untuk memilih renderer; bukan atribut input DOM.
 - Pertahankan contract Inertia, metadata PHP, query URL, izin tindakan,
   event/props, form values, registries, i18n, dan host publishing seam.
 - Jangan mengarang endpoint, fitur bisnis, atau data baru agar mockup terlihat lengkap.
@@ -309,6 +319,9 @@ Kontrak Field wajib mencakup:
 
 Rancang setiap kelompok:
 A. Text/password/number/textarea/date/datetime/time/color/slider.
+   Date menggunakan PanelDatePicker existing; time/datetime menggunakan
+   komposisi Select dan picker existing. Jangan menghasilkan input native
+   type=date/time/datetime/datetime-local, termasuk dalam wrapper atau portal.
 B. Checkbox/toggle/radio/checkbox-list/toggle-buttons.
 C. Select single/multiple/searchable/dependent: selection chips, clear jika
    diizinkan, no options, remote loading/error/retry, dan stale option.
