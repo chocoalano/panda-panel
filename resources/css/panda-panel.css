@@ -40,6 +40,14 @@
 
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
+    /* The rest of the status vocabulary. `destructive` already meant "this
+       action removes something"; success and warning are the other two states
+       a panel needs to state, and having them as tokens is what stops each
+       page reaching for a literal emerald or amber that has no dark pair. */
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
 
     --color-border: var(--border);
     --color-input: var(--input);
@@ -90,6 +98,13 @@
 }
 
 :root {
+    /* Native controls — date and time pickers, file inputs, select popups,
+       scrollbars — are drawn by the browser, not by this stylesheet. Without
+       this they stay light while everything around them goes dark. The `.dark`
+       block below flips it, so this follows the same resolved appearance the
+       rest of the theme does rather than being a second source of truth. */
+    color-scheme: light;
+
     --background: hsl(0 0% 100%);
     --foreground: hsl(0 0% 3.9%);
     --card: hsl(0 0% 100%);
@@ -101,13 +116,32 @@
     --secondary: hsl(0 0% 92.1%);
     --secondary-foreground: hsl(0 0% 9%);
     --muted: hsl(0 0% 96.1%);
-    --muted-foreground: hsl(0 0% 45.1%);
+    /* 4.89:1 on --muted, 5.33:1 on --background. The previous 45.1% read
+       4.35:1 against the muted surface it is most often drawn on — a neutral
+       badge, a tab count, a caption — which is under 4.5:1 for normal text.
+       Darkened only as far as the muted pair requires, so the hierarchy
+       against foreground text is unchanged. */
+    --muted-foreground: hsl(0 0% 42%);
     --accent: hsl(0 0% 96.1%);
     --accent-foreground: hsl(0 0% 9%);
-    --destructive: hsl(0 84.2% 60.2%);
-    --destructive-foreground: hsl(0 0% 98%);
+    /* 6.70:1 with its foreground. The previous 60.2% carried white at
+       3.61:1, which is a filled button whose label is below the threshold for
+       normal text — and destructive buttons are the ones worth reading. */
+    --destructive: hsl(0 72% 41%);
+    --destructive-foreground: hsl(0 0% 100%);
+    /* 6.02:1 and 6.13:1 against the background as text. */
+    --success: hsl(142 72% 26%);
+    --success-foreground: hsl(0 0% 100%);
+    --warning: hsl(25 90% 33%);
+    --warning-foreground: hsl(0 0% 100%);
+    /* Decorative: separators, card edges. Not required to reach 3:1, and
+       deliberately left alone so the UI does not turn into a grid of lines. */
     --border: hsl(0 0% 92.8%);
-    --input: hsl(0 0% 89.8%);
+    /* A control boundary, which is different: on a transparent input the
+       border is the only thing saying "you can type here". 3.03:1 against the
+       background, meeting the non-text contrast threshold. The previous
+       89.8% was 1.26:1. */
+    --input: hsl(0 0% 58%);
     --ring: hsl(0 0% 3.9%);
     --chart-1: hsl(12 76% 61%);
     --chart-2: hsl(173 58% 39%);
@@ -123,10 +157,16 @@
     --sidebar-accent-foreground: hsl(0 0% 30%);
     --sidebar-border: hsl(0 0% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(0 0% 98%);
+    /* `--sidebar-background` is the canonical name: it is what `bg-sidebar`
+       resolves. `--sidebar` is kept as an alias because a panel configuring
+       the `sidebar` key wrote it, and applications already do. Both are
+       defined so neither name is ever unset. */
+    --sidebar: var(--sidebar-background);
 }
 
 .dark {
+    color-scheme: dark;
+
     --background: hsl(0 0% 3.9%);
     --foreground: hsl(0 0% 98%);
     --card: hsl(0 0% 3.9%);
@@ -141,10 +181,19 @@
     --muted-foreground: hsl(0 0% 63.9%);
     --accent: hsl(0 0% 14.9%);
     --accent-foreground: hsl(0 0% 98%);
-    --destructive: hsl(0 84% 60%);
-    --destructive-foreground: hsl(0 0% 98%);
+    /* 6.00:1 with its foreground — a light red on a deep red ground rather
+       than white on mid red, which is what reads on a dark surface. */
+    --destructive: hsl(0 90% 71%);
+    --destructive-foreground: hsl(0 63% 15%);
+    /* 11.36:1 and 10.73:1 against the dark background as text. */
+    --success: hsl(142 69% 58%);
+    --success-foreground: hsl(142 72% 10%);
+    --warning: hsl(38 92% 60%);
+    --warning-foreground: hsl(25 90% 12%);
     --border: hsl(0 0% 14.9%);
-    --input: hsl(0 0% 14.9%);
+    /* 3.20:1 against the dark background; was 1.31:1 and effectively
+       invisible. See the light block for why this differs from --border. */
+    --input: hsl(0 0% 38%);
     --ring: hsl(0 0% 83.1%);
     --chart-1: hsl(220 70% 50%);
     --chart-2: hsl(160 60% 45%);
@@ -153,13 +202,16 @@
     --chart-5: hsl(340 75% 55%);
     --sidebar-background: hsl(0 0% 7%);
     --sidebar-foreground: hsl(0 0% 95.9%);
-    --sidebar-primary: hsl(360, 100%, 100%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
+    /* Both of these were white: 1:1, so a branding mark drawn with
+       `currentColor` on the sidebar-primary surface disappeared entirely.
+       They are a surface and the thing drawn on it and must differ. 17.93:1. */
+    --sidebar-primary: hsl(0 0% 100%);
+    --sidebar-primary-foreground: hsl(0 0% 9%);
     --sidebar-accent: hsl(0 0% 15.9%);
     --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
     --sidebar-border: hsl(0 0% 15.9%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(240 5.9% 10%);
+    --sidebar: var(--sidebar-background);
 }
 
 @layer base {

@@ -229,7 +229,7 @@ async function run(
                 <Bell />
                 <span
                     v-if="count > 0"
-                    class="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-medium text-white"
+                    class="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-medium text-destructive-foreground"
                 >
                     {{ count > 99 ? '99+' : count }}
                 </span>

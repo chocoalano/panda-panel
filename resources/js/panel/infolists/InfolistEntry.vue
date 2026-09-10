@@ -112,10 +112,7 @@ async function copy(value: string): Promise<void> {
 
             <template v-else-if="entry.type === 'boolean'">
                 <span class="flex items-center gap-1.5">
-                    <Check
-                        v-if="entry.value"
-                        class="size-4 text-emerald-600 dark:text-emerald-400"
-                    />
+                    <Check v-if="entry.value" class="size-4 text-success" />
                     <X v-else class="size-4 text-muted-foreground" />
                     {{ entry.value ? entry.trueLabel : entry.falseLabel }}
                 </span>

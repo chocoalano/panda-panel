@@ -223,22 +223,29 @@ $panel->colors(
 ```
 
 Values are CSS custom properties, validated by
-`PandaPanel\Support\PanelTheme` against an allowlist of eighteen property names
+`PandaPanel\Support\PanelTheme` against an allowlist of nineteen property names
 and four value shapes (hex, `rgb()`, `hsl()`, `oklch()`). Anything else is
 dropped rather than refused, so one bad colour does not stop a panel rendering.
 
 Both maps cross the wire as `panel.theme`, and `usePanelStyling()` writes the
-**light** map onto the shell root as inline custom properties:
+one matching the **resolved** appearance as custom properties:
 
 ```ts
-for (const [property, value] of Object.entries(theme.light ?? {})) {
-    style[`--${property}`] = value;
+const palette = (resolvedAppearance.value === 'dark' ? theme.dark : theme.light) ?? {};
+
+for (const [property, value] of Object.entries(palette)) {
+    style[`--${ALIASES[property] ?? property}`] = value;
 }
 ```
 
-The dark map is sent but not applied inline, because an inline style has no
-media query to hang off. A theme that must differ by scheme belongs in a
-stylesheet the panel loads with `Panel::assets()`.
+This is why `resolvedAppearance` has to be reactive rather than a `matchMedia`
+read: on `system`, the stylesheet follows the OS through the class toggle, and
+anything computed from the resolved appearance has to follow with it. A panel
+palette that stayed light while the page went dark was that computed value
+never being invalidated.
+
+A property named in `light` and omitted from `dark` is not carried over — the
+package default wins in the scheme that did not name it.
 
 ## The dark mode flag
 
@@ -294,10 +301,16 @@ That is `tests/Feature/Panel/PanelSettingsTest.php`.
   this page use, which is deliberate — one preference, one place.
 - **Without `initializeTheme()` the first paint can be wrong.** The composable
   reads local storage in `onMounted`, which is after the first render.
+- **A host with no usable storage still resolves an appearance.** A browser set
+  to block site data throws on the storage access itself; the composable treats
+  that as "nothing stored" and follows the system rather than failing to mount.
 - **The header toggle never selects `system`.** It is a two-state flip. Only
   this page can set the third state.
-- **`panel.theme.dark` is sent but not applied inline.** Dark values need a
-  stylesheet; see [Tailwind Theme](../frontend/tailwind-theme.md).
+- **A partial dark palette falls back to the package default,** not to your
+  light value; see [Tailwind Theme](../frontend/tailwind-theme.md).
+- **The panel palette is written to `<html>`,** so it is in scope for the
+  overlays that teleport out of the shell — and for anything else on the page
+  reading those property names while a panel is open.
 - **The route is GET only.** A POST answers 405. There is nothing to save.
 - **Panel access still applies.** A user the panel refuses gets 403 here like
   anywhere else, and a guest is redirected to the login.

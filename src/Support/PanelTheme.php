@@ -47,7 +47,12 @@ final class PanelTheme
         'destructive',
         'border',
         'ring',
+        // `sidebar` and `sidebar-background` name the same surface. The
+        // stylesheet resolves `bg-sidebar` from `--sidebar-background`, which
+        // is the canonical one; `sidebar` is what applications already write
+        // and is aliased onto it by the frontend, so both arrive.
         'sidebar',
+        'sidebar-background',
         'sidebar-foreground',
         'sidebar-primary',
         'sidebar-accent',

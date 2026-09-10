@@ -177,21 +177,27 @@ Two calls merge rather than replace, so a plugin can contribute a colour without
 
 ### How they are applied
 
-`usePanelStyling()` turns the light palette into inline custom properties on the shell root, which is where the Tailwind v4 theme reads them:
+`usePanelStyling()` turns the palette for the **resolved** appearance into custom properties, which is where the Tailwind v4 theme reads them:
 
 ```ts
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 
 const { themeStyle, hook } = usePanelStyling();
-// themeStyle === { '--primary': '#4f46e5', '--sidebar': 'oklch(0.98 0 0)' }
+// themeStyle === { '--primary': '#4f46e5', '--sidebar-background': 'oklch(0.98 0 0)' }
 ```
 
-The **dark palette is serialized but not applied inline**. An inline style cannot express "only under `.dark`", so the dark values travel in `panel.theme.dark` for a component or stylesheet to use. A theme that must differ by colour scheme belongs in a stylesheet loaded with [`assets()`](assets.md):
+They are written to `document.documentElement`, not only to the shell: every overlay the panel opens is teleported to `<body>`, which is a sibling of the shell rather than a child, and custom properties inherit down the tree. `themeStyle` is still returned for a custom shell to bind.
+
+`sidebar` is aliased to `--sidebar-background` on the way out, because that is the property `bg-sidebar` resolves.
+
+The dark palette **is** applied: `theme.dark` is used whenever dark is the resolved appearance, including when the operating system changes while the setting is `system`. A property named in `light` and omitted from `dark` falls back to the package default rather than to the light value.
+
+A theme that needs more than colour values belongs in a stylesheet loaded with [`assets()`](assets.md):
 
 ```css
 /* resources/css/panels/admin.css */
-.dark .panel-shell {
-    --primary: #818cf8;
+.panel-shell {
+    --radius: 0.25rem;
 }
 ```
 

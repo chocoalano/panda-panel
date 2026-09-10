@@ -130,13 +130,17 @@ $panel->colors(
 );
 ```
 
-**No rebuild is needed for this**, which is the first thing to know: the light values land in a
-`style` attribute on the shell root as `--primary` and `--sidebar`, and the stylesheet already reads
-those properties.
+**No rebuild is needed for this**, which is the first thing to know: the values for whichever
+appearance is resolved land as custom properties on `<html>`, and the stylesheet already reads those
+properties.
 
 ```html
-<div class="panel-shell" style="--primary: #4f46e5; --sidebar: oklch(0.98 0 0)">
+<html style="--primary: #4f46e5; --sidebar-background: oklch(0.98 0 0)">
 ```
+
+`sidebar` is aliased to `--sidebar-background` because that is what `bg-sidebar` resolves, and the
+properties go on `<html>` rather than on the shell because every overlay the panel opens is
+teleported to `<body>` — a sibling of the shell, not a descendant of it.
 
 That works because the theme block is `@theme **inline**`. With `inline`, a utility emits the
 referenced variable directly — `bg-primary` resolves to `var(--primary)` — so a value set further
@@ -179,9 +183,11 @@ stylesheet rather than a colour.
 | `PanelTheme::isEmpty` | `isEmpty(): bool` |
 | `PanelTheme::toArray` | `toArray(): array` |
 
-**The dark palette is serialized, not applied.** An inline style cannot express "only under
-`.dark`", so the dark values travel to the frontend in `panel.theme.dark` and no shipped component
-applies them. A theme that must differ by colour scheme belongs in a stylesheet:
+**The dark palette is applied.** `theme.dark` is used whenever dark is the resolved appearance,
+including when the operating system changes its mind while the setting is `system`. A property named
+in `light` and omitted from `dark` falls back to the package default under `.dark` rather than to
+your light value — so a palette that looks wrong in dark mode is usually a palette that only named
+half of itself. A theme that needs more than colour values belongs in a stylesheet:
 
 ```css
 /* resources/css/panels/admin.css */
@@ -432,9 +438,10 @@ written at all — see [Asset conflicts](asset-conflicts.md).
   `getTheme()` and `getCssHooks()` before suspecting the build.
 - **`colors()` needs no rebuild; `cssHooks()` usually does.** One sets custom property values, the
   other sets class names — and a class name has to exist in the bundle.
-- **`--sidebar` and `--sidebar-background` are different properties.** The theme block maps
-  `--color-sidebar` to `--sidebar-background`, while `:root` defines both.
-  `colors(['sidebar' => …])` sets `--sidebar`.
+- **`colors(['sidebar' => …])` sets `--sidebar-background`.** The theme block maps
+  `--color-sidebar` to `--sidebar-background`, which is the canonical property; `sidebar` is the
+  shorter name applications write and is aliased onto it on the frontend. `getTheme()` still shows
+  the key you wrote.
 - **Editing `:root` in `panda-panel.css` changes the whole application**, including the starter
   kit's own screens. Per-panel colours belong in `colors()` or a panel stylesheet.
 - **`tw-animate-css` is a dependency of the stylesheet**, not an optional extra. `panel:install`

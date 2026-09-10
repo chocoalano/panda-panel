@@ -25,11 +25,13 @@ final class AdminPanelProvider extends PanelProvider
 }
 ```
 
-No rebuild is needed. The light values land in a `style` attribute on the shell root as `--primary` and `--sidebar`, which is exactly what the stylesheet already reads:
+No rebuild is needed. The values for whichever appearance is currently resolved are written as custom properties on `<html>`, which is exactly what the stylesheet already reads:
 
 ```html
-<div class="panel-shell" style="--primary: #4f46e5; --sidebar: oklch(0.98 0 0)">
+<html style="--primary: #4f46e5; --sidebar-background: oklch(0.98 0 0)">
 ```
+
+Two things in that line are worth reading twice. The property is `--sidebar-background`, not `--sidebar`, because that is the one `bg-sidebar` resolves — `colors(['sidebar' => …])` is aliased onto it. And it is on `<html>` rather than on the shell, because dialogs, sheets, popovers, selects and toasts are teleported to `<body>`, which is a sibling of the shell and not a descendant.
 
 ## The stylesheet
 
@@ -68,12 +70,17 @@ Dark mode is a class on `<html>`, driven by the host application's `useAppearanc
 
 This is what turns a custom property into a Tailwind utility. `--color-primary: var(--primary)` is what makes `bg-primary` resolve to whatever `--primary` currently is — including a value set inline by a panel at runtime.
 
-The mapped families: `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, `chart-1` through `chart-5`, and the eight `sidebar-*` colours. Plus `--font-sans` and the three radius steps derived from `--radius`.
+The mapped families: `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `success`, `warning`, `border`, `input`, `ring`, `chart-1` through `chart-5`, and the eight `sidebar-*` colours. Plus `--font-sans` and the three radius steps derived from `--radius`.
+
+`success` and `warning` are there for the same reason `destructive` is: "this went well" and "look at this before you continue" are states the panel needs to say, and saying them with a literal `text-emerald-600` is a colour that does not follow the theme and — at that particular value — does not meet contrast on white either. Use `text-success`, `text-warning`, `text-destructive` and their `-foreground` pairs rather than a palette colour.
+
+Note that these are *not* in the list a panel may set through `colors()`. They are the panel's own vocabulary, not a per-panel brand value; a status colour that differs by panel means the same badge means two things in one application.
 
 ### The palettes
 
 ```css
 :root {
+    color-scheme: light;
     --background: hsl(0 0% 100%);
     --primary: hsl(0 0% 9%);
     --radius: 0.5rem;
@@ -82,12 +89,15 @@ The mapped families: `background`, `foreground`, `card`, `popover`, `primary`, `
 }
 
 .dark {
+    color-scheme: dark;
     --background: hsl(0 0% 3.9%);
     --primary: hsl(0 0% 98%);
     --sidebar-background: hsl(0 0% 7%);
     /* … */
 }
 ```
+
+`color-scheme` is what the browser draws its own controls from: date and time pickers, `<input type=file>` buttons, scrollbars, form control default borders, and the canvas behind the page. Without it those stay light on a dark panel, and there is no class that fixes them because they are not drawn by CSS you own.
 
 Editing these changes the whole application. A panel that wants its own palette should set it through `colors()` or a per-panel stylesheet instead, so the two panels sharing a build stay different.
 
@@ -127,8 +137,11 @@ An allowlist, because a typo would otherwise be a custom property nothing reads 
 | `secondary-foreground` | `accent` | `accent-foreground` |
 | `background` | `foreground` | `muted` |
 | `muted-foreground` | `destructive` | `border` |
-| `ring` | `sidebar` | `sidebar-foreground` |
-| `sidebar-primary` | `sidebar-accent` | `sidebar-border` |
+| `ring` | `sidebar` | `sidebar-background` |
+| `sidebar-foreground` | `sidebar-primary` | `sidebar-accent` |
+| `sidebar-border` | | |
+
+`sidebar` and `sidebar-background` name the same surface. The stylesheet resolves `bg-sidebar` from `--sidebar-background`; `sidebar` is the shorter name applications already write, and it is aliased onto the canonical one on the way to the DOM. Set either.
 
 Write them without the leading `--`; a leading dash is stripped.
 
@@ -196,22 +209,30 @@ $theme->toArray();
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
 
 const { themeStyle } = usePanelStyling();
-// { '--primary': '#4f46e5', '--sidebar': 'oklch(0.98 0 0)' }
+// { '--primary': '#4f46e5', '--sidebar-background': 'oklch(0.98 0 0)' }
 ```
 
-Both layouts bind it to the shell root, which is also where `hook('shell')` lands:
+Calling it is what applies the palette; the returned map is for a custom shell that wants to bind it somewhere of its own. Both shipped layouts still bind it to the shell root, which is also where `hook('shell')` lands:
 
 ```vue
 <AppShell variant="sidebar" :class="hook('shell')" :style="themeStyle">
 ```
 
-Set there so every custom property is in scope for everything the panel draws — and for nothing outside it.
+The panel's auth layout calls it too, so a panel's front door carries the panel's colours.
 
-### The dark palette is serialized, not applied
+### It is written to the document element
 
-`themeStyle` contains the **light** values only. An inline style cannot express "only under `.dark`", so the dark values travel in `panel.theme.dark` for a component or a stylesheet to use.
+Binding to the shell alone was not enough. Every overlay in the panel — dialog, sheet, popover, select, dropdown, tooltip, toast — is teleported to `<body>`, and `<body>` is a sibling of the shell rather than a child of it. Custom properties inherit down the tree, so a palette set on the shell reached everything except the surfaces that leave it, and a themed panel's modal was the package default.
 
-A theme that must differ by colour scheme belongs in a stylesheet, which is what `Panel::assets()` is for:
+So `usePanelStyling()` writes the same properties to `document.documentElement`, and removes them when the panel goes away — the package is published into a host application, and leaving a panel's accent on the document would tint whatever the host draws next.
+
+### The dark palette is applied
+
+`themeStyle` holds the values for the **resolved** appearance: `theme.light` when light is resolved, `theme.dark` when dark is. It recomputes when the appearance changes, including when the operating system changes its mind while the setting is `system`.
+
+A property set in `light` and omitted from `dark` is **not** carried over. The package default wins in the scheme that did not name it, which is almost always what a partial dark palette means — a pale surface reused in a dark panel is a bug, not a fallback.
+
+A theme that needs more than colour values — a different radius, a background image, a font — belongs in a stylesheet, which is what `Panel::assets()` is for:
 
 ```css
 /* resources/css/panels/admin.css */
@@ -301,9 +322,10 @@ Or use classes that already appear elsewhere in the application, or write plain 
 ## Gotchas
 
 - **A dropped colour is silent.** Neither an unknown property nor an unparseable value produces a warning; the theme simply arrives without it. Check `getTheme()` when a colour is not applying.
-- **The dark palette does nothing on its own.** It crosses the wire and no shipped component applies it. Use a per-panel stylesheet.
-- **`colors()` sets values, not utilities.** There is no `--color-brand`; the property must be one of the eighteen the stylesheet reads.
-- **`--sidebar` and `--sidebar-background` are different properties.** The theme block maps `--color-sidebar` to `--sidebar-background`, while `:root` defines both. `colors(['sidebar' => …])` sets `--sidebar`.
+- **A partial dark palette does not inherit from light.** A property named in `light` and omitted from `dark` falls back to the package default under `.dark`, not to your light value.
+- **`colors()` sets values, not utilities.** There is no `--color-brand`; the property must be one of the nineteen the stylesheet reads.
+- **`colors(['sidebar' => …])` sets `--sidebar-background`.** They name one surface. The alias is applied on the frontend, so `getTheme()` still shows the key you wrote.
+- **The palette is on `<html>`, not only on the shell.** Anything in the host application that reads these property names is inside the panel's palette while a panel page is open.
 - **Editing `:root` in `panda-panel.css` changes the whole application,** including the starter kit's own screens. Per-panel colours belong in `colors()` or a panel stylesheet.
 - **The stylesheet is a published file.** `panel:assets` will report your edits as `modified` and leave them alone on an upgrade — which also means an upstream improvement to it will never arrive automatically.
 - **`tw-animate-css` is a dependency of the stylesheet.** It is in the package's `dependencies`, so `panel:install` names it if the application has not declared it.
