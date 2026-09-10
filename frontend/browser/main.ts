@@ -1,5 +1,6 @@
 import { createApp, defineAsyncComponent, h } from 'vue';
 import { FIXTURES } from './fixtures';
+import { setPanelLocale } from './inertia';
 import './fixture.css';
 
 /**
@@ -49,6 +50,11 @@ if (loader === undefined) {
 
         console.warn(message);
     };
+
+    // The locale switch the browser checks drive. It goes through the same
+    // page props `useTranslator()` reads, so switching here is the switch a
+    // real navigation performs rather than a shortcut around it.
+    (window as unknown as Record<string, unknown>).__setLocale = setPanelLocale;
 
     app.mount('#app');
 }

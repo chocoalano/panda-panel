@@ -22,7 +22,8 @@
         "test:browser:ui6": "node tests/browser/ui6.mjs --build",
         "test:browser:stacked": "node tests/browser/stacked.mjs --build",
         "test:browser:temporal": "node tests/browser/temporal.mjs --build",
-        "test:browser:all": "npm run test:browser && npm run test:browser:verify && npm run test:browser:ui6 && npm run test:browser:stacked && npm run test:browser:temporal",
+        "test:browser:datatable": "node tests/browser/datatable.mjs --build",
+        "test:browser:all": "npm run test:browser && npm run test:browser:verify && npm run test:browser:ui6 && npm run test:browser:stacked && npm run test:browser:temporal && npm run test:browser:datatable",
         "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
     },
     "dependencies": {

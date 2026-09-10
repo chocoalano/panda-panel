@@ -17,7 +17,7 @@ import type {
  * used to unpin itself on a phone.
  */
 
-function column(
+export function column(
     name: string,
     label: string,
     overrides: Partial<ColumnDefinition> = {},
@@ -69,6 +69,8 @@ const ACTION: ActionDefinition = {
 };
 
 export const table: TableDefinition = {
+    description: null,
+    callouts: [],
     bulkActions: [],
     headerActions: [],
     toolbarActions: [],

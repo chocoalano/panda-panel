@@ -1,5 +1,6 @@
 import { defineComponent, h, reactive } from 'vue';
-import { translations } from './translations';
+import { dictionaries, translations } from './translations';
+import type { PanelLocale } from './translations';
 import type { PropType } from 'vue';
 
 /**
@@ -31,11 +32,28 @@ const page = reactive({
         // entry in a repeater — and a browser check that looked for a control
         // by name would be looking for the wrong name.
         translations,
+        locale: 'en',
     } as Record<string, unknown>,
 });
 
 export function usePage(): typeof page {
     return page;
+}
+
+/**
+ * Switches the panel's language the way the panel actually switches it.
+ *
+ * `useTranslator()` reads `translations` and `locale` off the page props, so
+ * changing them here is the same event a real Inertia navigation produces —
+ * not a test-only pathway around the mechanism. The page object is reactive,
+ * so every mounted component re-renders without a reload.
+ *
+ * Exposed on `window` for the browser checks; nothing in the published
+ * package imports it.
+ */
+export function setPanelLocale(locale: PanelLocale): void {
+    page.props.translations = dictionaries[locale];
+    page.props.locale = locale;
 }
 
 export const Link = defineComponent({

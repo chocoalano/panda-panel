@@ -37,4 +37,7 @@ export const FIXTURES: Record<string, () => Promise<{ default: Component }>> = {
 
     /** DT01-DT05 acceptance — every control a date or a time is picked with. */
     temporal: () => import('./TemporalFixture.vue'),
+
+    /** D1 acceptance — the table's controls, and what its dropdowns list. */
+    datatable: () => import('./DataTableFixture.vue'),
 };
