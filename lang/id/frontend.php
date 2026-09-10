@@ -34,6 +34,7 @@ return [
         'sidebar_description' => 'Menampilkan bilah sisi untuk perangkat seluler.',
         'toggle_sidebar' => 'Buka atau tutup bilah sisi',
         'breadcrumb' => 'remah roti',
+        'appearance' => 'Tampilan',
         'appearance_light' => 'Terang',
         'appearance_dark' => 'Gelap',
         'appearance_system' => 'Sistem',
@@ -46,6 +47,7 @@ return [
      * Kerangka panel: header, bilah sisi, pencarian, notifikasi, pengalih.
      */
     'shell' => [
+        'current_section' => 'Bagian saat ini',
         'panel_navigation' => 'Navigasi panel',
         'record_navigation' => 'Navigasi data',
         'switch_panel' => 'Ganti panel',
@@ -63,6 +65,13 @@ return [
         'search_placeholder' => 'Cari...',
         'search_too_short' => 'Ketik minimal dua karakter.',
         'search_empty' => 'Tidak ada yang ditemukan.',
+        'search_label' => 'Cari di panel ini',
+        'search_results' => 'Hasil pencarian',
+        'search_searching' => 'Mencari…',
+        'search_result_count' => ':count hasil',
+        'search_failed' => 'Pencarian tidak dapat dijalankan.',
+        'search_stale' => 'Menampilkan hasil sebelumnya — pembaruan gagal.',
+        'retry' => 'Coba lagi',
 
         'notifications' => 'Notifikasi',
         'notification_center' => 'Pusat notifikasi',

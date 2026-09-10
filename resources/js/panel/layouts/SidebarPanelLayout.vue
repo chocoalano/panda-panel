@@ -92,9 +92,14 @@ const cluster = computed(() => pageMetadata.value?.cluster ?? null);
                     orientation="row"
                 />
 
+                <!--
+                    Stacked until there is room to sit side by side. The rail
+                    is fixed-width, so on a narrow screen a row would give the
+                    content about ninety pixels — see `PanelClusterBar`.
+                -->
                 <div
                     v-if="cluster && cluster.position === 'right-bar'"
-                    class="flex flex-1 gap-6"
+                    class="flex flex-1 flex-col gap-4 lg:flex-row lg:gap-6"
                 >
                     <div class="flex min-w-0 flex-1 flex-col gap-4 md:gap-6">
                         <slot />

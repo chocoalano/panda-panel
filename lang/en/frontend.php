@@ -35,6 +35,7 @@ return [
         'sidebar_description' => 'Displays the mobile sidebar.',
         'toggle_sidebar' => 'Toggle sidebar',
         'breadcrumb' => 'breadcrumb',
+        'appearance' => 'Appearance',
         'appearance_light' => 'Light',
         'appearance_dark' => 'Dark',
         'appearance_system' => 'System',
@@ -47,6 +48,7 @@ return [
      * The panel shell: header, sidebar, search, notifications, switchers.
      */
     'shell' => [
+        'current_section' => 'Current section',
         'panel_navigation' => 'Panel navigation',
         'record_navigation' => 'Record navigation',
         'switch_panel' => 'Switch panel',
@@ -64,6 +66,13 @@ return [
         'search_placeholder' => 'Search...',
         'search_too_short' => 'Type at least two characters.',
         'search_empty' => 'Nothing found.',
+        'search_label' => 'Search this panel',
+        'search_results' => 'Search results',
+        'search_searching' => 'Searching…',
+        'search_result_count' => ':count result(s)',
+        'search_failed' => 'The search could not be run.',
+        'search_stale' => 'Showing earlier results — the update failed.',
+        'retry' => 'Try again',
 
         'notifications' => 'Notifications',
         'notification_center' => 'Notification center',

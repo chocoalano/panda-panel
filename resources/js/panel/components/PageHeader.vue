@@ -21,7 +21,17 @@ const { hook } = usePanelStyling();
             data on screen, which is the trade an ERP screen wants.
         -->
         <div class="flex min-w-0 flex-col gap-0.5">
-            <h1 class="truncate text-xl font-semibold tracking-tight">
+            <!--
+                It was `truncate`, unconditionally: a long record title was cut
+                off at every width so the actions could stay on one line. That
+                is the wrong way round — the title says which record is being
+                looked at, and the actions can wrap. `text-balance` with
+                `break-words` keeps a long word from overflowing rather than
+                hiding the sentence.
+            -->
+            <h1
+                class="text-xl font-semibold tracking-tight text-balance break-words"
+            >
                 {{ heading }}
             </h1>
             <p v-if="subheading" class="text-sm text-muted-foreground">
@@ -34,7 +44,7 @@ const { hook } = usePanelStyling();
             serialized shape. Until then the slot stays empty rather than
             showing a button that does nothing.
         -->
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <slot name="actions" />
         </div>
     </div>

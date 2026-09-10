@@ -53,8 +53,29 @@ const single = computed<string | undefined>(() =>
 const optionsUrl = useOptionsUrl();
 const formValues = useFormValues();
 
+/**
+ * What the remote list is currently doing.
+ *
+ * A failed search used to be invisible: `run()` returned without touching the
+ * options, so a query for "bob" that the server refused left Alice and Alina
+ * on screen with nothing to say they were the answer to a different question.
+ * Somebody could pick one believing it matched what they typed.
+ *
+ *   idle      no search running; the list is whatever the form arrived with
+ *   loading   a request is out
+ *   results   the last request answered
+ *   empty     the last request answered with nothing
+ *   error     the last request failed and there is nothing behind it
+ *   stale     the last request failed and older results are still up
+ */
+type SearchState = 'idle' | 'loading' | 'results' | 'empty' | 'error' | 'stale';
+
 const search = ref('');
-const searching = ref(false);
+const state = ref<SearchState>('idle');
+const searching = computed(() => state.value === 'loading');
+const failed = computed(
+    () => state.value === 'error' || state.value === 'stale',
+);
 
 /**
  * The options the server sent with the form, replaced by a search result once
@@ -114,12 +135,12 @@ watch(search, (term) => {
 
     if (term.trim() === '') {
         searched.value = null;
-        searching.value = false;
+        state.value = 'idle';
 
         return;
     }
 
-    searching.value = true;
+    state.value = 'loading';
 
     timer = setTimeout(() => {
         void run(term);
@@ -148,13 +169,32 @@ async function run(term: string): Promise<void> {
         return;
     }
 
-    searching.value = false;
+    // Null means the request failed. The list is still left as it was — an
+    // empty list would read as "nothing matches", which is a different and
+    // wrong answer — but now the field says so, rather than letting a
+    // previous query's results pass for this one's.
+    if (found === null) {
+        state.value = searched.value === null ? 'error' : 'stale';
 
-    // Null means the request failed. Leaving the list as it was is the honest
-    // answer: an empty list would read as "nothing matches".
-    if (found !== null) {
-        searched.value = found;
+        return;
     }
+
+    searched.value = found;
+    state.value = found.length > 0 ? 'results' : 'empty';
+}
+
+/**
+ * Asks again for exactly what was asked before.
+ *
+ * The term is read from the ref rather than captured, and `run()` reads the
+ * form's values at call time, so a dependent select retries against the
+ * parent's *current* value — the same state the first attempt would have used
+ * had it been made now.
+ */
+function retry(): void {
+    state.value = 'loading';
+
+    void run(search.value);
 }
 
 /**
@@ -193,25 +233,70 @@ function toggle(value: string, checked: boolean): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid, labelledBy }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
         :required="field.required"
         :helper-text="field.helperText"
         :error="error"
+        :group="field.multiple"
     >
         <div class="flex flex-col gap-2">
-            <div v-if="canSearch" class="relative">
-                <Input
-                    v-model="search"
-                    type="search"
-                    :placeholder="`Search ${field.label.toLowerCase()}...`"
-                    :disabled="field.disabled"
-                />
-                <Spinner
-                    v-if="searching"
-                    class="absolute top-1/2 right-2 size-4 -translate-y-1/2"
-                />
+            <div v-if="canSearch" class="flex flex-col gap-1.5">
+                <div class="relative">
+                    <Input
+                        v-model="search"
+                        type="search"
+                        :aria-label="
+                            t('forms.search_field', { field: field.label })
+                        "
+                        :placeholder="
+                            t('forms.search_field_placeholder', {
+                                field: field.label,
+                            })
+                        "
+                        :disabled="field.disabled"
+                        :aria-busy="searching ? 'true' : undefined"
+                    />
+                    <Spinner
+                        v-if="searching"
+                        class="absolute top-1/2 right-2 size-4 -translate-y-1/2"
+                    />
+                </div>
+
+                <!--
+                    A refused request is not an empty result, and results from
+                    a previous query are not the answer to this one. Both were
+                    silent: the list simply stayed as it was.
+                -->
+                <div
+                    v-if="failed"
+                    role="status"
+                    class="flex flex-wrap items-center gap-2 text-xs text-destructive"
+                >
+                    <span>
+                        {{
+                            state === 'stale'
+                                ? t('forms.select_stale')
+                                : t('forms.select_failed')
+                        }}
+                    </span>
+                    <button
+                        type="button"
+                        class="underline underline-offset-2"
+                        @click="retry"
+                    >
+                        {{ t('forms.retry') }}
+                    </button>
+                </div>
+
+                <p
+                    v-else-if="state === 'empty'"
+                    class="text-xs text-muted-foreground"
+                >
+                    {{ t('forms.select_no_matches') }}
+                </p>
             </div>
 
             <!--
@@ -220,7 +305,13 @@ function toggle(value: string, checked: boolean): void {
                 keyboard conventions the rest of the panel does not already
                 use.
             -->
-            <div v-if="field.multiple" class="flex flex-col gap-2">
+            <div
+                v-if="field.multiple"
+                role="group"
+                :aria-labelledby="labelledBy"
+                :aria-describedby="describedBy"
+                class="flex flex-col gap-2"
+            >
                 <div
                     v-if="selectedLabels.length > 0"
                     class="flex flex-wrap gap-1"
@@ -243,7 +334,7 @@ function toggle(value: string, checked: boolean): void {
                         class="flex items-center gap-2"
                     >
                         <Checkbox
-                            :id="`${field.name}-${option.value}`"
+                            :id="`${controlId}-${option.value}`"
                             :model-value="selected.includes(option.value)"
                             :disabled="field.disabled"
                             @update:model-value="
@@ -252,7 +343,7 @@ function toggle(value: string, checked: boolean): void {
                             "
                         />
                         <Label
-                            :for="`${field.name}-${option.value}`"
+                            :for="`${controlId}-${option.value}`"
                             class="font-normal"
                         >
                             {{ option.label }}
@@ -276,7 +367,12 @@ function toggle(value: string, checked: boolean): void {
                     (value) => emit('update:modelValue', String(value))
                 "
             >
-                <SelectTrigger :id="field.name" class="w-full">
+                <SelectTrigger
+                    :id="controlId"
+                    :aria-describedby="describedBy"
+                    :aria-invalid="invalid"
+                    class="w-full"
+                >
                     <SelectValue
                         :placeholder="
                             field.placeholder ?? t('forms.select_placeholder')

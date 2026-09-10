@@ -6,6 +6,7 @@ import AppShell from '@/components/AppShell.vue';
 import { Toaster } from '@/components/ui/sonner';
 import PanelClusterBar from '@/panel/components/PanelClusterBar.vue';
 import PanelHeader from '@/panel/components/PanelHeader.vue';
+import PanelHeaderNavigation from '@/panel/components/PanelHeaderNavigation.vue';
 import PanelRenderHook from '@/panel/components/PanelRenderHook.vue';
 import { useNavigation } from '@/panel/composables/useNavigation';
 import { usePanel } from '@/panel/composables/usePanel';
@@ -105,33 +106,11 @@ const topLevelItems = computed(() =>
                     :aria-label="t('shell.panel_navigation')"
                     class="flex items-center gap-1 overflow-x-auto"
                 >
-                    <Link
+                    <PanelHeaderNavigation
                         v-for="item in topLevelItems"
                         :key="item.href"
-                        :href="item.href"
-                        :aria-current="item.active ? 'page' : undefined"
-                        class="rounded-md px-3 py-1.5 text-sm whitespace-nowrap transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
-                        :class="
-                            item.active
-                                ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
-                                : ''
-                        "
-                    >
-                        <component
-                            :is="
-                                resolveIcon(
-                                    item.active ? item.activeIcon : item.icon,
-                                )
-                            "
-                            v-if="
-                                resolveIcon(
-                                    item.active ? item.activeIcon : item.icon,
-                                )
-                            "
-                            class="mr-1.5 inline size-4 align-text-bottom"
-                        />
-                        {{ item.label }}
-                    </Link>
+                        :item="item"
+                    />
                 </nav>
             </div>
         </div>
@@ -154,9 +133,14 @@ const topLevelItems = computed(() =>
                     orientation="row"
                 />
 
+                <!--
+                    Stacked until there is room to sit side by side. The rail
+                    is fixed-width, so on a narrow screen a row would give the
+                    content about ninety pixels — see `PanelClusterBar`.
+                -->
                 <div
                     v-if="cluster && cluster.position === 'right-bar'"
-                    class="flex flex-1 gap-6"
+                    class="flex flex-1 flex-col gap-4 lg:flex-row lg:gap-6"
                 >
                     <div class="flex min-w-0 flex-1 flex-col gap-4 md:gap-6">
                         <slot />
