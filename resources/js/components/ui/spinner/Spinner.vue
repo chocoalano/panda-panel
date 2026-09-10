@@ -13,6 +13,7 @@ const props = defineProps<{
 
 <template>
   <Loader2Icon
+    data-slot="spinner"
     role="status"
     :aria-label="t('ui.loading')"
     :class="cn('size-4 animate-spin', props.class)"

@@ -107,6 +107,7 @@ function apply(button: string): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -152,21 +153,22 @@ function apply(button: string): void {
             -->
             <div
                 v-if="previewing"
-                class="prose prose-sm dark:prose-invert max-w-none bg-background p-3 text-sm"
+                class="panel-prose max-w-none bg-background p-3 text-sm"
                 v-html="preview"
             />
 
             <Textarea
                 v-else
-                :id="field.name"
+                :id="controlId"
                 ref="input"
+                :aria-describedby="describedBy"
                 class="rounded-none border-0 font-mono text-sm shadow-none focus-visible:ring-0"
                 :model-value="text"
                 :rows="field.rows"
                 :placeholder="field.placeholder ?? undefined"
                 :disabled="field.disabled"
                 :maxlength="field.maxLength ?? undefined"
-                :aria-invalid="error ? true : undefined"
+                :aria-invalid="invalid"
                 @update:model-value="
                     (value) => emit('update:modelValue', String(value))
                 "

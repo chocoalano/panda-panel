@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import type { RichEditorFieldDefinition } from '@/panel/types/form';
 import { useTranslator } from '@/composables/useTranslator';
@@ -46,26 +46,95 @@ const editor = ref<HTMLElement | null>(null);
  * A name not in here draws no button, exactly as an unregistered icon
  * renders nothing.
  */
-const COMMANDS: Record<string, { label: string; run: () => void }> = {
-    bold: { label: 'B', run: () => exec('bold') },
-    italic: { label: 'I', run: () => exec('italic') },
-    strike: { label: 'S', run: () => exec('strikeThrough') },
-    underline: { label: 'U', run: () => exec('underline') },
+const COMMANDS: Record<
+    string,
+    { label: string; run: () => void; toggles?: string }
+> = {
+    bold: { label: 'B', run: () => exec('bold'), toggles: 'bold' },
+    italic: { label: 'I', run: () => exec('italic'), toggles: 'italic' },
+    strike: {
+        label: 'S',
+        run: () => exec('strikeThrough'),
+        toggles: 'strikeThrough',
+    },
+    underline: {
+        label: 'U',
+        run: () => exec('underline'),
+        toggles: 'underline',
+    },
     h2: { label: 'H2', run: () => exec('formatBlock', '<h2>') },
     h3: { label: 'H3', run: () => exec('formatBlock', '<h3>') },
     blockquote: { label: '❝', run: () => exec('formatBlock', '<blockquote>') },
     bulletList: {
         label: 'forms.editor_bullet_list',
         run: () => exec('insertUnorderedList'),
+        toggles: 'insertUnorderedList',
     },
     orderedList: {
         label: 'forms.editor_ordered_list',
         run: () => exec('insertOrderedList'),
+        toggles: 'insertOrderedList',
     },
     link: { label: 'forms.editor_link', run: () => link() },
     undo: { label: '↶', run: () => exec('undo') },
     redo: { label: '↷', run: () => exec('redo') },
 };
+
+/**
+ * Which formatting the caret currently sits inside.
+ *
+ * A toolbar button that toggles something has a state, and the state was
+ * carried by nothing at all — not a class, not an attribute. Somebody who
+ * cannot see the button had no way to know whether the next keystroke would
+ * be bold, and a sighted user had only whatever hover styling happened to be
+ * showing.
+ *
+ * Recomputed on selection change rather than watched, because the caret moves
+ * for reasons no Vue reactive value observes — arrow keys, a click inside the
+ * text, an undo.
+ */
+const activeCommands = ref<Set<string>>(new Set());
+
+function refreshCommandState(): void {
+    const found = new Set<string>();
+
+    for (const [name, command] of Object.entries(COMMANDS)) {
+        if (command.toggles === undefined) {
+            continue;
+        }
+
+        try {
+            if (document.queryCommandState(command.toggles)) {
+                found.add(name);
+            }
+        } catch {
+            // Not every browser answers for every command, and one that
+            // refuses is not a reason to lose the rest.
+        }
+    }
+
+    activeCommands.value = found;
+}
+
+/** Only the commands that are toggles have a pressed state to report. */
+function pressedState(name: string): boolean | undefined {
+    return COMMANDS[name]?.toggles === undefined
+        ? undefined
+        : activeCommands.value.has(name);
+}
+
+function onSelectionChange(): void {
+    if (editor.value?.contains(document.getSelection()?.anchorNode ?? null)) {
+        refreshCommandState();
+    }
+}
+
+onMounted(() =>
+    document.addEventListener('selectionchange', onSelectionChange),
+);
+onBeforeUnmount(() =>
+    document.removeEventListener('selectionchange', onSelectionChange),
+);
 
 function html(): string {
     return typeof props.modelValue === 'string' ? props.modelValue : '';
@@ -120,6 +189,7 @@ function link(): void {
 
 <template>
     <FieldWrapper
+        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -127,9 +197,27 @@ function link(): void {
         :helper-text="field.helperText"
         :error="error"
     >
+        <!--
+            Two indicators, answering two questions.
+
+            The border says *which editor holds focus* and changes on
+            `:focus-within`, so it is right whether the caret arrived by click
+            or by Tab, and it is restrained — a colour, not a glow. The ring
+            below says *this is where the keyboard is*, and is `:focus-visible`
+            only, so clicking a toolbar button does not leave the whole field
+            lit up.
+
+            An error keeps its own border: a field that is both focused and
+            wrong should not stop looking wrong, so the destructive colour
+            wins and the ring still draws around it.
+        -->
         <div
-            class="overflow-hidden rounded-md border border-input"
-            :class="error ? 'border-destructive' : ''"
+            class="overflow-hidden rounded-md border border-input transition-colors focus-within:border-ring"
+            :class="
+                error
+                    ? 'border-destructive focus-within:border-destructive'
+                    : ''
+            "
         >
             <div
                 v-if="field.toolbar.length > 0"
@@ -139,9 +227,10 @@ function link(): void {
                     <button
                         v-if="COMMANDS[button]"
                         type="button"
-                        class="rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        class="rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 aria-pressed:bg-accent aria-pressed:text-foreground aria-pressed:ring-1 aria-pressed:ring-border"
                         :disabled="field.disabled"
                         :aria-label="button"
+                        :aria-pressed="pressedState(button)"
                         @click="COMMANDS[button].run()"
                     >
                         {{ toolbarLabel(COMMANDS[button].label) }}
@@ -150,14 +239,15 @@ function link(): void {
             </div>
 
             <div
-                :id="field.name"
+                :id="controlId"
                 ref="editor"
+                :aria-describedby="describedBy"
                 role="textbox"
                 aria-multiline="true"
                 :aria-label="field.label"
-                :aria-invalid="error ? true : undefined"
+                :aria-invalid="invalid"
                 :contenteditable="!field.disabled"
-                class="prose prose-sm dark:prose-invert min-h-40 max-w-none bg-background p-3 text-sm outline-none"
+                class="panel-prose min-h-40 max-w-none bg-background p-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
                 :class="field.disabled ? 'cursor-not-allowed opacity-50' : ''"
                 @input="emitContent"
                 @blur="emitContent"

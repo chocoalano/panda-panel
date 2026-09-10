@@ -25,7 +25,12 @@ export const buttonVariants = cva(
         "sm": "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
         "lg": "h-10 rounded-md px-6 has-[>svg]:px-4",
         "icon": "size-9",
-        "icon-sm": "size-8",
+        // 44px where a finger is the pointer, 32px where a mouse is. See
+        // `docs/contributing/testing.md` for why the target is a product
+        // decision rather than a blanket rule: an operational table with a
+        // dozen 44px controls per row is a worse table, and a phone with a
+        // 32px control is a missed tap.
+        "icon-sm": "size-8 max-sm:size-11",
         "icon-lg": "size-10",
       },
     },
