@@ -34,4 +34,7 @@ export const FIXTURES: Record<string, () => Promise<{ default: Component }>> = {
 
     /** R1 acceptance — stacked columns against the axis they are drawn on. */
     'stacked-chart': () => import('./StackedChartFixture.vue'),
+
+    /** DT01-DT05 acceptance — every control a date or a time is picked with. */
+    temporal: () => import('./TemporalFixture.vue'),
 };

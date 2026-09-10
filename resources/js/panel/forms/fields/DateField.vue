@@ -24,7 +24,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
     >
         <PanelDatePicker
             :id="controlId"
-            :aria-describedby="describedBy"
+            :described-by="describedBy"
             class="w-full max-w-60"
             :model-value="typeof modelValue === 'string' ? modelValue : null"
             :disabled="field.disabled"

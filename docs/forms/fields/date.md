@@ -33,9 +33,21 @@ protected function casts(): array
 
 | Field | `FieldType` | Control | Value format | Type rules |
 | --- | --- | --- | --- | --- |
-| `DatePicker` | `Date` (`'date'`) | `<input type="date">` | `Y-m-d` | `date` |
-| `DateTimePicker` | `DateTime` (`'datetime'`) | `<input type="datetime-local">` | `Y-m-d H:i` on submit | `date` |
-| `TimePicker` | `Time` (`'time'`) | `<input type="time">` | `H:i` or `H:i:s` | `date_format:H:i[:s]` |
+| `DatePicker` | `Date` (`'date'`) | `PanelDatePicker` — a popover calendar | `Y-m-d` | `date` |
+| `DateTimePicker` | `DateTime` (`'datetime'`) | `PanelDatePicker` + `PanelTimePicker` | `Y-m-d H:i` on submit | `date` |
+| `TimePicker` | `Time` (`'time'`) | `PanelTimePicker` — hour, minute, optional second | `H:i` or `H:i:s` | `date_format:H:i[:s]` |
+
+None of the three creates a browser-native temporal input. `<input type="date">`,
+`type="time"` and `type="datetime-local"` are drawn by the browser rather than by the panel:
+Chrome, Firefox and Safari each render a different control, none of them themeable, none of them
+matching the rest of a form, and some of them silently round a value that carried seconds. The
+panel draws its own, from the same primitives every other field uses, and the value crossing the
+boundary is unchanged — that is the part your code and your columns see.
+
+A source guard (`resources/js/panel/temporalGuard.test.ts`) and a browser guard
+(`tests/browser/temporal.mjs`) both assert this, because the two catch different mistakes: the
+last violation to be found was a `:type` binding that resolved to `date` at runtime, with no
+literal attribute anywhere for a search to land on.
 
 ## `DatePicker`
 
@@ -107,7 +119,7 @@ The rules are `date` plus the same `after_or_equal` / `before_or_equal` pair as 
 
 ### The `T` on the boundary
 
-PHP formats the value for the control with a literal `T` (`2026-08-15T09:30`), which is what `datetime-local` requires. The control submits it back with a **space** (`2026-08-15 09:30`), because that is what a column would rather hold. The translation happens once, in `DateTimeField.vue`, and neither side has to change its mind about the format it prefers.
+PHP formats the value with a literal `T` (`2026-08-15T09:30`). The control submits it back with a **space** (`2026-08-15 09:30`), because that is what a column would rather hold. The translation happens once, in `DateTimeField.vue`, and neither side has to change its mind about the format it prefers — the field accepts either separator coming in and always sends the space back.
 
 That is worth knowing when a hook reads the raw submitted value: it is `Y-m-d H:i` (or `Y-m-d H:i:s`), not ISO-8601 with a `T`.
 

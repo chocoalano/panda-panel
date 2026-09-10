@@ -3,6 +3,7 @@ import { Plus, X } from '@lucide/vue';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import PanelDatePicker from '@/panel/components/PanelDatePicker.vue';
 import {
     Select,
     SelectContent,
@@ -62,10 +63,34 @@ function needsValue(rule: QueryBuilderRule): boolean {
     );
 }
 
+/**
+ * Which control the value is entered with.
+ *
+ * The server's `input` is a *semantic* type — `DateConstraint` declares
+ * `date` because the value is a date, not because a date input should be
+ * rendered. Passing it straight to an `<input type>` is how a native browser
+ * date picker ended up in the query builder without a literal `type="date"`
+ * anywhere to grep for.
+ *
+ * `none` cannot reach here: an operator that needs no value renders no
+ * control. It is mapped anyway so the function is total.
+ */
 function inputTypeFor(rule: QueryBuilderRule): string {
     const input = constraintFor(rule)?.input ?? 'text';
 
     return input === 'none' ? 'text' : input;
+}
+
+/** A date value is picked from the panel's calendar, like every other date. */
+function isDateRule(rule: QueryBuilderRule): boolean {
+    return inputTypeFor(rule) === 'date';
+}
+
+/** The picker speaks `string | null`; a rule may hold a number or be absent. */
+function dateValueOf(rule: QueryBuilderRule): string | null {
+    return typeof rule.value === 'string' && rule.value !== ''
+        ? rule.value
+        : null;
 }
 
 const canAdd = computed(
@@ -172,8 +197,20 @@ function removeRule(index: number): void {
                 </SelectContent>
             </Select>
 
+            <PanelDatePicker
+                v-if="needsValue(rule) && isDateRule(rule)"
+                class="w-44"
+                :aria-label="
+                    t('tables.rule_value', {
+                        rule: constraintFor(rule)?.label ?? t('tables.rule'),
+                    })
+                "
+                :model-value="dateValueOf(rule)"
+                @update:model-value="(value) => updateRule(index, { value })"
+            />
+
             <Input
-                v-if="needsValue(rule)"
+                v-else-if="needsValue(rule)"
                 class="h-8 w-44"
                 :type="inputTypeFor(rule)"
                 :aria-label="

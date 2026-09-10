@@ -39,7 +39,7 @@ $schema->dehydrate(['title' => 'Renamed', 'slug' => 'renamed'], $post);
 
 ### What each type casts a model value to
 
-`castForForm()` is `protected`, so this is behaviour rather than API — but it is the reason a `datetime` column arrives in a `datetime-local` control without anybody writing a hook.
+`castForForm()` is `protected`, so this is behaviour rather than API — but it is the reason a `datetime` column arrives in the datetime field already split into a date and a time, without anybody writing a hook.
 
 | Field | Input it accepts | Value the control receives |
 | --- | --- | --- |

@@ -72,9 +72,14 @@ final class DateTimePicker extends Field
     }
 
     /**
-     * The control binds to `datetime-local`, which only accepts its own
-     * format — a stored timestamp has to be shaped for it here rather than
-     * being handed over as whatever the database returned.
+     * A stored timestamp is shaped for the control here rather than being
+     * handed over as whatever the database returned.
+     *
+     * The literal `T` is historical — it is what `datetime-local` required
+     * when this field rendered one. `DateTimeField.vue` draws the panel's own
+     * date and time controls now and accepts either separator, so the format
+     * below is kept for the applications and hooks already reading it rather
+     * than because a control demands it.
      */
     protected function castForForm(mixed $value): ?string
     {

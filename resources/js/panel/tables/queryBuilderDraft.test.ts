@@ -53,6 +53,15 @@ const FILTER: FilterDefinition = {
                 { value: 'is_filled', label: 'is filled', needsValue: false },
             ],
         },
+        {
+            name: 'created_at',
+            label: 'Created at',
+            input: 'date',
+            operators: [
+                { value: 'equals', label: 'is', needsValue: true },
+                { value: 'is_blank', label: 'is blank', needsValue: false },
+            ],
+        },
     ],
 } as unknown as FilterDefinition;
 
@@ -338,5 +347,100 @@ describe('a table that defers its filters', () => {
         // Nothing is sent until Apply — unchanged.
         expect(wrapper.emitted('filter')).toBeUndefined();
         expect(shownRules(wrapper)).toEqual([draft]);
+    });
+});
+
+/**
+ * The same round trip for a date rule.
+ *
+ * A date value is now picked from `PanelDatePicker` rather than typed into a
+ * native date input, and the picker publishes `null` where the input
+ * published `''`. Both are incomplete, and PP-27 has to hold for both — the
+ * draft row is the whole reason "Add condition" works in immediate mode.
+ */
+describe('a date condition keeps the same draft behaviour', () => {
+    it('keeps an incomplete date rule visible', async () => {
+        const wrapper = render();
+
+        await openFilters(wrapper);
+
+        wrapper
+            .findComponent({ name: 'DataTableQueryBuilder' })
+            .vm.$emit('change', [
+                { column: 'created_at', operator: 'equals', value: null },
+            ]);
+
+        await wrapper.vm.$nextTick();
+        await wrapper.setProps({ table: table(), state: state({}) });
+
+        expect(shownRules(wrapper)).toEqual([
+            { column: 'created_at', operator: 'equals', value: null },
+        ]);
+    });
+
+    it('sends the server nothing while the date is unpicked', async () => {
+        const wrapper = render();
+
+        await openFilters(wrapper);
+
+        wrapper
+            .findComponent({ name: 'DataTableQueryBuilder' })
+            .vm.$emit('change', [
+                { column: 'created_at', operator: 'equals', value: null },
+            ]);
+
+        await wrapper.vm.$nextTick();
+
+        expect(emittedFilters(wrapper)).toEqual([null]);
+    });
+
+    it('applies the condition once a date is picked', async () => {
+        const wrapper = render();
+
+        await openFilters(wrapper);
+
+        const builder = wrapper.findComponent({
+            name: 'DataTableQueryBuilder',
+        });
+
+        builder.vm.$emit('change', [
+            { column: 'created_at', operator: 'equals', value: null },
+        ]);
+        await wrapper.vm.$nextTick();
+
+        builder.vm.$emit('change', [
+            { column: 'created_at', operator: 'equals', value: '2026-09-10' },
+        ]);
+        await wrapper.vm.$nextTick();
+
+        expect(emittedFilters(wrapper)[1]).toEqual([
+            { column: 'created_at', operator: 'equals', value: '2026-09-10' },
+        ]);
+    });
+
+    it('drops a stale date when the operator stops needing one', async () => {
+        const wrapper = render();
+
+        await openFilters(wrapper);
+
+        const builder = wrapper.findComponent({
+            name: 'DataTableQueryBuilder',
+        });
+
+        builder.vm.$emit('change', [
+            { column: 'created_at', operator: 'equals', value: '2026-09-10' },
+        ]);
+        await wrapper.vm.$nextTick();
+
+        // `is_blank` needs no value, so the date that was there must not ride
+        // along into the executable rule.
+        builder.vm.$emit('change', [
+            { column: 'created_at', operator: 'is_blank', value: null },
+        ]);
+        await wrapper.vm.$nextTick();
+
+        expect(emittedFilters(wrapper)[1]).toEqual([
+            { column: 'created_at', operator: 'is_blank', value: null },
+        ]);
     });
 });

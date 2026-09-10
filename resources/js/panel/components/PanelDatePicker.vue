@@ -47,6 +47,16 @@ const props = withDefaults(
         placeholder?: string;
         invalid?: boolean;
         ariaLabel?: string;
+        /**
+         * Helper and error ids, placed on the trigger.
+         *
+         * Declared as a prop rather than left to fall through: this component
+         * has a wrapping `<div>` for the clear button to sit against, and an
+         * undeclared attribute lands on that wrapper. `aria-describedby` on a
+         * `<div>` describes nothing anybody focuses — the field's helper text
+         * and its error message were both being announced to no one.
+         */
+        describedBy?: string;
         /** Set false where clearing is the parent's job. */
         clearable?: boolean;
         class?: string;
@@ -59,6 +69,7 @@ const props = withDefaults(
         placeholder: undefined,
         invalid: false,
         ariaLabel: undefined,
+        describedBy: undefined,
         clearable: true,
         class: undefined,
     },
@@ -145,6 +156,7 @@ function onClear(): void {
                     variant="outline"
                     :disabled="disabled"
                     :aria-label="ariaLabel"
+                    :aria-describedby="describedBy"
                     :aria-invalid="invalid ? true : undefined"
                     :class="
                         cn(
@@ -179,7 +191,7 @@ function onClear(): void {
             v-if="showClear"
             type="button"
             class="absolute top-1/2 right-2 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            :aria-label="`Clear ${ariaLabel ?? 'date'}`"
+            :aria-label="t('forms.clear_date')"
             @click="onClear"
         >
             <X class="size-3.5" />
