@@ -18,6 +18,50 @@ A schema mistake raises at schema-build time, which is boot or first render — 
 before a user does. That is why `php artisan test` is the first line of this page rather than the
 last.
 
+## 0.5.2
+
+One entry, and it is **silent for almost everybody**: the URI did not move, and the only thing that
+changed is a route *name* that the package had never documented.
+
+| # | Change | How it shows up |
+| --- | --- | --- |
+| 1 | The relation action-form route is named `action-form-schema` | `route()` on the old name throws `RouteNotFoundException` |
+
+---
+
+### 1. The relation action-form route is named `action-form-schema`
+
+**What changed.** The GET endpoint that describes a relation action's form was registered as
+`panel.{id}.relations.action-form`. It is now `panel.{id}.relations.action-form-schema`.
+
+```php
+route('panel.admin.relations.action-form');          // gone
+route('panel.admin.relations.action-form-schema');   // same endpoint
+```
+
+**Why.** Wayfinder names a generated helper after the last segment of a route name, and with
+`formVariants: true` it declares a second helper with `Form` appended. `relations.action` therefore
+already owned `actionForm` in that generated module, and `relations.action-form` redeclared it — so
+every panel's generated routes failed `tsc` with TS2451. Wayfinder has no per-route filter or
+rename, so the collision could only be resolved where the route is registered.
+
+**What did not change.** The URI. `GET {panel}/relations/action-form` and the POST on the same path
+are exactly where they were, so published components, `RelationEndpoints`, and anything holding a
+URL rather than a name are unaffected. The POST route's name, `relations.submit-action`, is also
+unchanged.
+
+**The fix.** Only if your application calls `route()` or `Route::has()` on the old name — nothing in
+this package did outside `RelationEndpoints`, and the name appeared in no documented table:
+
+```bash
+grep -rn "relations.action-form" app/ resources/ routes/ tests/
+```
+
+Append `-schema` to any hit that is a route name. A hit that is a URL path (`relations/action-form`)
+is correct as it stands and must not be changed.
+
+---
+
 ## 0.4.0
 
 Two entries. The first is **silent**: nothing stops working, and a colour stops meaning what it

@@ -239,3 +239,247 @@ it('exits zero on a conflict, because a conflict is not a failure', function ():
         ->expectsOutputToContain('CONFLICT')
         ->assertSuccessful();
 });
+
+/*
+|--------------------------------------------------------------------------
+| What an update records (PP-41)
+|--------------------------------------------------------------------------
+|
+| `compare()` was right from the start; `write()` was not. It hashed the
+| application's copy for every file on disk, so an update recorded a locally
+| modified file's *own* content as the ancestor. The file then read as `stale`
+| on the next run — the package copy differs from an ancestor that is now the
+| application's edit — and `stale` is the one state an update overwrites
+| without asking. An edit survived exactly one release.
+|
+| The invariant these tests hold: the recorded ancestor is the hash of the
+| **package** copy the application copy was last reconciled with. An update
+| that did not reconcile a file does not move its ancestor.
+|
+*/
+
+/**
+ * One update cycle over a scratch map: write what is safe, then record.
+ *
+ * Mirrors what `panel:assets --update` does to a single file, without the
+ * real publish map — the same reason `scratchAsset()` exists.
+ *
+ * @param  array<string, string>  $map
+ */
+function updateScratch(array $map, bool $force = false): void
+{
+    foreach (AssetManifest::compare($map) as $entry) {
+        $status = $entry['status'];
+
+        $writes = in_array($status, [AssetManifest::NEW, AssetManifest::STALE], true)
+            || ($force && in_array($status, [AssetManifest::CONFLICT, AssetManifest::MODIFIED], true));
+
+        if ($writes && $entry['source'] !== null) {
+            File::copy($entry['source'], $entry['destination']);
+        }
+    }
+
+    AssetManifest::write(AssetManifest::read(), $map);
+}
+
+it('keeps a locally modified file modified across an update', function (): void {
+    // PP-41. The application edited it, the package did not move. An update
+    // writes nothing — and must record nothing either, or the next run reads
+    // the edit as the ancestor and calls the package's copy an upgrade.
+    [$map, $key] = scratchAsset($this->root, 'original', 'ours');
+
+    writeManifest([$key => hashOf('original')]);
+
+    updateScratch($map);
+
+    expect(AssetManifest::read()[$key])->toBe(hashOf('original'))
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::MODIFIED)
+        ->and(File::get($key))->toBe('ours');
+});
+
+it('does not overwrite a locally modified file on the update after the one that recorded it', function (): void {
+    // The failure PP-41 actually caused: not the wrong label, but the edit
+    // being thrown away one release later. Two updates, and the second one
+    // is where the old behaviour reached for the package's copy.
+    [$map, $key] = scratchAsset($this->root, 'original', 'ours');
+
+    writeManifest([$key => hashOf('original')]);
+
+    updateScratch($map);
+    updateScratch($map);
+
+    expect(File::get($key))->toBe('ours')
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::MODIFIED);
+});
+
+it('keeps a conflict a conflict across an update', function (): void {
+    // Both sides moved. An update must leave the ancestor where it is, or the
+    // conflict reads as stale next time and is silently overwritten — which
+    // is the same data loss, reached through the state that was supposed to
+    // prevent it.
+    [$map, $key] = scratchAsset($this->root, 'theirs', 'ours');
+
+    writeManifest([$key => hashOf('original')]);
+
+    updateScratch($map);
+
+    expect(AssetManifest::read()[$key])->toBe(hashOf('original'))
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CONFLICT)
+        ->and(File::get($key))->toBe('ours');
+});
+
+it('rebases a stale file onto the package copy it just wrote', function (): void {
+    [$map, $key] = scratchAsset($this->root, 'version two', 'version one');
+
+    writeManifest([$key => hashOf('version one')]);
+
+    updateScratch($map);
+
+    expect(File::get($key))->toBe('version two')
+        ->and(AssetManifest::read()[$key])->toBe(hashOf('version two'))
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CURRENT);
+});
+
+it('records a new file against the package copy it wrote', function (): void {
+    [$map, $key] = scratchAsset($this->root, 'shipped', 'stale leftover');
+
+    writeManifest([]);
+
+    updateScratch($map);
+
+    expect(File::get($key))->toBe('shipped')
+        ->and(AssetManifest::read()[$key])->toBe(hashOf('shipped'))
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CURRENT);
+});
+
+it('leaves a current file exactly where it was', function (): void {
+    [$map, $key] = scratchAsset($this->root, 'original', 'original');
+
+    writeManifest([$key => hashOf('original')]);
+
+    updateScratch($map);
+
+    expect(AssetManifest::read()[$key])->toBe(hashOf('original'))
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CURRENT);
+});
+
+it('keeps a file the application deleted deleted rather than resurrecting it', function (): void {
+    // Dropping the record turned `deleted` into `new`, and `new` is written.
+    // A file removed on purpose came back on the next update.
+    [$map, $key] = scratchAsset($this->root, 'shipped', null);
+
+    writeManifest([$key => hashOf('shipped')]);
+
+    updateScratch($map);
+
+    expect(File::exists($key))->toBeFalse()
+        ->and(AssetManifest::read())->toHaveKey($key)
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::DELETED);
+});
+
+it('keeps recording a file the package no longer ships', function (): void {
+    [$map, $key] = scratchAsset($this->root, 'shipped', 'shipped');
+
+    writeManifest([$key => hashOf('shipped'), 'resources/js/panel/Gone.vue' => hashOf('gone')]);
+
+    updateScratch($map);
+
+    expect(AssetManifest::read())->toHaveKey('resources/js/panel/Gone.vue')
+        ->and(AssetManifest::compare($map)['resources/js/panel/Gone.vue']['status'])
+        ->toBe(AssetManifest::REMOVED_UPSTREAM);
+});
+
+it('rebases a force-overwritten conflict onto the package copy', function (): void {
+    [$map, $key] = scratchAsset($this->root, 'theirs', 'ours');
+
+    writeManifest([$key => hashOf('original')]);
+
+    updateScratch($map, force: true);
+
+    expect(File::get($key))->toBe('theirs')
+        ->and(AssetManifest::read()[$key])->toBe(hashOf('theirs'))
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CURRENT);
+});
+
+/*
+ * Reconciliation
+ */
+
+it('records a merged file against the current package copy without touching its contents', function (): void {
+    // The only way out of a conflict that keeps both sides: a person merges,
+    // then says so. The ancestor moves to the package copy they merged
+    // against; the content stays theirs. The file reads as `modified` after,
+    // which is the state that means "ours, and up to date with upstream".
+    [$map, $key] = scratchAsset($this->root, 'theirs', 'ours');
+
+    writeManifest([$key => hashOf('original')]);
+
+    File::put($key, 'ours and theirs');
+
+    expect(AssetManifest::reconcile([$key], $map))->toBe([$key]);
+
+    expect(File::get($key))->toBe('ours and theirs')
+        ->and(AssetManifest::read()[$key])->toBe(hashOf('theirs'))
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::MODIFIED);
+});
+
+it('keeps a reconciled file modified through the next update', function (): void {
+    [$map, $key] = scratchAsset($this->root, 'theirs', 'ours and theirs');
+
+    writeManifest([$key => hashOf('original')]);
+
+    AssetManifest::reconcile([$key], $map);
+
+    updateScratch($map);
+
+    expect(File::get($key))->toBe('ours and theirs')
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::MODIFIED);
+});
+
+it('reconciles only the files it was named and reports the rest', function (): void {
+    // Bounded on purpose. "Mark every conflict resolved" is a way to lose the
+    // review this state exists to demand.
+    [$map, $key] = scratchAsset($this->root, 'theirs', 'ours');
+
+    writeManifest([$key => hashOf('original')]);
+
+    expect(AssetManifest::reconcile(['resources/js/panel/NotOurs.vue'], $map))->toBe([]);
+
+    expect(AssetManifest::read()[$key])->toBe(hashOf('original'))
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CONFLICT);
+});
+
+/*
+ * The reconciliation workflow, end to end
+ */
+
+it('clears a conflict for the file it was named and leaves the rest alone', function (): void {
+    // Bounded on purpose: two files in conflict, one path given, one cleared.
+    writeManifest([
+        'resources/js/panel/palette.ts' => 'neither-side-has-this-hash',
+        'resources/js/panel/contract.ts' => 'neither-side-has-this-hash',
+    ]);
+
+    $before = File::get(base_path('resources/js/panel/palette.ts'));
+
+    $this->artisan('panel:assets --reconciled=resources/js/panel/palette.ts')
+        ->expectsOutputToContain('reconciled')
+        ->assertSuccessful();
+
+    $report = AssetManifest::compare();
+
+    expect(File::get(base_path('resources/js/panel/palette.ts')))->toBe($before)
+        ->and($report['resources/js/panel/palette.ts']['status'])->not->toBe(AssetManifest::CONFLICT)
+        ->and($report['resources/js/panel/contract.ts']['status'])->toBe(AssetManifest::CONFLICT);
+});
+
+it('refuses a path it does not publish and records nothing', function (): void {
+    writeManifest(['resources/js/panel/palette.ts' => 'neither-side-has-this-hash']);
+
+    $this->artisan('panel:assets --reconciled=resources/js/app.ts')
+        ->expectsOutputToContain('nothing to reconcile')
+        ->assertSuccessful();
+
+    expect(AssetManifest::read()['resources/js/panel/palette.ts'])
+        ->toBe('neither-side-has-this-hash');
+});

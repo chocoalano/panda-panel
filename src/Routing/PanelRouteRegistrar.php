@@ -414,9 +414,18 @@ final class PanelRouteRegistrar
             //
             // The context is in the query string on both verbs, which is what
             // lets the POST body be nothing but the user's values.
+            //
+            // Named `action-form-schema` rather than `action-form`, which the
+            // URI still is. Wayfinder names a helper after the last segment of
+            // the route name and, with `formVariants` on, declares a second
+            // one with `Form` appended — so `action` already owns `actionForm`
+            // in this module, and a route named `action-form` would redeclare
+            // it. Wayfinder has no per-route filter or rename, so the only
+            // place the collision can be resolved is here. See
+            // `WayfinderRouteNamingTest`.
             $this->router
                 ->get('action-form', [PanelRelationController::class, 'actionForm'])
-                ->name('action-form');
+                ->name('action-form-schema');
 
             $this->router
                 ->post('action-form', [PanelRelationController::class, 'submitAction'])

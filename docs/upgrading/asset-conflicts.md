@@ -113,7 +113,8 @@ php artisan panel:assets
 
   WARN  1 file(s) changed both here and upstream. Neither copy is safe to throw away, so
   nothing was written. Diff each against the package copy under vendor/chocoalano/panel,
-  then re-run with --force once you have merged:
+  Merge the two and re-run with --reconciled=<path> to keep your copy, or --force
+  to take the package's:
 
   resources/js/panel/tables/DataTable.vue
 
@@ -152,7 +153,8 @@ somebody edited on purpose.
 ```php
 protected $signature = 'panel:assets
     {--update : Write the files that are safe to write}
-    {--force : Also overwrite files this application has edited}';
+    {--force : Also overwrite files this application has edited}
+    {--reconciled=* : Record these already-merged files as level with the package copy, without changing them}';
 ```
 
 | Invocation | Writes | Rewrites `.panel-assets.json` |
@@ -160,6 +162,7 @@ protected $signature = 'panel:assets
 | `php artisan panel:assets` | nothing | never |
 | `php artisan panel:assets --update` | `new`, `stale` | always, even when it wrote nothing |
 | `php artisan panel:assets --force` | those, plus `modified` and `conflict` | same |
+| `php artisan panel:assets --reconciled=<path>` | nothing — it records only | the named files become `modified` |
 
 `--force` implies writing — it does not need `--update` beside it — and it extends the writable set
 to files you edited and to nothing else. A file you deleted on purpose stays deleted, and one the
@@ -202,39 +205,42 @@ php artisan panel:assets     # read the `yours` count first
 
 ### Route 2 — take the update *and* keep your edit
 
-**Take the package's copy first, let the manifest record it, then re-apply your change on top.**
-Not the other way around, and the reason is mechanical: the manifest records what is on disk when
-it is written, so a hand-merged file recorded as its own baseline reads as `out of date` on the
-next comparison — because the package's copy still differs from it — and the next `--update`
-overwrites it without a word.
+**Merge the two copies yourself, then record that you did.** Merging in either direction is fine;
+what matters is the second step, which tells the manifest that your file is now level with the
+package's current version.
 
 ```bash
-# 1. Baseline: the package's copy becomes the file on disk.
-cp vendor/chocoalano/panel/resources/js/panel/tables/DataTable.vue \
-   resources/js/panel/tables/DataTable.vue
+# 1. Read what upstream changed.
+diff -u \
+  resources/js/panel/tables/DataTable.vue \
+  vendor/chocoalano/panel/resources/js/panel/tables/DataTable.vue
 
-# 2. Record that baseline. panel:install writes the manifest unconditionally,
-#    publishes nothing over a file that already exists, and scaffolds nothing.
-php artisan panel:install --no-panel --no-user --no-interaction
+# 2. Merge it into your copy, by hand.
 
-# 3. Re-apply your change to the new file, by hand or from the diff you kept.
-git diff HEAD~1 -- resources/js/panel/tables/DataTable.vue
+# 3. Record that your copy is now level with the package's.
+php artisan panel:assets --reconciled=resources/js/panel/tables/DataTable.vue
 
 # 4. Confirm.
 php artisan panel:assets     # the file now reads `yours`
 npm run build
 ```
 
-After step 3 the recorded hash is the package's copy and the file on disk is yours, which is
-exactly `modified` — your edit, nothing new upstream — and `--update` will never touch it again.
-When the package next changes that file it becomes a conflict again, which is the correct answer:
-you have an edit, and there is something new to fold into it.
+`--reconciled` writes no file. It moves the recorded ancestor to the package's current copy and
+leaves your contents alone, which is exactly `modified` — your edit, nothing new upstream — and
+`--update` will never touch it again. When the package next changes that file it becomes a conflict
+again, which is the correct answer: you have an edit, and there is something new to fold into it.
 
-Keep the diff before you start, so step 3 is a re-application rather than an act of memory:
+Name each file you merged; only the paths you pass are recorded, and a path the package does not
+publish is refused rather than ignored.
 
 ```bash
-git diff -- resources/js/panel/tables/DataTable.vue > /tmp/datatable.patch
+php artisan panel:assets \
+  --reconciled=resources/js/panel/tables/DataTable.vue \
+  --reconciled=resources/js/panel/theme/panda-panel.css
 ```
+
+Do not finish a merge with `--force`. `--force` overwrites your file with the package's copy, so a
+file you merged and then forced has lost the merge.
 
 ### Route 3 — keep yours, skip the update
 
@@ -246,28 +252,23 @@ has moved past, which is true and worth being reminded of.
 What it costs is a report that is never clean, so it is worth being sure the edit still earns its
 place — [Not having the conflict next time](#not-having-the-conflict-next-time).
 
-### Recording a resolution by hand
+### Recording a resolution from PHP
 
-`AssetManifest::write()` hashes the **application's** copy, never the package's, so there is no
-supported call that says "treat my file as the baseline". When route 2's baseline step is
-impractical — a file you rewrote wholesale, for instance — the escape hatch is to write the hash
-into `.panel-assets.json` yourself. The hash is `xxh128` over the file's contents with `\r\n`
-normalised to `\n`:
+`--reconciled` is `AssetManifest::reconcile()`, and that call is public if you need it from a
+script or a test:
 
 ```php
-use Illuminate\Support\Facades\File;
 use PandaPanel\Support\Installer\AssetManifest;
 
-$relative = 'resources/js/panel/tables/DataTable.vue';
-$source = base_path('vendor/chocoalano/panel/'.$relative);
-
-$files = AssetManifest::read();
-$files[$relative] = hash('xxh128', str_replace("\r\n", "\n", (string) File::get($source)));
-
-ksort($files);
-
-File::put(AssetManifest::path(), json_encode(['files' => $files], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+// Returns the paths it actually recorded. A path this package does not
+// publish, or one that is not on disk, is not among them.
+AssetManifest::reconcile(['resources/js/panel/tables/DataTable.vue']);
 ```
+
+Do not write `.panel-assets.json` yourself. The recorded hash is the *package* version your copy is
+level with, not your copy's contents, and hand-writing the wrong one is the failure this mechanism
+exists to prevent — a file recorded against its own contents reads as `out of date` on the next
+run and is overwritten on the one after.
 
 Recording the package's hash for a file you have edited makes it read as `modified` rather than
 `conflict`. It is a claim that you have already considered the upstream change, so make it only
@@ -352,7 +353,8 @@ A file you never edited is a file `--update` can always write, which is the whol
   reads as `out of date` — the package's copy still differs from it — and the next `--update`
   overwrites it silently. Take the package's copy first, record it, then re-apply. That is route 2,
   in that order.
-- **`--force` is a whole-run switch.** It writes every `modified` and `conflict` file. Resolve the
+- **`--force` is a whole-run switch.** It writes every `modified` and `conflict` file. `--reconciled`
+  is the per-path option, and it keeps your copy rather than replacing it. Resolve the
   ones you care about individually first, or check the `yours` count before running it.
 - **Run `panel:icons` after any `--force`.** `resources/js/panel/icons/registry.ts` is a published
   file that `php artisan panel:icons` generates from the icons your panels declare, so `--force`

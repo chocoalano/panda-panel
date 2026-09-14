@@ -7,6 +7,84 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-15
+
+Two bug fixes, both in the seam between the package and an application that has
+published its frontend. Neither needs a source edit in an application.
+
+### Fixed
+
+- **The relation action-form route no longer collides with Wayfinder's form
+  variants.** Wayfinder names a generated helper after the last segment of a
+  route name, and with `formVariants: true` it declares a second one with
+  `Form` appended — so `panel.{id}.relations.action` already owned `actionForm`
+  in that module, and `panel.{id}.relations.action-form` redeclared it. Every
+  panel's generated routes failed `tsc` with TS2451, three errors per panel,
+  and the only workarounds left to an application were turning form variants
+  off everywhere or editing generated output. Wayfinder (v0.1.21) has no
+  per-route filter or rename, so the name is resolved where it is registered:
+  the GET route is now named `action-form-schema`.
+
+  **The URI is unchanged.** `GET {panel}/relations/action-form` and its POST
+  twin are exactly where they were, so published components, `RelationEndpoints`
+  and anything holding a URL are unaffected. Only the route *name* moved, and
+  only that one — see [Breaking changes](docs/upgrading/breaking-changes.md) if
+  your application calls `route()` on it.
+
+  `WayfinderRouteNamingTest` now reproduces Wayfinder's naming rule over every
+  route this package registers, so a future name that would break a consumer's
+  build fails here first.
+- **An update no longer turns a file you edited into a stale one.**
+  `AssetManifest::write()` hashed the copy on disk for every published file, so
+  `panel:assets --update` recorded a locally modified file's own edit as its
+  ancestor. The file then read as `out of date` on the next run — the package's
+  copy no longer matched an ancestor that was now the edit — and `out of date`
+  is the one status an update overwrites without asking. **Every deliberate
+  customisation survived exactly one release**, and a `CONFLICT` was quietly
+  downgraded to a file safe to throw away.
+
+  The recorded hash is now the ancestor it always claimed to be: the *package*
+  version that copy was last brought level with. It moves only for a file the
+  run actually reconciled — one overwritten from the package, or one
+  `--reconciled` named — so `modified` and `conflict` files keep their
+  ancestry however often `--update` runs.
+
+  Two consequences worth knowing about:
+
+  - A file you deleted on purpose stays `deleted by you`. Its record used to be
+    dropped, which made it read as `new` on the next run and wrote it straight
+    back.
+  - A `conflict` is still a `conflict`, and still fails a check that treats one
+    as drift. This fix preserves ancestry; it does not suppress conflicts.
+
+  **If you have already lost ancestry to this**, a file that should read as
+  `yours` and reads as `out of date` is the symptom. Do not run `--update`
+  until you have re-recorded it — see `--reconciled` below.
+
+### Added
+
+- **`panel:assets --reconciled=<path>`** — the supported way out of a conflict
+  that keeps both copies. Merge the package's changes into your file by hand,
+  then name the file: the ancestor moves to the package's current copy, your
+  contents are left exactly as they are, and the file reads as `yours` from
+  then on.
+
+  ```bash
+  php artisan panel:assets --reconciled=resources/js/panel/tables/DataTable.vue
+  ```
+
+  It writes no file, it is repeatable, and it acts only on the paths you name —
+  there is deliberately no flag that settles every conflict at once, because
+  the state exists to make somebody read a diff. A path this package does not
+  publish is refused rather than ignored.
+
+  This replaces two pieces of advice that were wrong. `--force` was documented
+  as the way to finish a merge, and it is not: it overwrites your file with the
+  package's copy, so a file you merged and then forced has lost the merge. And
+  `docs/upgrading/asset-conflicts.md` carried a snippet for writing
+  `.panel-assets.json` by hand, because no supported call could record a
+  resolution. `AssetManifest::reconcile()` is that call.
+
 ## [0.5.0] - 2026-09-10
 
 ### Added

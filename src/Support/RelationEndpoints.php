@@ -43,7 +43,7 @@ final class RelationEndpoints
             // open at most one dialog. The client appends the action name,
             // the scope, and the related key — never the resource, the owner,
             // or the relation, which are already fixed here.
-            'actionForm' => self::contextUrl($panel, 'relations.action-form', $resource, $manager, $owner),
+            'actionForm' => self::contextUrl($panel, 'relations.action-form-schema', $resource, $manager, $owner),
         ];
     }
 
@@ -68,7 +68,7 @@ final class RelationEndpoints
     ): string {
         return self::contextUrl(
             self::panel(),
-            'relations.action-form',
+            'relations.action-form-schema',
             $resource,
             $manager,
             $owner,

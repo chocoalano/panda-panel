@@ -79,3 +79,37 @@ it('keeps the existing starter kit routes working', function (): void {
     $this->actingAs($user)->get('/settings/profile')
         ->assertRedirect('/app/settings/profile');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Relation action form endpoint
+|--------------------------------------------------------------------------
+|
+| The GET route is named `action-form-schema` so its generated Wayfinder
+| helper cannot collide with the form variant of `relations.action` — see
+| `WayfinderRouteNamingTest`. The URI is unchanged, which is the half of this
+| that a published frontend and an application's own links depend on, so it
+| is pinned here separately from the name.
+|
+*/
+
+it('keeps the relation action form URI while naming it so Wayfinder cannot collide', function (): void {
+    $route = Route::getRoutes()->getByName('panel.admin.relations.action-form-schema');
+
+    expect($route)->not->toBeNull()
+        ->and($route->uri())->toBe('admin/relations/action-form')
+        ->and($route->methods())->toContain('GET');
+});
+
+it('keeps the relation action form submit on the same URI by POST', function (): void {
+    $route = Route::getRoutes()->getByName('panel.admin.relations.submit-action');
+
+    expect($route)->not->toBeNull()
+        ->and($route->uri())->toBe('admin/relations/action-form')
+        ->and($route->methods())->toContain('POST');
+});
+
+it('no longer registers the colliding relation action-form route name', function (): void {
+    expect(Route::has('panel.admin.relations.action-form'))->toBeFalse()
+        ->and(Route::has('panel.app.relations.action-form'))->toBeFalse();
+});

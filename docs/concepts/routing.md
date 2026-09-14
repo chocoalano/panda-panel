@@ -120,10 +120,20 @@ page run the other's actions.
 | `panel.{id}.relations.form` | GET | `relations/form` | `PanelRelationController@form` |
 | `panel.{id}.relations.save` | POST | `relations/form` | `PanelRelationController@save` |
 | `panel.{id}.relations.action` | POST | `relations/action` | `PanelRelationController@action` |
+| `panel.{id}.relations.action-form-schema` | GET | `relations/action-form` | `PanelRelationController@actionForm` |
+| `panel.{id}.relations.submit-action` | POST | `relations/action-form` | `PanelRelationController@submitAction` |
 | `panel.{id}.relations.bulk` | POST | `relations/bulk` | `PanelRelationController@bulk` |
 
 The form and save routes take their context from the query string, which is
 why they need no path parameters.
+
+The GET route on `relations/action-form` is named `action-form-schema` rather
+than `action-form`. Wayfinder names a generated helper after the last segment
+of the route name, and with `formVariants` enabled it declares a second helper
+with `Form` appended — so `relations.action` already owns `actionForm` in that
+module, and a route named `action-form` would redeclare it and fail the
+consumer's `tsc` with TS2451. Wayfinder offers no per-route filter or rename,
+so the name is resolved here. The URI is unchanged.
 
 ## Guest routes
 

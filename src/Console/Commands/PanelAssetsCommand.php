@@ -61,7 +61,8 @@ final class PanelAssetsCommand extends Command
 {
     protected $signature = 'panel:assets
         {--update : Write the files that are safe to write}
-        {--force : Also overwrite files this application has edited}';
+        {--force : Also overwrite files this application has edited}
+        {--reconciled=* : Record these already-merged files as level with the package copy, without changing them}';
 
     protected $description = 'Report which published panel assets are out of date, and update the ones that are safe to';
 
@@ -82,6 +83,12 @@ final class PanelAssetsCommand extends Command
 
     public function handle(): int
     {
+        // Before the report, not after: a file somebody merged and is telling
+        // us about is no longer in conflict, and every decision below — what
+        // the summary counts, what `--force` is willing to overwrite — has to
+        // be made against that answer rather than the question.
+        $this->reconcile();
+
         $report = AssetManifest::compare();
 
         $counts = array_count_values(array_column($report, 'status'));
@@ -174,6 +181,52 @@ final class PanelAssetsCommand extends Command
             (int) FrontendContract::published(),
         ));
         $this->newLine();
+    }
+
+    /**
+     * Records files a person has merged by hand as level with the package.
+     *
+     * The missing step in the upgrade story. A `conflict` says both sides
+     * changed and there is no answer this command can compute; `--force`
+     * resolves it by discarding the application's work, which is not a merge.
+     * Once somebody has actually merged the two copies, the content is theirs
+     * and the ancestor is the package version they merged against — and
+     * without a way to say so, the file stays in conflict forever and every
+     * later run repeats a question that has been answered.
+     *
+     * Paths, always, and never an option that clears every conflict at once:
+     * the state exists to make somebody read a diff.
+     */
+    private function reconcile(): void
+    {
+        /** @var list<string> $paths */
+        $paths = $this->option('reconciled');
+
+        if ($paths === []) {
+            return;
+        }
+
+        $recorded = AssetManifest::reconcile($paths);
+
+        foreach ($recorded as $relative) {
+            $this->components->twoColumnDetail($relative, '<fg=green>reconciled</>');
+        }
+
+        foreach (array_diff($paths, $recorded) as $unknown) {
+            $this->components->error(sprintf(
+                '%s is not a file this package publishes, so there is nothing to reconcile.',
+                $unknown,
+            ));
+        }
+
+        if ($recorded !== []) {
+            $this->newLine();
+            $this->components->info(sprintf(
+                'Recorded %d file(s) as level with the package copy. Their contents were not changed.',
+                count($recorded),
+            ));
+            $this->newLine();
+        }
     }
 
     /**
@@ -274,7 +327,8 @@ final class PanelAssetsCommand extends Command
         $this->components->warn(sprintf(
             '%d file(s) changed both here and upstream. Neither copy is safe to throw away, so '
             .'nothing was written. Diff each against the package copy under '
-            .'vendor/chocoalano/panel, then re-run with --force once you have merged:',
+            .'vendor/chocoalano/panel. Merge the two and re-run with '
+            .'--reconciled=<path> to keep your copy, or --force to take the package\'s:',
             count($conflicts),
         ));
         $this->newLine();

@@ -20,7 +20,8 @@ php artisan panel:assets
 
   WARN  1 file(s) changed both here and upstream. Neither copy is safe to throw away, so
   nothing was written. Diff each against the package copy under vendor/chocoalano/panel,
-  then re-run with --force once you have merged:
+  Merge the two and re-run with --reconciled=<path> to keep your copy, or --force
+  to take the package's:
 
   resources/js/panel/tables/DataTable.vue
 ```
@@ -139,10 +140,13 @@ AssetManifest::compare(['/tmp/app/Component.vue' => '/tmp/pkg/Component.vue']);
 // ['/tmp/app/Component.vue' => ['status' => 'conflict', …]]
 ```
 
-`write()` hashes the **application's** copy, not the package's. That distinction is the whole point:
-a file that was published and then immediately edited is recorded as edited, and recording the
-package's hash would claim your application had a pristine copy it never had. The `$existing`
-argument carries forward hashes for files not being written now.
+`write()` records the **ancestor** — the package version your copy is level with — and never your
+copy's own contents. That distinction is the whole point: a file recorded against its own edit
+would read as `out of date` on the next run, because the package's copy no longer matches it, and
+`out of date` is the one state an update overwrites without asking. So a `modified` or `conflict`
+file keeps the ancestor it had, and only a file that was overwritten from the package, or that
+`reconcile()` was told by name about, gets a new one. The `$existing` argument carries forward
+hashes for files not in the map.
 
 ## What counts as a published file
 
