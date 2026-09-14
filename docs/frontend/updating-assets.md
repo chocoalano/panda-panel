@@ -96,14 +96,16 @@ found rather than the state it left behind.
 ```php
 protected $signature = 'panel:assets
     {--update : Write the files that are safe to write}
-    {--force : Also overwrite files this application has edited}';
+    {--force : Also overwrite files this application has edited}
+    {--reconciled=* : Record these already-merged files as level with the package copy, without changing them}';
 ```
 
 | Option | Effect |
 | --- | --- |
 | *(none)* | Report only. Writes no files and does not create or touch `.panel-assets.json`. |
-| `--update` | Writes `new` and `stale`. Rewrites the manifest afterwards, whether or not it wrote a file. |
+| `--update` | Writes `new` and `stale`. Records the manifest afterwards, whether or not it wrote a file. |
 | `--force` | Implies writing. Extends `--update` to `modified` and `conflict`, and to nothing else. |
+| `--reconciled=<path>` | Records one file you have merged yourself as level with the package copy. Changes no file's contents. Repeatable. |
 
 The exit code is always 0. A conflict is not a failure of the command — it ran correctly and found
 something a person has to look at — and a non-zero exit would break a deploy over a file somebody
@@ -116,8 +118,8 @@ command prints the paths and stops:
 
 ```text
   1 file(s) changed both here and upstream. Neither copy is safe to throw away, so nothing was
-  written. Diff each against the package copy under vendor/chocoalano/panel, then re-run with
-  --force once you have merged:
+  written. Diff each against the package copy under vendor/chocoalano/panel. Merge the two and
+  re-run with --reconciled=<path> to keep your copy, or --force to take the package's:
 
   resources/js/panel/tables/DataTable.vue
 ```
@@ -131,16 +133,40 @@ diff -u \
   vendor/chocoalano/panel/resources/js/panel/tables/DataTable.vue
 ```
 
-Merge by hand, into your copy, then tell the command the conflict is settled:
+There are two ways out, and they are genuinely different decisions.
+
+**Keep your copy.** Merge the package's changes into your file by hand, then say so:
+
+```bash
+php artisan panel:assets --reconciled=resources/js/panel/tables/DataTable.vue
+npm run build
+```
+
+`--reconciled` changes nothing on disk. It records that your copy is now level with the package's
+current version — the ancestor moves to the package copy you merged against, and your merged
+content stays exactly as you wrote it. The file reads as `modified` from then on: yours, and up to
+date. Repeat the flag for each file, or pass it more than once:
+
+```bash
+php artisan panel:assets \
+  --reconciled=resources/js/panel/tables/DataTable.vue \
+  --reconciled=resources/js/panel/theme/panda-panel.css
+```
+
+Only the paths you name are recorded, and a path the package does not publish is refused rather
+than ignored. There is deliberately no flag that settles every conflict at once: the state exists
+to make somebody read a diff.
+
+**Take the package's copy.** Give up your changes to that file:
 
 ```bash
 php artisan panel:assets --force
 npm run build
 ```
 
-`--force` at that point overwrites with the package's version, so merge *into your file first*
-only if you intend to keep your changes — otherwise `--force` is the way to take the package's
-version wholesale. There is no per-file flag; the granularity is the whole run.
+`--force` overwrites, so it is not a way to finish a merge — a file you merged and then `--force`d
+has lost the merge. It is a whole-run switch, so it takes the package's copy of *every* `modified`
+and `conflict` file, not just the one you were looking at.
 
 ## What `--force` does not do
 
@@ -361,8 +387,12 @@ application that published before the manifest existed.
   `php artisan panel:icons` after any `--force`.
 - **Line endings do not count as an edit.** Hashes are taken with `\r\n` normalised to `\n`,
   because a report where every file is a conflict is a report nobody reads.
-- **`--force` is a whole-run switch.** There is no way to force one path. Resolve the files you
-  care about first, then force.
+- **`--force` is a whole-run switch.** There is no way to force one path. `--reconciled` is the
+  per-path option, and it keeps your copy rather than replacing it.
+- **An update never moves an ancestor it did not earn.** The manifest records which *package*
+  version each file is level with, so running `--update` repeatedly leaves `modified` and
+  `conflict` files exactly where they were. Before v0.5.2 it recorded your own content instead,
+  which made an edit read as `stale` on the next run and overwrote it on the one after.
 - **This repository reads as `current` everywhere.** Its published copies *are* the package's
   files, which is why `AssetManifest::compare()` accepts an injected map for testing.
 

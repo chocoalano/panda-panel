@@ -150,23 +150,59 @@ AssetManifest::write(AssetManifest::read());   // keep what is already recorded,
 ```
 
 ```php
-public static function write(array $existing = []): void
+public static function write(array $existing = [], ?array $shipped = null): void
 ```
 
 | Parameter | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `$existing` | `array<string, string>` | `[]` | Hashes to keep for files not being written now. |
+| `$existing` | `array<string, string>` | `[]` | Hashes to keep for files not in the map. |
+| `$shipped` | `array<string, string>\|null` | `null` | `destination => source`, defaulting to the real publish map. For tests. |
 
-Two properties are worth stating out loud:
+What it records is the **ancestor**: the version of the *package's* copy that the application's
+copy was last brought level with. Never the application's own content — that was PP-41, and it
+made every local edit read as `out of date` on the next run and get overwritten on the one after.
 
-- **It hashes the application's copy, not the package's.** This is a record of what the application
-  *has*, so a file published and then immediately edited is recorded as edited. Recording the
-  package's hash would claim the application had a pristine copy it never had.
-- **A shipped file that is not on disk has its record removed**, so a file you deleted stops being
-  reported as `deleted` after the next write.
+So the recorded hash moves only when the application demonstrably has the package's copy:
+
+| On disk | Recorded as | Why |
+| --- | --- | --- |
+| Identical to the package | the package's hash | Level with it, by having the same bytes. |
+| Differs, nothing recorded | its own hash | No ancestor exists to preserve. |
+| Differs, ancestor recorded | the ancestor, untouched | The application's; this run did not reconcile it. |
+| Absent, ancestor recorded | the ancestor, untouched | Deleted on purpose, and it stays deleted. |
+
+Row three is what `modified` and `conflict` files take, which is why `--update` can be run as often
+as you like without moving anything the application owns. A file that was just overwritten from the
+package — `stale`, `new`, or a `--force`d conflict — is identical to the package by the time this
+runs, so it takes row one and rebases onto the version it just received.
 
 `$existing` is why `panel:assets` calls it as `write(read())`: entries for files the package no
 longer ships are preserved rather than silently dropped.
+
+### `reconcile()`
+
+```php
+AssetManifest::reconcile(['resources/js/panel/tables/DataTable.vue']);
+```
+
+```php
+public static function reconcile(array $relatives, ?array $shipped = null): array
+```
+
+| Parameter | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `$relatives` | `list<string>` | — | Application-relative paths, as the report prints them. |
+| `$shipped` | `array<string, string>\|null` | `null` | `destination => source`, defaulting to the real publish map. For tests. |
+
+Returns the paths it actually recorded. A path this package does not publish, or one that is not
+on disk, is not among them.
+
+The way out of a `conflict` that keeps both sides. Once a person has merged the package's changes
+into their copy, this records the second half of that: the ancestor moves to the package's current
+copy, the contents are left exactly as they are, and the file reads as `modified` from then on.
+
+Named files only. There is deliberately no call that reconciles every conflict at once — the state
+exists to make somebody read a diff. It backs `panel:assets --reconciled=<path>`.
 
 ### `compare()`
 

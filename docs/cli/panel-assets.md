@@ -99,6 +99,7 @@ tree.
 panel:assets
     {--update : Write the files that are safe to write}
     {--force : Also overwrite files this application has edited}
+    {--reconciled=* : Record these already-merged files as level with the package copy, without changing them}
 ```
 
 | Option | Default | Effect |
@@ -106,11 +107,13 @@ panel:assets
 | — | — | Report only. Nothing is written. |
 | `--update` | off | Writes the `new` and `out of date` files. |
 | `--force` | off | Implies writing, and extends it to `CONFLICT` and `yours`. |
+| `--reconciled=<path>` | — | Writes no file. Records the named files as level with the package's current copy. Repeatable. |
 
 ```bash
 php artisan panel:assets                    # report
 php artisan panel:assets --update           # write the safe ones
 php artisan panel:assets --force            # write those, plus your edits, overwritten
+php artisan panel:assets --reconciled=resources/js/panel/tables/DataTable.vue
 ```
 
 ## The seven statuses
@@ -138,7 +141,8 @@ ships is not resurrected.
 ```text
 WARN  2 file(s) changed both here and upstream. Neither copy is safe to throw away, so
       nothing was written. Diff each against the package copy under
-      vendor/chocoalano/panel, then re-run with --force once you have merged:
+      vendor/chocoalano/panel. Merge the two and re-run with --reconciled=<path> to keep
+      your copy, or --force to take the package's:
 
   resources/js/panel/tables/DataTable.vue
   resources/js/panel/forms/registry.ts
@@ -152,9 +156,17 @@ diff -u vendor/chocoalano/panel/resources/js/panel/tables/DataTable.vue \
         resources/js/panel/tables/DataTable.vue
 ```
 
-Merge upstream's change into your copy by hand, then either leave it alone — it
-is now `yours` and `MODIFIED` — or, if you decided your edit was not worth
-keeping, take the package's with `--force`.
+Merge upstream's change into your copy by hand, then say so:
+
+```bash
+php artisan panel:assets --reconciled=resources/js/panel/tables/DataTable.vue
+```
+
+That changes no file. It records that your copy is now level with the package's
+current version, which is what turns a `CONFLICT` into `yours` — and only for
+the paths you name. If you decided your edit was not worth keeping, take the
+package's copy with `--force` instead; do not use it to finish a merge, because
+it overwrites the merge.
 
 Only conflicts are listed by path. `current` files are the overwhelming majority
 and saying so three hundred times is how a report becomes something nobody
@@ -178,8 +190,9 @@ At the application's root, and it belongs in the repository the way
 `bootstrap/cache` it would be regenerated and useless; under `storage` it would
 be gitignored and lost on the first deploy.
 
-The hashes are of the **application's** copy, with `\r\n` normalised to `\n`, so
-a Windows checkout does not report every file as edited.
+Each hash is the **package** version that copy is level with — the ancestor —
+not the contents of your copy. `\r\n` is normalised to `\n`, so a Windows
+checkout does not report every file as edited.
 
 Without the file:
 
@@ -191,8 +204,12 @@ WARN  No .panel-assets.json, so there is no record of what this application publ
 
 It is written by `panel:install`, and rewritten by every `--update` or
 `--force` run — including one that wrote no files at all, because recording the
-state is half of what an update is for. Always from disk rather than from what
-was intended, so it records what the application actually has.
+state is half of what an update is for.
+
+A rewrite moves an entry only for a file the run actually reconciled: one it
+overwrote from the package, or one `--reconciled` named. A `yours` or `CONFLICT`
+file keeps the ancestor it had, so `--update` can be run as often as you like
+without moving anything the application owns.
 
 ## The API behind it
 
@@ -203,7 +220,8 @@ was intended, so it records what the application actually has.
 | `path` | `static path(): string` — `base_path('.panel-assets.json')` |
 | `exists` | `static exists(): bool` |
 | `read` | `static read(): array<string, string>` — recorded hashes, keyed by relative destination |
-| `write` | `static write(array $existing = []): void` |
+| `write` | `static write(array $existing = [], ?array $shipped = null): void` |
+| `reconcile` | `static reconcile(array $relatives, ?array $shipped = null): list<string>` — records the named files against the package's current copy, returns the ones it recorded |
 | `compare` | `static compare(?array $files = null): array<string, array{status: string, destination: string, source: string\|null}>` |
 
 ```php

@@ -46,6 +46,31 @@ use Illuminate\Support\Facades\File;
  * reported with its path and never resolved by guessing — that is a diff for
  * a person to read.
  *
+ * ## What the recorded hash is
+ *
+ * The ancestor, and an ancestor is a point on the *package's* history: the
+ * version of the package's copy that the application's copy was last brought
+ * level with. It is never a hash of the application's own content.
+ *
+ * Getting that backwards is what PP-41 was. `write()` hashed the copy on disk,
+ * so an update recorded a locally modified file's own edit as its ancestor.
+ * The package's copy then no longer matched the ancestor while the disk copy
+ * did — which is the definition of `stale`, the one state an update overwrites
+ * without asking. Every deliberate customisation survived exactly one release,
+ * and a `conflict` was quietly downgraded to a file safe to throw away.
+ *
+ * So the ancestor moves on exactly two occasions, and both are decisions:
+ * a file was overwritten from the package, or `reconcile()` was told by name
+ * that somebody merged it. An update that touched nothing records nothing.
+ *
+ * ## Getting out of a conflict
+ *
+ * `--force` resolves a conflict by discarding the application's copy, which is
+ * an answer but not a merge. `reconcile()` is the other one: the person merges
+ * the two copies themselves, then names the file, and the ancestor moves to
+ * the package version they merged against while the content stays theirs. The
+ * file reads as `modified` afterwards — ours, and level with upstream.
+ *
  * ## Where it lives
  *
  * `.panel-assets.json` at the application's root, and it belongs in the
@@ -133,41 +158,145 @@ final class AssetManifest
     }
 
     /**
-     * Records the hashes of everything currently on disk that we ship.
+     * Records which **package** version each published file is reconciled with.
      *
-     * Hashes the **application's** copy rather than the package's, and the
-     * distinction matters: this is a record of what the application has, so a
-     * file that was published and then immediately edited is recorded as
-     * edited. Recording the package's hash would claim the application had a
-     * pristine copy it never had.
+     * The recorded hash is the ancestor, and an ancestor is only meaningful as
+     * a point on the package's history — the version the application's copy
+     * was last brought level with. It is never the application's own content.
      *
-     * @param  array<string, string>  $existing  hashes to keep for files not being written now
+     * That distinction is the whole of PP-41. This used to hash the copy on
+     * disk for every file, so an update recorded a locally modified file's own
+     * edit as its ancestor. The file then read as `stale` on the next run — the
+     * package's copy no longer matches an ancestor that is now the edit — and
+     * `stale` is the one state an update overwrites without asking. Every
+     * deliberate customisation survived exactly one release, and a conflict was
+     * quietly downgraded to a file safe to throw away.
+     *
+     * So a file is recorded against the package only when the application
+     * demonstrably has the package's copy:
+     *
+     * | on disk | recorded as | why |
+     * | --- | --- | --- |
+     * | identical to the package | the package's hash | reconciled, by having the same bytes |
+     * | differs, nothing recorded | its own hash | no ancestor exists to preserve |
+     * | differs, ancestor recorded | the ancestor, untouched | ours; this run did not reconcile it |
+     * | absent, ancestor recorded | the ancestor, untouched | deleted on purpose, and it stays deleted |
+     *
+     * Row three is what a `modified` and a `conflict` file take, and it is why
+     * an update can be run as often as you like without moving anything the
+     * application owns. Row four used to drop the record, which turned a file
+     * deleted on purpose into a `new` one and wrote it straight back.
+     *
+     * A file that was just overwritten from the package — `stale`, `new`, or a
+     * `--force`d conflict — is identical to the package by the time this runs,
+     * so it takes row one and rebases onto the version it just received. That
+     * is the only way an ancestor moves on its own; every other move is
+     * `reconcile()`, which a person asks for by name.
+     *
+     * @param  array<string, string>  $existing  hashes to keep for files not in the map
+     * @param  array<string, string>|null  $shipped  destination => source, defaulting to the real publish map
      */
-    public static function write(array $existing = []): void
+    public static function write(array $existing = [], ?array $shipped = null): void
     {
         $files = $existing;
 
-        foreach (PublishedAssets::files() as $destination => $source) {
+        foreach ($shipped ?? PublishedAssets::files() as $destination => $source) {
             $relative = PublishedAssets::relative($destination);
+            $recorded = $files[$relative] ?? null;
 
             if (! File::exists($destination)) {
-                unset($files[$relative]);
+                // Deleted here. The ancestor is what keeps it reading as
+                // `deleted` rather than as a file we have never heard of.
+                if ($recorded === null) {
+                    unset($files[$relative]);
+                }
 
                 continue;
             }
 
-            $files[$relative] = self::hash($destination);
+            $onDisk = self::hash($destination);
+
+            if ($onDisk === self::hash($source)) {
+                $files[$relative] = $onDisk;
+
+                continue;
+            }
+
+            if ($recorded === null) {
+                // Nothing to preserve. Claiming the package's hash here would
+                // call the file stale and overwrite it on the next run.
+                $files[$relative] = $onDisk;
+            }
         }
 
+        self::writeFiles($files);
+    }
+
+    /**
+     * @param  array<string, string>  $files
+     */
+    private static function writeFiles(array $files): void
+    {
         ksort($files);
 
         File::put(self::path(), json_encode([
             '_' => 'Written by php artisan panel:install / panel:assets. Commit this file: '
                 .'it is the record of which version of the panel frontend and translations this '
                 .'application published, and without it an upgrade cannot tell your edits from a '
-                .'stale copy.',
+                .'stale copy. Each hash is the package version that copy is reconciled with, not '
+                .'the contents of your copy.',
             'files' => $files,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+    }
+
+    /**
+     * Records named files as reconciled with the package's current copy,
+     * leaving their contents alone.
+     *
+     * The way out of a `conflict` that keeps both sides. A conflict says the
+     * application edited a file and the package changed it too, and there is
+     * no automatic answer to that — `--force` resolves it by throwing the
+     * application's work away, which is the opposite of a merge. Once a person
+     * has actually merged the two, the content is theirs and the ancestor is
+     * the package version they merged against; this records the second half.
+     * The file reads as `modified` afterwards, which is what "ours, and level
+     * with upstream" looks like.
+     *
+     * Named files only, and never a sweep over everything in conflict. The
+     * state exists to demand a diff be read, and an option that clears them
+     * all at once is a way to not read any of them.
+     *
+     * @param  list<string>  $relatives  application-relative paths, as the report prints them
+     * @param  array<string, string>|null  $shipped  destination => source, defaulting to the real publish map
+     * @return list<string> the paths actually recorded; anything absent was not one we ship
+     */
+    public static function reconcile(array $relatives, ?array $shipped = null): array
+    {
+        $files = self::read();
+        $recorded = [];
+
+        foreach ($shipped ?? PublishedAssets::files() as $destination => $source) {
+            $relative = PublishedAssets::relative($destination);
+
+            if (! in_array($relative, $relatives, true)) {
+                continue;
+            }
+
+            // A file that is not on disk has nothing to reconcile: there is no
+            // merged copy to keep, and recording one would hide a deletion.
+            if (! File::exists($destination)) {
+                continue;
+            }
+
+            $files[$relative] = self::hash($source);
+            $recorded[] = $relative;
+        }
+
+        if ($recorded !== []) {
+            self::writeFiles($files);
+        }
+
+        return $recorded;
     }
 
     /**
