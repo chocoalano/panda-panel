@@ -54,7 +54,8 @@ With the hash a file had *when it was published*, three values answer the questi
 | ≠ manifest | = manifest | `modified` | leave alone |
 | ≠ manifest | ≠ manifest | `conflict` | report, never touch |
 | absent | present | `deleted` | leave alone |
-| not in manifest, differs | present | `new` | **write it** |
+| absent, not in manifest | present | `new` | **write it** |
+| present, not in manifest, differs | present | `conflict` | report, never touch |
 | not in manifest, identical | present | `current` | nothing |
 | in manifest | not shipped | `removed-upstream` | report as removable |
 
@@ -271,7 +272,7 @@ AssetManifest::REMOVED_UPSTREAM;  // 'removed-upstream'
 
 | Constant | Value | Meaning | Label in the report | `--update` | `--force` |
 | --- | --- | --- | --- | --- | --- |
-| `NEW` | `new` | A file the application never published | `new`, green | writes | writes |
+| `NEW` | `new` | A file the application does not have | `new`, green | writes | writes |
 | `CURRENT` | `current` | Published, untouched, unchanged upstream | `current`, gray | no | no |
 | `STALE` | `stale` | Published, untouched, changed upstream | `out of date`, yellow | writes | writes |
 | `MODIFIED` | `modified` | Published and then edited here | `yours`, blue | no | writes |

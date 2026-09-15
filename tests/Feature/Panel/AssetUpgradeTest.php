@@ -124,8 +124,11 @@ it('marks a file conflicted when both sides changed', function (): void {
  * The edges
  */
 
-it('calls a file new when the manifest has never heard of it and it differs', function (): void {
-    [$map, $key] = scratchAsset($this->root, 'a brand new component', 'something else entirely');
+it('calls a file new when the manifest has never heard of it and it is not on disk', function (): void {
+    // `new` is about absence. A file that is on disk and differs is a
+    // conflict instead — see the PP-42 block below, which is the bug this
+    // test used to assert as the behaviour.
+    [$map, $key] = scratchAsset($this->root, 'a brand new component', null);
 
     writeManifest([]);
 
@@ -341,7 +344,9 @@ it('rebases a stale file onto the package copy it just wrote', function (): void
 });
 
 it('records a new file against the package copy it wrote', function (): void {
-    [$map, $key] = scratchAsset($this->root, 'shipped', 'stale leftover');
+    // Nothing on disk, so this really is new and the update really does write
+    // it. A file that was already there would be a conflict — PP-42.
+    [$map, $key] = scratchAsset($this->root, 'shipped', null);
 
     writeManifest([]);
 
@@ -482,4 +487,94 @@ it('refuses a path it does not publish and records nothing', function (): void {
 
     expect(AssetManifest::read()['resources/js/panel/palette.ts'])
         ->toBe('neither-side-has-this-hash');
+});
+
+/*
+|--------------------------------------------------------------------------
+| A file on disk this manifest has never heard of (PP-42)
+|--------------------------------------------------------------------------
+|
+| `new` used to mean two different things: a file the application does not
+| have, and a file it does have that we have no record of. The first is safe to
+| write. The second is not, and writing it is how an application lost its own
+| work.
+|
+| It reached a real project through the flat translation layout. The package
+| publishes `lang/{locale}/*.php` beside the application's own strings, and an
+| application that already had `lang/id/formats.php` — its own file, its own
+| keys, never published by anybody — had it classified `new` and overwritten on
+| the first `panel:assets --update` after the upgrade. `formats.currency_prefix`
+| went with it, and every amount on every screen rendered as the name of the key
+| that used to hold it.
+|
+| The same shape reaches a partial override. `lang/vendor/panda-panel/{locale}/
+| frontend.php` holding only the keys an application added is a complete and
+| supported file — Laravel merges it recursively over ours — and replacing it
+| with our own copy deletes every key it existed to add.
+|
+| So an unrecorded file that is on disk and differs from ours is a `conflict`:
+| nobody can tell from here whether it is ours, theirs, or both, and guessing
+| is the one thing this class exists not to do. `--reconciled` keeps theirs,
+| `--force` takes ours, and until one of those is asked for, nothing is written.
+|
+*/
+
+it('refuses to overwrite an unrecorded file that is already on disk', function (): void {
+    // The application's own file, at a path this package also ships to.
+    [$map, $key] = scratchAsset($this->root, 'the package copy', 'the application own file');
+
+    writeManifest([]);
+
+    expect(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CONFLICT);
+
+    updateScratch($map);
+
+    expect(File::get($key))->toBe('the application own file');
+});
+
+it('still calls a file new when nothing is on disk to lose', function (): void {
+    // The case `new` was always right for, and the one an update may write.
+    [$map, $key] = scratchAsset($this->root, 'a component this release adds', null);
+
+    writeManifest([]);
+
+    expect(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::NEW);
+
+    updateScratch($map);
+
+    expect(File::get($key))->toBe('a component this release adds');
+});
+
+it('keeps an unrecorded file that already matches current', function (): void {
+    // Published by `vendor:publish` and never edited. Identical to ours, so
+    // there is nothing to decide and nothing to warn about.
+    [$map, $key] = scratchAsset($this->root, 'identical', 'identical');
+
+    writeManifest([]);
+
+    expect(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CURRENT);
+});
+
+it('lets a person keep their own unrecorded file by reconciling it', function (): void {
+    [$map, $key] = scratchAsset($this->root, 'the package copy', 'the application own file');
+
+    writeManifest([]);
+
+    AssetManifest::reconcile([$key], $map);
+
+    updateScratch($map);
+
+    expect(File::get($key))->toBe('the application own file')
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::MODIFIED);
+});
+
+it('lets a person take the package copy of an unrecorded file with force', function (): void {
+    [$map, $key] = scratchAsset($this->root, 'the package copy', 'the application own file');
+
+    writeManifest([]);
+
+    updateScratch($map, force: true);
+
+    expect(File::get($key))->toBe('the package copy')
+        ->and(AssetManifest::compare($map)[$key]['status'])->toBe(AssetManifest::CURRENT);
 });

@@ -18,6 +18,66 @@ A schema mistake raises at schema-build time, which is boot or first render — 
 before a user does. That is why `php artisan test` is the first line of this page rather than the
 last.
 
+## 0.5.4
+
+One entry, and it only shows up as a **check that newly goes red**. Nothing
+stops working, and no source edit fixes it — the red is the point.
+
+| # | Change | How it shows up |
+| --- | --- | --- |
+| 1 | A file on disk with nothing recorded about it is a conflict, not new | `panel:assets` reports conflicts it did not report before |
+
+---
+
+### 1. A file on disk with nothing recorded about it is a conflict, not new
+
+**What changed.** `panel:assets` used to classify any file the manifest had
+never heard of as `new`, and `--update` writes `new`. That is right when the
+file is not there and wrong when it is: an application's own
+`lang/en/formats.php`, at a name this package also publishes to, was read as a
+file we had shipped and never recorded, and was overwritten on the first
+`--update` after an upgrade.
+
+It is a `conflict` now. `new` is reserved for a file that is absent.
+
+**What breaks.** Nothing at runtime, and nothing that was working. Two things
+change what you see:
+
+- **`panel:assets --update` writes fewer files.** The ones it stops writing are
+  the ones it should never have written.
+- **A CI check that fails on `conflict` may newly fail.** If your project runs
+  something like `AssetManifest::compare()` and blocks on `CONFLICT`, files that
+  were quietly overwritten every release now show up and stop the build. That is
+  the fix working; the previous green was a build that was destroying files.
+
+**The fix.** Read the report, then settle each file once:
+
+```bash
+php artisan panel:assets                                   # see what is listed
+diff -u lang/en/formats.php vendor/chocoalano/panel/lang/en/formats.php
+
+php artisan panel:assets --reconciled=lang/en/formats.php  # keep yours
+php artisan panel:assets --force                           # or take ours, whole-run
+```
+
+A reconciled file reads as `yours` from then on and is never listed again until
+the package changes it.
+
+**If the collision itself is the problem**, and your application simply has its
+own `lang/{locale}` files it would rather keep separate, set
+
+```php
+'translations' => [
+    'publish_to_lang_root' => false,
+],
+```
+
+in `config/panda-panel.php`. The panel's strings move to
+`lang/vendor/panda-panel/{locale}`, Laravel's own convention, and the two sets
+of names cannot collide at all.
+
+---
+
 ## 0.5.2
 
 One entry, and it is **silent for almost everybody**: the URI did not move, and the only thing that

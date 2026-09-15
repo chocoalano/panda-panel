@@ -39,7 +39,8 @@ three-way one.
 | ≠ manifest | = manifest | `modified` | no | **writes** |
 | ≠ manifest | ≠ manifest | `conflict` | no | **writes** |
 | absent | present | `deleted` | no | no |
-| not in manifest, differs | present | `new` | **writes** | writes |
+| absent, not in manifest | present | `new` | **writes** | writes |
+| present, not in manifest, differs | present | `conflict` | no | writes |
 | not in manifest, identical | present | `current` | no | no |
 | in manifest | no longer shipped | `removed-upstream` | no | no |
 
@@ -208,12 +209,14 @@ With no manifest at all the command says so and carries on:
 
 ```text
   WARN  No .panel-assets.json, so there is no record of what this application published.
-        Everything already identical to the package reads as current; anything else reads as new.
-        Run --update to write one.
+        Everything already identical to the package reads as current; anything else on disk
+        reads as a conflict, and anything missing reads as new. Run --update to write one.
 ```
 
-A manifest that is not valid JSON is treated as absent rather than fatal. The worst outcome is
-that files read as `new`, which is exactly the state an application that never published is in.
+A manifest that is not valid JSON is treated as absent rather than fatal. The worst outcome is a
+report full of conflicts — every file on disk becomes one, because with nothing recorded there is
+nothing to compare against — and a conflict is the status that writes nothing. A missing manifest
+loses the answers, never the files.
 
 ## The API
 
@@ -387,6 +390,10 @@ application that published before the manifest existed.
   `php artisan panel:icons` after any `--force`.
 - **Line endings do not count as an edit.** Hashes are taken with `\r\n` normalised to `\n`,
   because a report where every file is a conflict is a report nobody reads.
+- **A file of your own at a name the package ships to is a conflict, not a new file.** The flat
+  translation layout makes this ordinary: `lang/en/formats.php` may be yours. Nothing on disk is
+  overwritten to find out — resolve it once with `--reconciled` or `--force`. Before v0.5.4 such a
+  file read as `new` and an update wrote straight over it.
 - **`--force` is a whole-run switch.** There is no way to force one path. `--reconciled` is the
   per-path option, and it keeps your copy rather than replacing it.
 - **An update never moves an ancestor it did not earn.** The manifest records which *package*

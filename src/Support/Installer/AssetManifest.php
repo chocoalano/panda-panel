@@ -38,13 +38,21 @@ use Illuminate\Support\Facades\File;
  * | ≠ manifest | = manifest | you edited it, nothing upstream | leave alone |
  * | ≠ manifest | ≠ manifest | **conflict** — both changed | report, never touch |
  * | absent | present | you deleted it | leave alone |
- * | not in manifest | present | new since you published | **write it** |
+ * | absent, not in manifest | present | new since you published | **write it** |
+ * | present, not in manifest, differs | present | we have no record of it | report, never touch |
  * | in manifest | absent | no longer shipped | report as removable |
  *
  * Only two rows are written automatically, and both are ones where the
- * application demonstrably has no opinion about the file. A conflict is
- * reported with its path and never resolved by guessing — that is a diff for
- * a person to read.
+ * application demonstrably has no opinion about the file: one it has never
+ * touched, and one it does not have at all. A conflict is reported with its
+ * path and never resolved by guessing — that is a diff for a person to read.
+ *
+ * Note the second-to-last row, which is the one that reads oddly. A file on
+ * disk that this manifest has never heard of is *not* new. It may be an
+ * unrecorded copy of ours, it may be the application's own file at a name we
+ * happen to ship too — the flat translation layout makes that ordinary — and
+ * from here the two are indistinguishable. `new` used to cover it, and an
+ * update overwrote a real project's own `lang/id/formats.php` because of it.
  *
  * ## What the recorded hash is
  *
@@ -94,7 +102,7 @@ use Illuminate\Support\Facades\File;
  */
 final class AssetManifest
 {
-    /** A file the application never published. */
+    /** A file the application does not have. Nothing to lose by writing it. */
     public const NEW = 'new';
 
     /** Published, untouched, and unchanged upstream. */
@@ -106,7 +114,12 @@ final class AssetManifest
     /** Published and then edited here. Nothing new upstream. */
     public const MODIFIED = 'modified';
 
-    /** Edited here *and* changed upstream. A person has to look. */
+    /**
+     * A person has to look. Either edited here *and* changed upstream, or on
+     * disk with nothing recorded about it and differing from ours — which
+     * could be our copy edited, or a file of the application's own at a name
+     * this package also ships to.
+     */
     public const CONFLICT = 'conflict';
 
     /** Published and then deleted here. */
@@ -355,10 +368,27 @@ final class AssetManifest
         $inPackage = self::hash($source);
 
         if ($recorded === null) {
-            // Never published, or published before this manifest existed. A
-            // file already on disk and identical to ours is the second case,
-            // and is current rather than new.
-            return $onDisk === $inPackage ? self::CURRENT : self::NEW;
+            // Nothing recorded, so there is no ancestor and the answer comes
+            // from what is on disk.
+            //
+            // Absent is the only case `new` may mean. A file that is *there*
+            // and differs from ours is not new — it is a file we have no
+            // record of, which is a different thing and the one that cost
+            // somebody their work: an application's own `lang/id/formats.php`
+            // at a path this package also publishes to was read as `new` and
+            // overwritten on the first update after an upgrade. Nobody can
+            // tell from here whether such a file is ours, theirs, or a merge
+            // of both, and guessing is what this class exists not to do — so
+            // it is a conflict, and a person decides with `--reconciled` or
+            // `--force`.
+            //
+            // Identical is not ambiguous at all: `vendor:publish` leaves
+            // exactly that, and it is current.
+            return match (true) {
+                $onDisk === null => self::NEW,
+                $onDisk === $inPackage => self::CURRENT,
+                default => self::CONFLICT,
+            };
         }
 
         if ($onDisk === null) {
