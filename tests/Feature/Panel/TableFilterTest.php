@@ -763,3 +763,90 @@ it('answers nothing for a forged payload that is not a list of rules', function 
 
     expect($filter->sanitize('not-an-array'))->toBeNull();
 });
+
+/*
+|--------------------------------------------------------------------------
+| Id-keyed select options
+|--------------------------------------------------------------------------
+|
+| The common case: options built from `pluck('name', 'id')`, so the keys are
+| integers. `SelectFilter` was written for it throughout — `sanitize()` accepts
+| an int, `describe()`'s docblock names the id-keyed chip it exists to fix, and
+| `extraArray()` casts keys through `strval()` on the way out — while its
+| `@param` said `array<string, string>`.
+|
+| That shape is not one any caller can hand over: PHP coerces a decimal-integer
+| string key straight back to an integer, so casting the id to a string on the
+| way in changes nothing. The annotation made a correct call fail static
+| analysis in the consuming application, and it was the only options-taking
+| component in the package that did not already say `array-key`.
+|
+| These pin the behaviour the annotation was describing wrongly.
+|
+*/
+
+it('filters on an id-keyed select option', function (): void {
+    $project = Project::query()->create(['name' => 'Apollo']);
+    $other = Project::query()->create(['name' => 'Gemini']);
+
+    Task::query()->create(['name' => 'Ours', 'project_id' => $project->getKey()]);
+    Task::query()->create(['name' => 'Theirs', 'project_id' => $other->getKey()]);
+
+    // Exactly what `pluck('name', 'id')` hands back: integer keys.
+    $options = Project::query()->orderBy('name')->pluck('name', 'id')->all();
+
+    $schema = TableSchema::make()
+        ->columns([TextColumn::make('name')])
+        ->filters([SelectFilter::make('project_id')->options($options)]);
+
+    expect(filteredNames($schema, ['filters' => ['project_id' => (string) $project->getKey()]]))
+        ->toBe(['Ours']);
+});
+
+it('names an id-keyed option by its label rather than its id', function (): void {
+    $project = Project::query()->create(['name' => 'Apollo']);
+
+    $schema = TableSchema::make()
+        ->columns([TextColumn::make('name')])
+        ->filters([
+            SelectFilter::make('project_id')
+                ->options(Project::query()->pluck('name', 'id')->all()),
+        ]);
+
+    $state = filterQuery($schema, ['filters' => ['project_id' => (string) $project->getKey()]])->state();
+
+    expect($state['filterIndicators'])->toBe([['name' => 'project_id', 'label' => 'Project Id: Apollo']]);
+});
+
+it('sends an id-keyed option to the frontend with a string value', function (): void {
+    $project = Project::query()->create(['name' => 'Apollo']);
+
+    $schema = TableSchema::make()
+        ->columns([TextColumn::make('name')])
+        ->filters([
+            SelectFilter::make('project_id')
+                ->options(Project::query()->pluck('name', 'id')->all()),
+        ]);
+
+    $filter = $schema->toArray()['filters'][0];
+
+    expect($filter['options'])->toBe([
+        ['value' => (string) $project->getKey(), 'label' => 'Apollo'],
+    ]);
+});
+
+it('refuses an id that is not one of the declared options', function (): void {
+    $project = Project::query()->create(['name' => 'Apollo']);
+
+    Task::query()->create(['name' => 'Ours', 'project_id' => $project->getKey()]);
+
+    $schema = TableSchema::make()
+        ->columns([TextColumn::make('name')])
+        ->filters([
+            SelectFilter::make('project_id')
+                ->options(Project::query()->pluck('name', 'id')->all()),
+        ]);
+
+    // The declared options are the whitelist, id keys or not.
+    expect(filteredNames($schema, ['filters' => ['project_id' => '999999']]))->toBe(['Ours']);
+});

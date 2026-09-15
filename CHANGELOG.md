@@ -7,6 +7,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-09-15
+
+### Fixed
+
+- **A select filter's options may be keyed by id, and the type now says so.**
+  `SelectFilter::options()` declared `array<array-key, string>`'s stricter
+  cousin, `array<string, string>` — a shape no caller can actually hand over,
+  because PHP coerces a decimal-integer string key straight back to an integer.
+  So `->options(Project::query()->pluck('name', 'id')->all())`, which is how
+  nearly every id-keyed filter is built, failed static analysis in the
+  consuming application, and casting the key to a string to satisfy it did
+  nothing at all.
+
+  Nothing about the behaviour changes: the filter was written for id keys
+  throughout — `sanitize()` already accepted an `int`, `describe()` exists
+  precisely to stop an id-keyed chip reading `Status: 3`, and `extraArray()`
+  already sent keys through `strval()`. This was the annotation disagreeing
+  with the code, and `SelectFilter` was the only options-taking component in
+  the package that had not already been corrected to `array-key`;
+  `SelectColumn`, `Select`, `Radio`, `CheckboxList` and `ToggleButtons` all
+  said so already.
+
+  Four tests now pin the id-keyed path end to end — filtering, the chip label,
+  the serialized option values, and the whitelist — which nothing covered
+  before.
+
 ## [0.5.2] - 2026-09-15
 
 Two bug fixes, both in the seam between the package and an application that has
