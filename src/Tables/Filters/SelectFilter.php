@@ -9,7 +9,7 @@ use PandaPanel\Tables\Enums\FilterType;
 
 final class SelectFilter extends Filter
 {
-    /** @var array<string, string> */
+    /** @var array<array-key, string> */
     private array $options = [];
 
     private ?string $placeholder = null;
@@ -20,7 +20,17 @@ final class SelectFilter extends Filter
     }
 
     /**
-     * @param  array<string, string>  $options
+     * Keyed by the value the query uses, labelled by what the reader sees.
+     *
+     * `array-key` rather than `string`, matching every other options-taking
+     * component in this package. An id-keyed map is the common case — the
+     * filter's own `sanitize()`, `describe()` and `extraArray()` are all
+     * written for it — and PHP coerces a decimal-integer string key back to an
+     * integer, so `array<string, string>` was a shape no caller could actually
+     * hand over. Declaring it made a correctly-typed `pluck('name', 'id')`
+     * fail static analysis in the consuming application.
+     *
+     * @param  array<array-key, string>  $options
      */
     public function options(array $options): self
     {
