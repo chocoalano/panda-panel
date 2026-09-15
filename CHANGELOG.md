@@ -7,6 +7,48 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-09-15
+
+### Fixed
+
+- **An update no longer overwrites a file it has no record of.** `new` meant
+  two different things: a file the application does not have, and a file it
+  does have that the manifest has never heard of. The first is safe to write.
+  The second is not, and `panel:assets --update` wrote it anyway.
+
+  The flat translation layout is how this reaches an ordinary project.
+  Publishing into `lang/{locale}` puts the panel's strings beside the
+  application's own, and `formats.php`, `notifications.php` and
+  `integrations.php` are names an application is every bit as likely to have
+  chosen for itself. Such a file was never published by anybody, so nothing
+  recorded it — and the first `--update` after an upgrade wrote the package's
+  copy straight over it. One project lost `formats.currency_prefix` that way,
+  and every amount on every screen rendered as the name of the key that used
+  to hold it. A partial override is destroyed the same way:
+  `lang/vendor/panda-panel/{locale}/frontend.php` holding only the keys an
+  application added is a complete and supported file, and replacing it with
+  ours deletes every key it existed to add.
+
+  A file on disk that the manifest has never heard of and that differs from
+  ours is now a **conflict**. From here it cannot be told from an unrecorded
+  copy of ours, and guessing is the one thing this mechanism exists not to do.
+  `--reconciled=<path>` keeps yours, `--force` takes ours, and until one of
+  those is asked for nothing is written. `new` still means what it always
+  should have: the file is not there, so there is nothing to lose.
+
+  This also lifts a limitation the docs stated outright. A file published by
+  `vendor:publish` and then edited with no `--update` in between had no
+  ancestor, read as `new`, and was overwritten on the next release. It is
+  protected now.
+
+### Changed
+
+- **`config/panda-panel.php` no longer claims the flat layout overwrites
+  nothing.** It said "Nothing is overwritten either way — the merge only ever
+  adds to what the package shipped". That is true of the runtime loader and
+  was never true of the publisher, which is where the damage happened. The
+  comment now says what each half actually does.
+
 ## [0.5.3] - 2026-09-15
 
 ### Fixed

@@ -134,11 +134,21 @@ return [
     | `PandaPanel\Translation\PanelTranslationLoader`.
     |
     | The cost of the flat layout is a shared filename. `lang/en/actions.php`
-    | may already be yours, and then one file holds both the panel's
-    | `panda-panel::actions.*` keys and your own `actions.*` keys. Nothing is
-    | overwritten either way — the merge only ever adds to what the package
-    | shipped, and your own non-namespaced lookups are untouched — but two sets
-    | of keys in one file is a thing to know about rather than discover.
+    | may already be yours, and `formats.php`, `notifications.php` and
+    | `integrations.php` are names an application is every bit as likely to
+    | have chosen for itself.
+    |
+    | At runtime the two sets coexist: the loader merges key by key, and your
+    | own non-namespaced lookups are untouched. Publishing is the part to know
+    | about. A file of yours sitting at one of those names has no record in
+    | `.panel-assets.json`, so `panel:assets` reports it as a conflict and
+    | writes nothing — it cannot tell your file from an unrecorded copy of
+    | ours. Resolve it once with `--reconciled=<path>` to keep yours, or
+    | `--force` to take ours, and it is settled from then on.
+    |
+    | Before v0.5.4 that file was read as `new` and overwritten on the first
+    | update after an upgrade. If you are upgrading from below that, check
+    | `php artisan panel:assets` before running it with `--update`.
     |
     | Set this to false to go back to Laravel's own convention,
     | `lang/vendor/panda-panel/{locale}`, which keeps the panel's strings in a

@@ -318,27 +318,44 @@ it('protects a rewording made after the publish was recorded', function (): void
     expect(File::get(lang_path('en/tables.php')))->toBe($reworded);
 });
 
-it('cannot protect a rewording made before anything recorded the publish', function (): void {
-    // The limitation, stated rather than papered over. `vendor:publish`
-    // cannot write the manifest, so a file published and then edited with no
-    // record in between has no ancestor — and "differs from the package's
-    // copy" is equally true of a rewording and of a file a later release
-    // added. It reads as `new`, and an update writes it.
+it('protects a rewording made before anything recorded the publish', function (): void {
+    // This used to be the stated limitation: `vendor:publish` cannot write the
+    // manifest, so a file published and then edited with no record in between
+    // had no ancestor, read as `new`, and was overwritten by the next update.
     //
-    // The answer is an order rather than a heuristic: publish, run
-    // `panel:assets --update` to record what you got, then reword.
+    // It is a conflict now. "Differs from the package's copy with nothing
+    // recorded" is equally true of a rewording, of a file a later release
+    // added, and of a file that was never ours at all — and the one thing
+    // those have in common is that a person has to look.
     publishTranslations();
 
-    File::put(lang_path('en/tables.php'), "<?php\n\nreturn ['reordered' => 'Sequence saved.'];\n");
+    $reworded = "<?php\n\nreturn ['reordered' => 'Sequence saved.'];\n";
+
+    File::put(lang_path('en/tables.php'), $reworded);
 
     $key = PublishedAssets::relative(lang_path('en/tables.php'));
 
-    expect(AssetManifest::compare()[$key]['status'])->toBe(AssetManifest::NEW);
+    expect(AssetManifest::compare()[$key]['status'])->toBe(AssetManifest::CONFLICT);
 
     $this->artisan('panel:assets --update')->assertSuccessful();
 
-    expect(File::get(lang_path('en/tables.php')))
-        ->toBe(File::get(packageLangPath('en/tables.php')));
+    expect(File::get(lang_path('en/tables.php')))->toBe($reworded);
+});
+
+it('lets a rewording with no ancestor be kept by reconciling it', function (): void {
+    // The way out, and the reason the conflict above is not a dead end.
+    publishTranslations();
+
+    $reworded = "<?php\n\nreturn ['reordered' => 'Sequence saved.'];\n";
+
+    File::put(lang_path('en/tables.php'), $reworded);
+
+    $key = PublishedAssets::relative(lang_path('en/tables.php'));
+
+    $this->artisan('panel:assets --reconciled='.$key)->assertSuccessful();
+
+    expect(File::get(lang_path('en/tables.php')))->toBe($reworded)
+        ->and(AssetManifest::compare()[$key]['status'])->toBe(AssetManifest::MODIFIED);
 });
 
 /*
@@ -387,4 +404,49 @@ it('leaves every lookup that is not the panel’s alone', function (): void {
 
     expect(__('greetings.hello'))->toBe('Hello')
         ->and(__('panda-panel::greetings.hello'))->toBe('panda-panel::greetings.hello');
+});
+
+/*
+|--------------------------------------------------------------------------
+| An application's own file at a name this package also ships (PP-42)
+|--------------------------------------------------------------------------
+|
+| The flat layout is what makes this reachable. Publishing into `lang/{locale}`
+| puts the panel's strings beside the application's own, and `formats.php`,
+| `notifications.php` and `integrations.php` are names an application is every
+| bit as likely to have chosen for itself.
+|
+| Such a file was never published by anybody, so the manifest has no record of
+| it — and `new` used to be the answer to "no record", which meant the first
+| `panel:assets --update` after an upgrade wrote the package's copy straight
+| over it. A real project lost `formats.currency_prefix` that way, and every
+| amount on every screen rendered as the name of the key that used to hold it.
+|
+*/
+
+it('does not overwrite an application translation file it never published', function (): void {
+    // The application's own `formats.php`: its own keys, at a name this
+    // package happens to ship too, and nothing in the manifest about it.
+    $own = "<?php\n\nreturn ['currency_prefix' => 'Rp'];\n";
+
+    File::ensureDirectoryExists(lang_path('en'));
+    File::put(lang_path('en/formats.php'), $own);
+
+    $key = PublishedAssets::relative(lang_path('en/formats.php'));
+
+    expect(AssetManifest::compare()[$key]['status'])->toBe(AssetManifest::CONFLICT);
+
+    $this->artisan('panel:assets --update')->assertSuccessful();
+
+    expect(File::get(lang_path('en/formats.php')))->toBe($own);
+});
+
+it('names the application file in the report rather than writing it', function (): void {
+    File::ensureDirectoryExists(lang_path('en'));
+    File::put(lang_path('en/formats.php'), "<?php\n\nreturn ['currency_prefix' => 'Rp'];\n");
+
+    $this->artisan('panel:assets')
+        ->expectsOutputToContain('CONFLICT')
+        ->expectsOutputToContain('lang/en/formats.php')
+        ->assertSuccessful();
 });

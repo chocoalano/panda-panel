@@ -74,7 +74,8 @@ Which gives four answers where `vendor:publish` had two:
 | ≠ manifest | = manifest | `modified` | **yours** — nothing new upstream | no | writes |
 | ≠ manifest | ≠ manifest | `conflict` | **both** changed | no | writes |
 | absent | present | `deleted` | you deleted it | no | no |
-| not in manifest, differs | present | `new` | new since you published | **writes** | writes |
+| absent, not in manifest | present | `new` | new since you published | **writes** | writes |
+| present, not in manifest, differs | present | `conflict` | no record of it either way | no | writes |
 | not in manifest, identical | present | `current` | published before the manifest existed | no | no |
 | in manifest | not shipped | `removed-upstream` | no longer shipped | no | no |
 
