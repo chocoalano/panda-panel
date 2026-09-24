@@ -381,9 +381,17 @@
  * Deliberately restrained. This is an operational dashboard, not an article:
  * a heading should be legible as a heading, not the top of a landing page.
  *
- * Covers what the two editors actually emit — `RichEditorField`'s toolbar
- * commands and `renderMarkdown`'s output — and nothing else. An element that
- * cannot appear here has no rule.
+ * Covers what the rich editor actually emits — the nodes Tiptap's schema
+ * allows, which are also the tags `RichEditor::allowedTags()` keeps — and
+ * nothing else. An element that cannot appear there has no rule.
+ *
+ * The Markdown editor's preview is *not* styled from here, and that is a
+ * deliberate split rather than an omission. `md-editor-v3` brings its own
+ * content theme and exposes it as custom properties, so that preview is themed
+ * by mapping those properties to these same tokens — see the one scoped
+ * `<style>` block in `MarkdownEditorField.vue`. Two mechanisms, one set of
+ * tokens, and no selector in a published stylesheet that could reach an
+ * editor an application mounted for its own purposes.
  */
 @layer components {
     .panel-prose {
@@ -404,10 +412,11 @@
         margin-block: 0.75em;
     }
 
-    /* Headings step down rather than shouting: 1.5×, 1.25×, 1.1× the body. */
+    /* Headings step down rather than shouting: 1.5×, 1.25×, 1.1×, 1× body. */
     .panel-prose h1,
     .panel-prose h2,
-    .panel-prose h3 {
+    .panel-prose h3,
+    .panel-prose h4 {
         color: var(--foreground);
         font-weight: 600;
         line-height: 1.3;
@@ -425,6 +434,16 @@
 
     .panel-prose h3 {
         font-size: 1.1em;
+    }
+
+    /*
+     * `allowedTags()` keeps `h4` and the editor's schema allows it, so a
+     * pasted one survives to be rendered and needs a rule. Body size, and
+     * distinguished by weight alone: past the third level a heading is a label
+     * rather than a title.
+     */
+    .panel-prose h4 {
+        font-size: 1em;
     }
 
     .panel-prose ul,

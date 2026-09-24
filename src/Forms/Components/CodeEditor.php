@@ -8,11 +8,12 @@ use PandaPanel\Forms\Enums\CodeLanguage;
 use PandaPanel\Forms\Enums\FieldType;
 
 /**
- * Source text, shown in a monospaced editor.
+ * Source text, edited in Monaco.
  *
  * The language is an enum rather than a free string because the frontend maps
- * each case to a highlighter that was compiled in — a name resolved from data
- * would be a request for a grammar that is not in the bundle.
+ * each case to a Monaco grammar by name — a name resolved from data would be a
+ * request for a language id that may not be registered, and an unregistered id
+ * highlights nothing rather than failing.
  */
 final class CodeEditor extends Field
 {

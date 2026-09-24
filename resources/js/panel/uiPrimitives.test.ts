@@ -140,18 +140,34 @@ describe('editor content typography', () => {
         expect(STYLESHEET).not.toMatch(/^\s*h2\s*\{/m);
     });
 
-    it('is used by both editors', () => {
-        for (const path of [
+    it('is what the rich editor styles its content with', () => {
+        const source = readFileSync(
             'resources/js/panel/forms/fields/RichEditorField.vue',
-            'resources/js/panel/forms/fields/MarkdownEditorField.vue',
-        ]) {
-            const source = readFileSync(path, 'utf8');
+            'utf8',
+        );
 
-            expect(source).toContain('panel-prose');
-            // The classes that resolved to nothing are gone.
-            expect(source).not.toContain('prose-sm');
-            expect(source).not.toContain('dark:prose-invert');
-        }
+        expect(source).toContain('panel-prose');
+        // The classes that resolved to nothing are gone.
+        expect(source).not.toContain('prose-sm');
+        expect(source).not.toContain('dark:prose-invert');
+    });
+
+    it('is not how the Markdown preview is styled, and the tokens still are', () => {
+        // `md-editor-v3` brings its own content theme and exposes it as custom
+        // properties, so that preview is themed by mapping those properties to
+        // the same tokens rather than by winning a specificity contest with
+        // them. What must not happen is the preview quietly keeping the
+        // library's literal hex colours — a white pane and a `#2d8cf0` link in
+        // a panel that is neither.
+        const source = readFileSync(
+            'resources/js/panel/forms/fields/MarkdownEditorField.vue',
+            'utf8',
+        );
+
+        expect(source).toContain('--md-theme-link-color: var(--primary)');
+        expect(source).toContain('--md-theme-bg-color: var(--background)');
+        expect(source).toContain('--md-color: var(--foreground)');
+        expect(source).not.toContain('prose-sm');
     });
 
     it('needs no dark-mode twin, because it uses tokens', () => {

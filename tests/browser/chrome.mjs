@@ -80,11 +80,20 @@ function run(command, args) {
     });
 }
 
-/** Builds the fixture page unless one is already there. */
+/**
+ * Builds the fixture page unless one is already there.
+ *
+ * Run through `node` with a raised heap rather than through `npx`, because the
+ * fixture reaches the code editor field — every fixture that renders a form
+ * does — and that pulls Monaco into the graph. Rollup transforming it needs
+ * more than Node's default ~2 GB, and the failure is an out-of-memory abort
+ * with no mention of which module was being transformed.
+ */
 export async function buildFixture({ force = false } = {}) {
     if (force || !existsSync(join(fixtureRoot, 'index.html'))) {
-        await run('npx', [
-            'vite',
+        await run(process.execPath, [
+            '--max-old-space-size=4096',
+            join(packageRoot, 'node_modules/vite/bin/vite.js'),
             'build',
             '--config',
             'frontend/browser/vite.config.ts',

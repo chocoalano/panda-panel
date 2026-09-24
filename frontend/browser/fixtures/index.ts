@@ -40,4 +40,10 @@ export const FIXTURES: Record<string, () => Promise<{ default: Component }>> = {
 
     /** D1 acceptance — the table's controls, and what its dropdowns list. */
     datatable: () => import('./DataTableFixture.vue'),
+
+    /**
+     * E1 acceptance — the Markdown and code editors, which are third-party
+     * editors and can only be stubbed in a unit test.
+     */
+    editors: () => import('./EditorsFixture.vue'),
 };

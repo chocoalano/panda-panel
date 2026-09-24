@@ -364,7 +364,7 @@ function partId(part: string): string | undefined {
                         <SelectTrigger
                             :id="partId('hour')"
                             size="sm"
-                            class="w-[4.5rem]"
+                            class="w-18"
                             :aria-label="t('forms.hour')"
                             :aria-describedby="describedBy"
                             :aria-invalid="invalid ? true : undefined"
@@ -395,7 +395,7 @@ function partId(part: string): string | undefined {
                         <SelectTrigger
                             :id="partId('minute')"
                             size="sm"
-                            class="w-[4.5rem]"
+                            class="w-18"
                             :aria-label="t('forms.minute')"
                             :aria-describedby="describedBy"
                             :aria-invalid="invalid ? true : undefined"
@@ -429,7 +429,7 @@ function partId(part: string): string | undefined {
                             <SelectTrigger
                                 :id="partId('second')"
                                 size="sm"
-                                class="w-[4.5rem]"
+                                class="w-18"
                                 :aria-label="t('forms.second')"
                                 :aria-describedby="describedBy"
                                 :aria-invalid="invalid ? true : undefined"

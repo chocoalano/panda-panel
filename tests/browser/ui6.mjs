@@ -153,9 +153,13 @@ async function main() {
         );
 
         // The wrapper border says which editor owns focus, click or Tab.
+        //
+        // `closest` rather than `parentElement`: the editable element is
+        // ProseMirror's and it sits inside Tiptap's own content div, so the
+        // bordered shell is the field's, two levels up.
         const wrapperBorder = await page.evaluate(`(async () => {
             const el = document.querySelector('[contenteditable="true"]');
-            const wrapper = el.parentElement;
+            const wrapper = el.closest('[data-slot="rich-editor"]');
 
             const frame = () =>
                 new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
@@ -204,9 +208,15 @@ async function main() {
             const range = document.createRange();
             // A paragraph that carries no formatting, so the toggle starts
             // from off. Selecting one that already contains <strong> makes
-            // queryCommandState report true before anything is pressed —
-            // correctly, which is why the first version of this test failed.
-            const paragraph = el.querySelector('#plain-paragraph');
+            // the toggle report true before anything is pressed — correctly,
+            // which is why the first version of this test failed.
+            //
+            // Found by position rather than by id: the document is parsed
+            // against Tiptap's schema, and an attribute the schema does not
+            // declare does not survive the parse. The fixture's last paragraph
+            // is the unformatted one.
+            const paragraphs = el.querySelectorAll('p');
+            const paragraph = paragraphs[paragraphs.length - 1];
 
             range.selectNodeContents(paragraph);
 
@@ -255,7 +265,9 @@ async function main() {
             el.focus();
 
             const style = getComputedStyle(el);
-            const wrapper = getComputedStyle(el.parentElement);
+            const wrapper = getComputedStyle(
+                el.closest('[data-slot="rich-editor"]'),
+            );
 
             return {
                 ariaInvalid: el.getAttribute('aria-invalid'),

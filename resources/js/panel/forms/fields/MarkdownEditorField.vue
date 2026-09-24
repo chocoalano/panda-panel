@@ -1,24 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { ComponentPublicInstance } from 'vue';
-import { Textarea } from '@/components/ui/textarea';
+import { MdEditor } from 'md-editor-v3';
+import type { ToolbarNames } from 'md-editor-v3';
+import 'md-editor-v3/lib/style.css';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
-import { renderMarkdown } from '@/panel/forms/markdown';
+import { useEditorAttributes } from '@/panel/forms/fields/editorAttributes';
+import { useFieldIdentity } from '@/panel/forms/fieldIdentity';
+import { useColorScheme } from '@/panel/composables/useColorScheme';
 import type { MarkdownEditorFieldDefinition } from '@/panel/types/form';
-import { useTranslator } from '@/composables/useTranslator';
-
-const { t } = useTranslator();
-
-/**
- * A toolbar button's face.
- *
- * Most are typographic — `B`, `H2`, `❝` — and mean the same thing in every
- * language, so they are written literally. The few that are words hold a
- * translation key instead, recognised by its dot.
- */
-function toolbarLabel(label: string): string {
-    return label.includes('.') ? t(label) : label;
-}
 
 const props = defineProps<{
     field: MarkdownEditorFieldDefinition;
@@ -29,85 +18,134 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
 /**
- * Markdown is stored as Markdown. The toolbar only inserts the characters a
- * user would otherwise type, and the preview renders a copy — neither one
- * rewrites what is submitted.
+ * Markdown is stored as Markdown, and this is `md-editor-v3` editing it.
+ *
+ * What it replaces was a textarea, a table of strings to wrap the selection
+ * in, and a preview rendered by a hand-written Markdown subset. Each of those
+ * three was a small lie. The toolbar inserted syntax without understanding it,
+ * so pressing **B** twice produced `****text****`; the textarea had no idea it
+ * held Markdown, so a list continued only if the user typed the next marker
+ * themselves; and the preview implemented headings, quotes, fenced code and
+ * the inline marks the toolbar knew about, which meant a table, a footnote or
+ * a reference link — all valid Markdown, all stored perfectly well — rendered
+ * as the literal characters they were typed as. The button showed something
+ * true about the *toolbar*, not about the value.
+ *
+ * `md-editor-v3` parses. The editing surface is CodeMirror with a Markdown
+ * grammar, so a list continues and a toggle toggles, and the preview is
+ * `markdown-it`, so what it shows is what a Markdown renderer produces.
+ *
+ * Still nothing is sanitized and still nothing is converted: what is typed is
+ * what is submitted. The preview is a view of the value and never a step on
+ * the way to storing it, which is the same guarantee the old one gave.
  */
-const input = ref<ComponentPublicInstance | null>(null);
-const previewing = ref(false);
 
 /**
- * The real textarea behind the styled component. Selection offsets are a
- * property of the element, and the wrapper does not forward them.
+ * Deliberately not the editor's whole feature set.
+ *
+ * `md-editor-v3` fetches highlight.js, Prettier, Mermaid, KaTeX, ECharts and
+ * Cropper from unpkg the first time a feature needs one. An admin panel that
+ * reaches out to a CDN mid-edit is a panel that behaves differently on a
+ * network that blocks it, under a strict `Content-Security-Policy`, or on an
+ * air-gapped deployment — and the failure lands on a user in the middle of
+ * writing something. So every one of those features is off, and nothing here
+ * loads anything at runtime that the application did not build.
+ *
+ * The cost is honest and small: fenced code in the preview is monospaced
+ * rather than colourised, and there is no reformat button. Both of those are
+ * conveniences. Neither is what the field is for.
  */
-function element(): HTMLTextAreaElement | null {
-    const node = input.value?.$el;
+const OFFLINE = {
+    noHighlight: true,
+    noPrettier: true,
+    noMermaid: true,
+    noKatex: true,
+    noEcharts: true,
+    noUploadImg: true,
+    noImgZoomIn: true,
+} as const;
 
-    return node instanceof HTMLTextAreaElement ? node : null;
-}
+/**
+ * The schema's button names, mapped to what the editor calls them.
+ *
+ * The names on the left are `MarkdownEditor::toolbar()`'s and they do not
+ * change: a form that asked for `bulletList` keeps asking for `bulletList`.
+ * A name not in here draws no button, which is what it did before.
+ */
+const TOOLBAR: Record<string, ToolbarNames> = {
+    bold: 'bold',
+    italic: 'italic',
+    strike: 'strikeThrough',
+    underline: 'underline',
+    link: 'link',
+    heading: 'title',
+    bulletList: 'unorderedList',
+    orderedList: 'orderedList',
+    taskList: 'task',
+    blockquote: 'quote',
+    code: 'codeRow',
+    codeBlock: 'code',
+    table: 'table',
+    undo: 'revoke',
+    redo: 'next',
+    divider: '-',
+    preview: 'preview',
+};
+
+const toolbars = computed<ToolbarNames[]>(() =>
+    props.field.toolbar
+        .map((button) => TOOLBAR[button])
+        .filter((button): button is ToolbarNames => button !== undefined),
+);
 
 const text = computed(() =>
     typeof props.modelValue === 'string' ? props.modelValue : '',
 );
 
-const preview = computed(() => renderMarkdown(text.value));
+/**
+ * The same identity every other field carries, derived here rather than taken
+ * from `FieldWrapper`'s slot: the element it belongs on is the CodeMirror
+ * content div, which the editor creates for itself. See `editorAttributes`.
+ */
+const identity = useFieldIdentity(() => props.field.name, {
+    helper: () =>
+        props.field.helperText !== null && props.field.helperText !== '',
+    error: () => props.error !== undefined && props.error !== '',
+});
 
-/** What each toolbar button wraps or prefixes the selection with. */
-const WRAPPERS: Record<
-    string,
-    { label: string; before: string; after: string }
-> = {
-    bold: { label: 'B', before: '**', after: '**' },
-    italic: { label: 'I', before: '*', after: '*' },
-    strike: { label: 'S', before: '~~', after: '~~' },
-    code: { label: '</>', before: '`', after: '`' },
-    link: { label: 'forms.editor_link', before: '[', after: '](https://)' },
-    heading: { label: 'H', before: '## ', after: '' },
-    bulletList: { label: 'forms.editor_bullet_list', before: '- ', after: '' },
-    orderedList: {
-        label: 'forms.editor_ordered_list',
-        before: '1. ',
-        after: '',
-    },
-    blockquote: { label: '❝', before: '> ', after: '' },
-};
+const container = ref<HTMLElement | null>(null);
 
-function apply(button: string): void {
-    const wrapper = WRAPPERS[button];
-    const target = element();
+useEditorAttributes(
+    () => container.value,
+    // CodeMirror's own editable element. It already says `role="textbox"` and
+    // `aria-multiline="true"`; what it cannot know is what this field is
+    // called or what the server said about it.
+    '.cm-content',
+    () => ({
+        id: identity.value.controlId,
+        'aria-label': props.field.label,
+        'aria-describedby': identity.value.describedBy,
+        'aria-invalid':
+            props.error !== undefined && props.error !== ''
+                ? 'true'
+                : undefined,
+    }),
+);
 
-    if (!wrapper || target === null || props.field.disabled) {
-        return;
-    }
+const scheme = useColorScheme();
 
-    const start = target.selectionStart;
-    const end = target.selectionEnd;
-    const selected = text.value.slice(start, end);
-
-    const next =
-        text.value.slice(0, start) +
-        wrapper.before +
-        selected +
-        wrapper.after +
-        text.value.slice(end);
-
-    emit('update:modelValue', next);
-
-    // The caret goes back around what was selected, so typing continues where
-    // the user was rather than at the end of the inserted syntax.
-    requestAnimationFrame(() => {
-        target.focus();
-        target.setSelectionRange(
-            start + wrapper.before.length,
-            start + wrapper.before.length + selected.length,
-        );
-    });
-}
+/**
+ * `rows` still means rows.
+ *
+ * The editor is a sized box rather than a growing textarea, so the number a
+ * schema gave has to become a height. One line of the editor's own text is
+ * `1.5rem`; the rest is the toolbar strip above it.
+ */
+const height = computed(() => `calc(${props.field.rows} * 1.5rem + 3rem)`);
 </script>
 
 <template>
     <FieldWrapper
-        v-slot="{ controlId, describedBy, invalid }"
         :name="field.name"
         :inline-label="field.inlineLabel"
         :label="field.label"
@@ -116,63 +154,113 @@ function apply(button: string): void {
         :error="error"
     >
         <div
-            class="overflow-hidden rounded-md border border-input"
-            :class="error ? 'border-destructive' : ''"
+            ref="container"
+            data-slot="markdown-editor"
+            class="panel-markdown-editor overflow-hidden rounded-md border border-input transition-colors focus-within:border-ring"
+            :class="
+                error
+                    ? 'border-destructive focus-within:border-destructive'
+                    : ''
+            "
         >
-            <div
-                class="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/40 p-1"
-            >
-                <template v-for="button in field.toolbar" :key="button">
-                    <button
-                        v-if="WRAPPERS[button]"
-                        type="button"
-                        class="rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                        :disabled="field.disabled || previewing"
-                        :aria-label="button"
-                        @click="apply(button)"
-                    >
-                        {{ toolbarLabel(WRAPPERS[button].label) }}
-                    </button>
-                </template>
-
-                <button
-                    v-if="field.toolbar.includes('preview')"
-                    type="button"
-                    class="ml-auto rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-                    :aria-pressed="previewing"
-                    @click="previewing = !previewing"
-                >
-                    {{ previewing ? t('forms.write') : t('forms.preview') }}
-                </button>
-            </div>
-
-            <!--
-                The preview is rendered by `renderMarkdown`, which escapes
-                every character before adding a single tag. See that module
-                for why this `v-html` is safe.
-            -->
-            <div
-                v-if="previewing"
-                class="panel-prose max-w-none bg-background p-3 text-sm"
-                v-html="preview"
-            />
-
-            <Textarea
-                v-else
-                :id="controlId"
-                ref="input"
-                :aria-describedby="describedBy"
-                class="rounded-none border-0 font-mono text-sm shadow-none focus-visible:ring-0"
+            <MdEditor
                 :model-value="text"
-                :rows="field.rows"
-                :placeholder="field.placeholder ?? undefined"
+                :toolbars="toolbars"
+                :footers="[]"
+                :theme="scheme"
+                language="en-US"
+                :style="{ height }"
                 :disabled="field.disabled"
-                :maxlength="field.maxLength ?? undefined"
-                :aria-invalid="invalid"
+                :placeholder="field.placeholder ?? undefined"
+                :max-length="field.maxLength ?? undefined"
+                :tab-width="4"
+                v-bind="OFFLINE"
                 @update:model-value="
-                    (value) => emit('update:modelValue', String(value))
+                    (value: string) => emit('update:modelValue', value)
                 "
             />
         </div>
     </FieldWrapper>
 </template>
+
+<!--
+    The only `<style>` block in this frontend, and the reason is specific.
+
+    `md-editor-v3` is themed through CSS custom properties — one set on
+    `.md-editor` for its chrome, another on `.md-editor .md-editor-preview` for
+    the rendered content — and their defaults are literal hex colours: a white
+    background, a `#2d8cf0` link, a `#e6e6e6` border. In a panel whose
+    `--background` is not `#fff` that is a stark white rectangle in the middle
+    of the form, and in a re-themed panel it is somebody else's brand colour on
+    every link in the preview.
+
+    So the properties are mapped to the panel's tokens. This is the library's
+    own extension point rather than a fight with its selectors, and it follows a
+    re-themed panel and a dark one for free — the tokens already do.
+
+    Scoped rather than added to `panda-panel.css`, for two reasons. That
+    stylesheet is published into an application, and a bare `.md-editor` rule in
+    it would restyle an editor the application mounted for its own purposes.
+    And the library's own rules are two classes deep, so an override has to be
+    three; `:deep()` inside a scoped block is exactly three and says why.
+
+    Tailwind cannot express any of this: there is no utility for "set a custom
+    property on a descendant a library created".
+-->
+<style scoped>
+.panel-markdown-editor :deep(.md-editor) {
+    --md-color: var(--foreground);
+    --md-hover-color: var(--foreground);
+    --md-bk-color: var(--background);
+    --md-bk-color-outstand: var(--muted);
+    --md-bk-hover-color: var(--accent);
+    --md-border-color: var(--border);
+    --md-border-hover-color: var(--border);
+    --md-border-active-color: var(--ring);
+    --md-scrollbar-bg-color: transparent;
+    --md-scrollbar-thumb-color: var(--border);
+    --md-scrollbar-thumb-hover-color: var(--muted-foreground);
+    --md-scrollbar-thumb-active-color: var(--muted-foreground);
+}
+
+.panel-markdown-editor :deep(.md-editor-preview) {
+    --md-theme-color: var(--foreground);
+    --md-theme-color-hover: var(--accent);
+    --md-theme-bg-color: var(--background);
+    --md-theme-bg-color-inset: var(--muted);
+    --md-theme-border-color: var(--border);
+    --md-theme-border-color-inset: var(--border);
+    --md-theme-border-color-reverse: var(--muted-foreground);
+    --md-theme-link-color: var(--primary);
+    --md-theme-link-hover-color: var(--primary);
+    --md-theme-heading-color: var(--foreground);
+    --md-theme-quote-color: var(--muted-foreground);
+    --md-theme-quote-bg-color: transparent;
+    --md-theme-quote-border: 2px solid var(--border);
+    --md-theme-table-td-border-color: var(--border);
+    --md-theme-table-tr-bg-color: var(--background);
+    --md-theme-table-stripe-color: var(--muted);
+    --md-theme-code-inline-color: var(--foreground);
+    --md-theme-code-inline-bg-color: var(--muted);
+    --md-theme-code-block-color: var(--foreground);
+    --md-theme-code-block-bg-color: var(--muted);
+    --md-theme-code-before-bg-color: var(--muted);
+    --md-theme-code-line-number-color: var(--muted-foreground);
+    --md-theme-code-active-color: var(--primary);
+    --md-theme-code-copy-tips-color: var(--popover-foreground);
+    --md-theme-code-copy-tips-bg-color: var(--popover);
+    --md-theme-radius-s: calc(var(--radius) - 4px);
+    --md-theme-radius-m: calc(var(--radius) - 2px);
+}
+
+/*
+ * A link distinguished only by hue is a link somebody with a colour vision
+ * deficiency cannot find in a paragraph — the same reasoning as `.panel-prose`
+ * in the package stylesheet, and the one place the library's theme is not
+ * merely recoloured but corrected.
+ */
+.panel-markdown-editor :deep(.md-editor-preview a) {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+</style>

@@ -3,6 +3,7 @@
  */
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import type { RichEditorFieldDefinition } from '@/panel/types/form';
 
 /**
@@ -12,7 +13,12 @@ import type { RichEditorFieldDefinition } from '@/panel/types/form';
  * `tests/browser/ui6.mjs` — a computed box-shadow that is neither transparent
  * nor zero-width. What is asserted here is the half a DOM implementation can
  * see: that the editable region still says what it is, that the field wiring
- * from U01 survived, and that a toolbar toggle reports a state at all.
+ * from U01 survived the move to Tiptap, and that a toolbar toggle both reports
+ * a state and changes the document.
+ *
+ * Every one of these was true of the `execCommand` version too, and that is
+ * the point of keeping them: the control underneath changed completely and the
+ * contract this form layer depends on did not.
  */
 vi.mock('@inertiajs/vue3', () => ({
     router: {
@@ -74,13 +80,23 @@ function field(
     } as unknown as RichEditorFieldDefinition;
 }
 
-function render(props: Record<string, unknown> = {}) {
+/**
+ * Mounted and then waited on, because Tiptap builds its view in `onMounted`
+ * and the `contenteditable` does not exist until it has.
+ */
+async function render(props: Record<string, unknown> = {}) {
     const wrapper = mount(RichEditorField, {
         attachTo: document.body,
         props: { field: field(), modelValue: '<p>Content.</p>', ...props },
     });
 
     mounted.push(wrapper);
+
+    // Twice: once for the editor to be constructed, once for the render that
+    // reads it. Tiptap's reactivity is debounced behind two animation frames,
+    // which is why the state assertions below drive it explicitly instead.
+    await nextTick();
+    await nextTick();
 
     return wrapper;
 }
@@ -90,8 +106,8 @@ function render(props: Record<string, unknown> = {}) {
  */
 
 describe('the editable region', () => {
-    it('still says it is a multi-line textbox', () => {
-        const wrapper = render();
+    it('still says it is a multi-line textbox', async () => {
+        const wrapper = await render();
 
         const editor = wrapper.get('[contenteditable="true"]');
 
@@ -99,8 +115,8 @@ describe('the editable region', () => {
         expect(editor.attributes('aria-multiline')).toBe('true');
     });
 
-    it('keeps the field wiring U01 established', () => {
-        const wrapper = render({
+    it('keeps the field wiring U01 established', async () => {
+        const wrapper = await render({
             field: field({ helperText: 'Some help.' }),
             error: 'It is required.',
         });
@@ -111,7 +127,10 @@ describe('the editable region', () => {
         );
 
         // Both the helper and the error, and the invalid state — the same
-        // contract every other field carries.
+        // contract every other field carries. These live on an element
+        // ProseMirror creates, so they arrive through `editorProps.attributes`
+        // rather than through the template, and that is exactly why they are
+        // asserted.
         expect(described).toHaveLength(2);
         expect(editor.attributes('aria-invalid')).toBe('true');
         expect(document.getElementById(described[0])?.textContent?.trim()).toBe(
@@ -125,18 +144,27 @@ describe('the editable region', () => {
         );
     });
 
-    it('marks the field boundary rather than removing the outline and stopping', () => {
-        const wrapper = render();
+    it('marks the field boundary rather than removing the outline and stopping', async () => {
+        const wrapper = await render();
 
         // The class list is the part a DOM implementation can see; whether
         // anything is painted is asserted in the browser suite.
-        const shell = wrapper.get('[contenteditable="true"]').element
-            .parentElement as HTMLElement;
+        const shell = wrapper.get('[data-slot="rich-editor"]');
 
-        expect(shell.className).toContain('focus-within:border-ring');
+        expect(shell.classes().join(' ')).toContain('focus-within:border-ring');
         expect(
             wrapper.get('[contenteditable="true"]').classes().join(' '),
         ).toContain('focus-visible:ring-3');
+    });
+
+    it('renders the value it was given', async () => {
+        const wrapper = await render({
+            modelValue: '<p>Existing <strong>content</strong>.</p>',
+        });
+
+        expect(wrapper.get('[contenteditable="true"]').html()).toContain(
+            '<strong>content</strong>',
+        );
     });
 });
 
@@ -145,18 +173,18 @@ describe('the editable region', () => {
  */
 
 describe('a toolbar toggle', () => {
-    it('reports a pressed state', () => {
-        const wrapper = render();
-
-        const bold = wrapper.get('[aria-label="bold"]');
+    it('reports a pressed state', async () => {
+        const wrapper = await render();
 
         // Present and false, rather than absent: a toggle with no state is a
         // toggle nobody can read.
-        expect(bold.attributes('aria-pressed')).toBe('false');
+        expect(
+            wrapper.get('[aria-label="bold"]').attributes('aria-pressed'),
+        ).toBe('false');
     });
 
-    it('claims no pressed state for a control that is not a toggle', () => {
-        const wrapper = render();
+    it('claims no pressed state for a control that is not a toggle', async () => {
+        const wrapper = await render();
 
         // Undo is an action, not a state. `aria-pressed` on it would say the
         // editor is "currently undone".
@@ -165,18 +193,25 @@ describe('a toolbar toggle', () => {
         ).toBeUndefined();
     });
 
-    it('still runs its command', async () => {
-        const exec = vi.fn(() => true);
+    it('changes the document rather than only the markup', async () => {
+        const wrapper = await render();
 
-        Object.defineProperty(document, 'execCommand', {
-            value: exec,
-            configurable: true,
-        });
+        // A document-level assertion, not a string match: the whole reason for
+        // the move to Tiptap is that there is now a document to ask.
+        await wrapper.get('[aria-label="bulletList"]').trigger('click');
 
-        const wrapper = render();
+        const emitted = wrapper.emitted('update:modelValue') ?? [];
 
-        await wrapper.get('[aria-label="bold"]').trigger('click');
+        expect(emitted.length).toBeGreaterThan(0);
+        expect(String(emitted[emitted.length - 1][0])).toContain('<ul>');
+    });
 
-        expect(exec).toHaveBeenCalledWith('bold', false, undefined);
+    it('emits nothing but the empty string for an emptied document', async () => {
+        const wrapper = await render();
+
+        await wrapper.setProps({ modelValue: '' });
+        await nextTick();
+
+        expect(wrapper.get('[contenteditable="true"]').text()).toBe('');
     });
 });

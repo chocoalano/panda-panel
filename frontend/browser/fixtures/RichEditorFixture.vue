@@ -11,8 +11,9 @@ import type { RichEditorFieldDefinition } from '@/panel/types/form';
  * caret in it, gives it a visible ring, or applies `:focus-visible` — which
  * is the whole of the finding.
  *
- * Nothing here is fixed. The fixture exists so the next session can measure
- * the current behaviour honestly before changing it.
+ * The editor underneath is Tiptap now, and the fixture did not have to change
+ * for that: it mounts the published component against the published
+ * stylesheet, which is the only thing it was ever allowed to do.
  */
 const field = {
     component: 'field',
@@ -22,8 +23,12 @@ const field = {
     value:
         '<h2>A heading</h2>' +
         '<p>Some <strong>existing</strong> content.</p>' +
-        // A paragraph with no formatting, so a toggle check starts from off.
-        '<p id="plain-paragraph">Nothing is applied here.</p>',
+        // Last, and with no formatting, so a toggle check starts from off.
+        // It carries no id on purpose: the editor parses this against its own
+        // schema and an attribute the schema does not declare does not
+        // survive — a fixture that relied on one would be asserting against
+        // markup the editor had already thrown away.
+        '<p>Nothing is applied here.</p>',
     placeholder: null,
     helperText: 'Formatting is applied to the selection.',
     required: false,

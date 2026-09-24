@@ -73,17 +73,16 @@ export default ts.config(
             // input to that; `any` would be skipping it.
             '@typescript-eslint/no-explicit-any': 'error',
 
-            // One use, in the Markdown editor's preview, and it is safe by
-            // construction rather than by review: `renderMarkdown()` escapes
-            // every character *before* adding a single tag, so by the time
-            // markup exists there is no author input left that could become
-            // it. See `panel/forms/markdown.ts`, which exists to make that
-            // ordering the module's whole contract.
+            // On, because there is nothing left to exempt. This was off for
+            // one use — the Markdown editor's hand-written preview, safe by
+            // construction because `renderMarkdown()` escaped every character
+            // before adding a tag — and that preview is now `md-editor-v3`'s,
+            // which does its own rendering inside its own component.
             //
-            // Off globally rather than disabled at the site: the rule reports
-            // on the attribute, and a `<!-- eslint-disable-next-line -->` in a
-            // multi-line tag cannot sit on the line before it.
-            'vue/no-v-html': 'off',
+            // The next `v-html` in this tree would be a new decision about
+            // trusting a string, and it should have to be argued for rather
+            // than inherited from a module that no longer exists.
+            'vue/no-v-html': 'error',
 
             // Written for the options API, where an absent prop and a prop
             // explicitly passed `undefined` are indistinguishable. With

@@ -292,9 +292,12 @@ Say what an assertion actually rests on. The words below mean specific things, a
 ```bash
 npm run test:browser          # frozen columns, at 360×800
 npm run test:browser:verify   # the verification foundation and its baselines
-npm run test:browser:all      # both
+npm run test:browser:editors  # the Markdown and code editors, and what they load
+npm run test:browser:all      # every one of them
 PANDA_CHROME=/path/to/chromium npm run test:browser:all
 ```
+
+`test:browser:editors` is the newest and answers a question nothing else can. Three form fields are a third-party editor — Tiptap, `md-editor-v3`, Monaco — and two of those libraries fetch parts of themselves from a CDN by default. Both defaults are turned off, and "off" is a claim about what a browser does: the check reads `performance.getEntriesByType('resource')` and fails if anything came from another origin. It also measures what a stub cannot — that CodeMirror and Monaco mount, that the field's `id` and describing sentences reach the element the keyboard actually goes to, and that the Markdown preview resolved to the panel's own theme tokens rather than the library's hex defaults.
 
 `tests/browser/chrome.mjs` is the shared driver: it builds the fixture, serves it on an OS-allocated port, launches a headless Chrome with a throwaway profile, and hands back a small page object — `go`, `evaluate`, `setViewport`, `press`, `type`, `emulateMedia`. Deliberately small. A wider surface is a runner, and a runner is the thing that needs an ADR.
 

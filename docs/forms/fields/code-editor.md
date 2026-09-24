@@ -1,6 +1,6 @@
 # Code Editor
 
-`PandaPanel\Forms\Components\CodeEditor` stores source text and edits it in a monospaced control that keeps a tab a tab. Reach for it when a column holds something a person writes as code — a JSON configuration blob, a snippet of CSS, a SQL fragment — rather than prose, which belongs in a [Markdown editor](markdown.md) or a rich editor.
+`PandaPanel\Forms\Components\CodeEditor` stores source text and edits it in Monaco, the editor VS Code is built on. Reach for it when a column holds something a person writes as code — a JSON configuration blob, a snippet of CSS, a SQL fragment — rather than prose, which belongs in a [Markdown editor](markdown.md) or a rich editor.
 
 ## The minimal example
 
@@ -27,9 +27,9 @@ public function maxLength(int $length): self             // default: null, clamp
 
 | Method | Default | Effect on rules | Effect on the control |
 | --- | --- | --- | --- |
-| `language()` | `CodeLanguage::Plain` | adds `json` for `Json` only | names the language in the header strip |
-| `rows()` | `12` | none | the textarea's `rows` |
-| `maxLength()` | `null` | adds `max:n` | the textarea's `maxlength` |
+| `language()` | `CodeLanguage::Plain` | adds `json` for `Json` only | names the language in the header strip, and selects the grammar |
+| `rows()` | `12` | none | how many lines of code the editor is tall |
+| `maxLength()` | `null` | adds `max:n` | typing stops at that many characters |
 
 ```php
 use PandaPanel\Forms\Components\CodeEditor;
@@ -46,19 +46,21 @@ CodeEditor::make('stylesheet')
 
 `PandaPanel\Forms\Enums\CodeLanguage` is a closed set, because each case maps to something the build already knows about. A free string would be a request for a grammar that is not in the bundle, which fails silently as unformatted text.
 
-| Case | Wire value | Header label |
-| --- | --- | --- |
-| `CodeLanguage::Plain` | `plain` | Plain text |
-| `CodeLanguage::Json` | `json` | JSON |
-| `CodeLanguage::Html` | `html` | HTML |
-| `CodeLanguage::Css` | `css` | CSS |
-| `CodeLanguage::JavaScript` | `javascript` | JavaScript |
-| `CodeLanguage::Php` | `php` | PHP |
-| `CodeLanguage::Sql` | `sql` | SQL |
-| `CodeLanguage::Yaml` | `yaml` | YAML |
-| `CodeLanguage::Markdown` | `markdown` | Markdown |
+| Case | Wire value | Header label | Monaco grammar |
+| --- | --- | --- | --- |
+| `CodeLanguage::Plain` | `plain` | Plain text | `plaintext` |
+| `CodeLanguage::Json` | `json` | JSON | `json` |
+| `CodeLanguage::Html` | `html` | HTML | `html` |
+| `CodeLanguage::Css` | `css` | CSS | `css` |
+| `CodeLanguage::JavaScript` | `javascript` | JavaScript | `javascript` |
+| `CodeLanguage::Php` | `php` | PHP | `php` |
+| `CodeLanguage::Sql` | `sql` | SQL | `sql` |
+| `CodeLanguage::Yaml` | `yaml` | YAML | `yaml` |
+| `CodeLanguage::Markdown` | `markdown` | Markdown | `markdown` |
 
-Only `Json` changes behaviour beyond the label: it adds Laravel's `json` rule, so a document that will not parse is rejected before it reaches a column.
+`Json` also adds Laravel's `json` rule, so a document that will not parse is rejected before it reaches a column — and the editor now says so first, underlining the offending character as it is typed.
+
+`json`, `css` and `html` have a language service behind them, which is why those three are checked as you type. The rest are grammars: coloured and folded and bracket-matched, and not validated.
 
 ```php
 use PandaPanel\Forms\Components\CodeEditor;
@@ -106,13 +108,30 @@ The `json` rule has already run by then, so the decode cannot be handed somethin
 
 ## What the control does
 
-`resources/js/panel/forms/fields/CodeEditorField.vue` is a textarea, deliberately, with the things that matter for editing code:
+`resources/js/panel/forms/fields/CodeEditorField.vue` is [Monaco](https://github.com/imguolao/monaco-vue) — the editor from VS Code — reading and writing the same string as before.
 
-- a fixed-width face and a header strip showing the language and the live line count,
-- `spellcheck`, `autocorrect`, `autocapitalize`, and `autocomplete` all off, so identifiers are not rewritten under the cursor,
-- **Tab inserts four spaces** rather than moving focus. Escape and then Tab is the way out, which is the convention every code editor on the web already uses.
+What it replaced was a textarea with a monospace face and a `Tab` handler, and that was not enough for reasons that are not decoration. A textarea cannot tell a string from a key, so a JSON blob was edited without ever being told it did not parse until the server refused the whole form. The four spaces `Tab` inserted were four spaces wherever the caret happened to be, indentation or not. There was no bracket matching, no way to select a block, no way to find anything in a long document.
 
-There is no syntax highlighting. Adding one would mean adding a highlighter dependency to every panel bundle, which is a decision the package does not make on an application's behalf. If you need it, a [custom field](../custom-fields.md) renders whatever editor you choose against the same value.
+What you get now:
+
+- **Syntax highlighting** for every case of `CodeLanguage`, and **validation as you type** for `json`, `css` and `html`.
+- **A gutter with line numbers**, bracket matching, folding, multiple cursors, and `Ctrl+F` inside the field.
+- **Tab is indentation**, four spaces of it, understood as indentation rather than as four characters. Escape and then Tab is still the way out, which is the convention Monaco is itself the origin of.
+- Deliberately *not* an IDE: no minimap, no sticky-scroll header, no overview ruler. This is a control in a form.
+
+The header strip is unchanged — the language and the live line count.
+
+### It is bundled, not fetched
+
+`@guolao/vue-monaco-editor` defaults to downloading Monaco from a CDN at runtime. That default is off. The panel configures the loader with the copy your application built, so a code field works behind a proxy, under a `Content-Security-Policy` that names its own origins, and on an air-gapped install — and opening a form does not tell a third party that you did.
+
+`monaco-editor` and `@guolao/vue-monaco-editor` are in the panel's own `dependencies`, so `panel:install` names them if your application has not declared them.
+
+### It arrives late, and the field works before it does
+
+Monaco is large, so it is behind a dynamic `import()` and lands in its own chunk: a panel with no code field never downloads a byte of it, and the language grammars are lazy inside Monaco too — opening a PHP field fetches the PHP grammar and not the other eighty.
+
+Until that chunk arrives, the field renders the textarea it used to be, carrying the same id, the same value and the same describing sentences. **That is not only a loading state.** If the chunk cannot be loaded at all, the textarea stays, and the field stays editable and submittable — a form that cannot be filled in is worse than a form with a plain box in it.
 
 ## What crosses the wire
 
@@ -127,11 +146,11 @@ interface CodeEditorFieldDefinition extends BaseFieldDefinition {
 
 ## Gotchas
 
-**`maxLength()` counts characters, not lines.** It becomes `max:n` on a string, which Laravel measures in characters, and the browser enforces the same number as `maxlength`. A long JSON document hits it faster than it looks.
+**`maxLength()` counts characters, not lines.** It becomes `max:n` on a string, which Laravel measures in characters, and the editor stops at the same number. A long JSON document hits it faster than it looks.
 
 **`language(CodeLanguage::Json)` does not make the value an array.** The rule proves it parses; the stored value is still the text the user typed, including their whitespace. Decode in `mutateUsing()` if the column expects structure.
 
-**The `json` rule rejects an empty editor.** A cleared textarea submits `''`, and `nullable` only excuses a real `null`, so an optional JSON field fails on being emptied. Give it a `default('{}')`, or normalize the blank to `null` before validation in a page's `beforeValidate()` hook:
+**The `json` rule rejects an empty editor.** A cleared editor submits `''`, and `nullable` only excuses a real `null`, so an optional JSON field fails on being emptied. Give it a `default('{}')`, or normalize the blank to `null` before validation in a page's `beforeValidate()` hook:
 
 ```php
 /**
@@ -148,7 +167,15 @@ protected function beforeValidate(array $input): array
 }
 ```
 
-**Four spaces, always.** The Tab handler inserts a fixed four spaces; it is not configurable and does not detect the surrounding indentation.
+**Four spaces, always.** The indent width is a fixed four spaces and is not configurable from a schema.
+
+**Building an application that uses a code field needs more memory than Node gives Vite by default.** Monaco is big enough that Rollup transforming it exceeds the default heap, and the failure is an out-of-memory abort that names no module. Raise it:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=4096 npm run build
+```
+
+**The editor's own strings are English**, as Monaco ships them. The field's label, helper text and error come from the panel's translations as usual.
 
 **A language with no case is not extensible from userland.** `CodeLanguage` is a PHP enum; adding a case means changing the package and the TypeScript union together. Use `Plain` for anything not listed.
 

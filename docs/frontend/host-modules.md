@@ -131,6 +131,8 @@ npm install @inertiajs/vue3@^3.0.0 \
 npm run build
 ```
 
+Three of those are the editors the form layer renders: `@tiptap/*` for the rich editor, `md-editor-v3` for Markdown, and `monaco-editor` with `@guolao/vue-monaco-editor` for code. They are ordinary `dependencies` and are named like any other, but `monaco-editor` is by some distance the largest thing the panel asks an application to build — see [the note on build memory](assets.md#gotchas).
+
 ### The layout override check
 
 The one thing about this seam that cannot be fixed from inside the package:

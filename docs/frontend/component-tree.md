@@ -63,7 +63,7 @@ resources/js/panel/
   composables/   usePanel, usePanelPage, usePanelShell, usePanelStyling,
                  usePanelBroadcasting, useNavigation, useResource, useActions,
                  useInfolistActions, useRelationActions, useRelationTable,
-                 useErrorNotifications, useUnsavedChangesAlert
+                 useErrorNotifications, useUnsavedChangesAlert, useColorScheme
   icons/         registry
   hooks/         registry
   shell/         registry
@@ -192,7 +192,10 @@ TimeField           ToggleButtonsField  ToggleField
 
 FieldWrapper        the label, helper text and error every field wears
 CustomFieldRenderer resolves a CustomField's component through the registry
+editorAttributes.ts puts a field's identity on an element an editor owns
 ```
+
+Three of those fields are a third-party editor rather than a control this package draws: `RichEditorField` is [Tiptap](https://tiptap.dev), `MarkdownEditorField` is [`md-editor-v3`](https://imzbf.github.io/md-editor-v3/en-US/), and `CodeEditorField` is [Monaco](https://github.com/imguolao/monaco-vue). In each case the element that takes the keyboard is created by the library, after the component has rendered — so the `id`, the accessible name, `aria-describedby` and `aria-invalid` are written onto it rather than bound in a template. `editorAttributes.ts` is that one mechanism, shared; the rich editor uses Tiptap's own `editorProps.attributes` instead, which does the same thing at the point the view is built.
 
 The layout components — `FormSection`, `FormGrid`, `FormTabs`, `FormWizard`, `FormRelationship`, `FormCustomComponent` — all recurse back through `FormComponentRenderer`, so nesting depth is a data concern rather than a component one.
 
@@ -203,7 +206,7 @@ The supporting modules:
 | `conditions.ts` | `matchesConditions()`, `conditionDependencies()`, `isBlankValue()` |
 | `validation.ts` | `validateFields()` — the subset of rules a browser can honestly check |
 | `http.ts` | `csrfToken()`, `postJson()`, `postForm()` |
-| `markdown.ts` | `renderMarkdown()` |
+| `monacoBundle.ts` | `configureMonaco()` — the code editor's chunk boundary |
 | `optionsEndpoint.ts` | `provideOptionsUrl()`, `useOptionsUrl()`, `fetchOptions()` |
 | `uploadEndpoint.ts` | `provideUploadUrl()`, `useUploadUrl()`, `uploadFile()` |
 | `formStateEndpoint.ts` | `provideFormStateUrl()`, `useFormStateUrl()`, `fetchFormState()` |
@@ -240,6 +243,7 @@ All under `@/panel/composables/`.
 | `useRelationTable` | `useRelationTable(...): UseRelationTableReturn` |
 | `useErrorNotifications` | `useErrorNotifications(): void` |
 | `useUnsavedChangesAlert` | `useUnsavedChangesAlert(isDirty: Ref<boolean>): void` |
+| `useColorScheme` | `useColorScheme(): ComputedRef<'light' \| 'dark'>` |
 
 ### `usePanel()`
 
@@ -287,6 +291,19 @@ reloadShell();       // both
 ```
 
 There is no endpoint answering "what does the sidebar look like now" — it would have to re-resolve the panel, the user and the URL to say anything true, which is what a request already does.
+
+### `useColorScheme()`
+
+```ts
+import { useColorScheme } from '@/panel/composables/useColorScheme';
+
+const scheme = useColorScheme();
+// scheme.value === 'dark'
+```
+
+For handing a theme name to something that will not read a stylesheet — the Markdown editor and the code editor both take one as a prop. It reads the `dark` class on `<html>` and watches it with a `MutationObserver`, because Tailwind's dark variant *is* that class and nothing about a `classList` mutation is reactive on its own.
+
+Deliberately not `useAppearance()`. That answers "what did the user pick", which is right for a control that writes the preference and wrong here: the preference may be `system`, and an application is free to toggle the class itself — a starter kit's own theme switch, a class the server rendered on first paint. An editor reading the stored preference would then be the one element on the page in the wrong theme.
 
 ### `usePanelStyling()`
 

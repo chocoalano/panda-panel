@@ -190,6 +190,7 @@ The file records the hash each published file had *at publish time*, which is th
 - **`pages_path` and the registry globs are two separate edits.** Moving one without the other means every custom component resolves to nothing, silently, with a development-only console warning as the only clue.
 - **A published component is yours.** `composer update` cannot improve it. That is the price of the `import.meta.glob` allowlist, and `panel:assets` exists to pay it.
 - **`panel:install` is safe to re-run.** It publishes, records, scaffolds, checks the frontend, and prints what is still outstanding once at the end. Only `--force` overwrites.
+- **`npm run build` may need more memory than Node gives it by default.** The code editor field is Monaco, and Rollup transforming it exceeds Node's default heap on many machines. The abort names no module, so it reads as an unrelated failure. `NODE_OPTIONS=--max-old-space-size=4096 npm run build` is the fix; nothing else about the build changes, and nothing else in the panel is close to that size.
 - **`frontend/host` is not in any publish map.** It resolves inside this repository's own type-check and build, and `panel:install` copies a stand-in for each module your application has none of — never over one it has. Your application supplies the real modules; those are a floor, not a design.
 
 ## See also

@@ -340,7 +340,7 @@ use PandaPanel\Infolists\Components\CodeEntry;
 CodeEntry::make('payload')->language(CodeLanguage::Json)->copyable();
 ```
 
-`PandaPanel\Forms\Enums\CodeLanguage` is closed: `Plain`, `Json`, `Html`, `Css`, `JavaScript`, `Php`, `Sql`, `Yaml`, `Markdown`. It is the same enum the code editor field uses, and it is closed because the frontend maps each case to a fixed label rather than accepting a free string. Nothing highlights the value: `language` crosses the wire and the renderer draws the block as plain monospace text, because syntax highlighting would mean a highlighter dependency in every panel bundle.
+`PandaPanel\Forms\Enums\CodeLanguage` is closed: `Plain`, `Json`, `Html`, `Css`, `JavaScript`, `Php`, `Sql`, `Yaml`, `Markdown`. It is the same enum the code editor field uses, and it is closed because the frontend maps each case to a fixed label rather than accepting a free string. Nothing highlights the value here: `language` crosses the wire and the renderer draws the block as plain monospace text. The [code editor field](../forms/fields/code-editor.md) does highlight, because it is Monaco — but Monaco is a chunk an entry would have to download in order to *display* text it is not editing, which is a poor trade for a read-only block.
 
 **Value.** Null for null or `''`. A scalar is cast. Anything else is pretty-printed with `JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES` — here rather than in Vue, so what arrives is already the string that will be shown.
 

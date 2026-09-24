@@ -217,7 +217,7 @@ Prettier owns formatting. `.prettierrc.json`:
 
 `.prettierignore` excludes `build`, `node_modules`, `vendor`, `bootstrap`, `examples`, `resources/views` and `resources/js/components/ui`. The last one is vendored from shadcn-vue and left in that project's formatting, because these are the files an application is most likely to re-pull upstream and reformatting them would make every update a whitespace diff.
 
-ESLint owns the class of mistake that type-checks perfectly and is still wrong. `eslint-config-prettier` comes last and turns off every stylistic rule, so no rule is one both tools have an opinion about. The six overrides in `eslint.config.js`, each with a stated reason:
+ESLint owns the class of mistake that type-checks perfectly and is still wrong. `eslint-config-prettier` comes last and turns off every stylistic rule, so no rule is one both tools have an opinion about. The six settings in `eslint.config.js` that differ from the shared configs, each with a stated reason:
 
 | Rule | Setting | Reason |
 | --- | --- | --- |
@@ -225,7 +225,7 @@ ESLint owns the class of mistake that type-checks perfectly and is still wrong. 
 | `vue/no-mutating-props` | `error` | A prop the server sent is data. Copying every one into local state to satisfy a rule is how a form ends up with two ideas of what its value is. |
 | `@typescript-eslint/no-unused-vars` | `error`, ignoring `^_` | An unused argument prefixed `_` is a signature being honoured. |
 | `@typescript-eslint/no-explicit-any` | `error` | Payloads arrive as untyped JSON and are narrowed by hand. `unknown` is the input to that; `any` would be skipping it. |
-| `vue/no-v-html` | `off` | One use, in the Markdown preview, safe by construction: `renderMarkdown()` escapes every character before adding a single tag. Off globally rather than at the site because the rule reports on the attribute and a disable comment cannot sit on the line before it in a multi-line tag. |
+| `vue/no-v-html` | `error` | On, because there is nothing left to exempt. It was off for the Markdown editor's hand-written preview, which `md-editor-v3` has replaced. The next `v-html` here would be a new decision about trusting a string, and should be argued for rather than inherited. |
 | `vue/require-default-prop` | `off` | Written for the options API. With `defineProps<Props>()`, `class?: string` with no default is the correct way to say "no class unless given one"; a default of `''` would put an empty attribute on every element. |
 
 Two directories relax further: `frontend/host/**` allows empty component blocks, because the stand-ins exist to be minimal; and `resources/js/components/ui/**` turns off four rules for the same reason Prettier skips it.
