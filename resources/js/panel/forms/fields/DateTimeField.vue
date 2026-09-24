@@ -65,9 +65,16 @@ const date = ref<string | null>(null);
 /** The chosen time, `HH:mm[:ss]`, or null while it is incomplete. */
 const time = ref<string | null>(null);
 
+let pending: string | null | undefined;
+
 watch(
     () => props.modelValue,
     (value) => {
+        if (pending !== undefined && value === pending) {
+            pending = undefined;
+            return;
+        }
+        pending = undefined;
         const parts = split(value);
 
         date.value = parts?.date ?? null;
@@ -136,6 +143,7 @@ function publish(): void {
             : `${date.value} ${time.value}`;
 
     if (next !== props.modelValue) {
+        pending = next;
         emit('update:modelValue', next);
     }
 }
@@ -196,7 +204,7 @@ function onTime(value: string | null): void {
         >
             <PanelDatePicker
                 :id="controlId"
-                class="w-full sm:w-auto sm:min-w-44"
+                class="w-full sm:min-w-44 sm:flex-1"
                 :model-value="date"
                 :disabled="field.disabled"
                 :min="minDate"

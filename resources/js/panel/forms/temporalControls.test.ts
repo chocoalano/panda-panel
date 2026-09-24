@@ -60,6 +60,12 @@ vi.mock('@inertiajs/vue3', () => ({
     Link: { name: 'Link', template: '<a><slot /></a>' },
 }));
 
+// Keep popover contents mounted for value-contract tests; browser checks cover portals.
+vi.mock('@/components/ui/popover', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/components/ui/popover')>()),
+    PopoverContent: { template: '<div><slot /></div>' },
+}));
+
 const { default: PanelTimePicker } =
     await import('@/panel/components/PanelTimePicker.vue');
 const { default: TimeField } =
@@ -205,7 +211,7 @@ describe('no renderer creates a native temporal control', () => {
         renderDate(dateField({ helperText: 'When it goes live.' }));
 
         // DT04: an undeclared attribute falls through onto the wrapping div.
-        const trigger = document.querySelector('button[aria-haspopup]');
+        const trigger = document.querySelector('input');
 
         expect(trigger?.getAttribute('aria-describedby')).toBeTruthy();
     });
@@ -567,7 +573,7 @@ describe('helper and error reach the focusable control', () => {
             null,
         );
 
-        const trigger = document.querySelector('button[aria-label="Date"]');
+        const trigger = document.querySelector('input[aria-label="Date"]');
 
         expect(trigger?.getAttribute('aria-describedby')).toBeTruthy();
     });
@@ -749,5 +755,62 @@ describe('a query builder picks a date with the panel calendar', () => {
         // `String(null)` is `'null'`, which the old handler would have written
         // into the rule and the server would have tried to parse as a date.
         expect(changes[0]?.[0][0]?.value).toBeNull();
+    });
+});
+
+describe('manual temporal input', () => {
+    it('accepts a typed date and rejects impossible or out-of-bounds dates', async () => {
+        const wrapper = renderDate(
+            dateField({ minDate: '2026-09-10', maxDate: '2026-09-20' }),
+        );
+        const input = wrapper.get('input');
+        await input.setValue('2026-09-15');
+        expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
+            '2026-09-15',
+        ]);
+        for (const value of ['2026-02-30', '2026-09-09', '2026-09-21']) {
+            await input.setValue(value);
+            expect(input.attributes('aria-invalid')).toBe('true');
+            expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
+                null,
+            ]);
+        }
+        await input.setValue('');
+        expect(input.attributes('aria-invalid')).toBeUndefined();
+    });
+
+    it('accepts midnight and seconds, rejecting invalid times', async () => {
+        const wrapper = renderTime(timeField({ seconds: true }));
+        const input = wrapper.get('input');
+        await input.setValue('00:00:07');
+        expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
+            '00:00:07',
+        ]);
+        await input.setValue('24:00:00');
+        expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([null]);
+        expect(input.attributes('aria-invalid')).toBe('true');
+    });
+
+    it('preserves the datetime sibling while an edit is incomplete', async () => {
+        const wrapper = renderDateTime(dateTimeField(), '2026-09-10 09:30');
+        const inputs = wrapper.findAll('input');
+        await inputs[0]!.setValue('2026-09-');
+        await wrapper.setProps({ modelValue: null });
+        expect((inputs[1]!.element as HTMLInputElement).value).toBe('09:30');
+        await inputs[0]!.setValue('2026-09-11');
+        expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
+            '2026-09-11 09:30',
+        ]);
+    });
+
+    it('applies time bounds to manual input', async () => {
+        const wrapper = mount(PanelTimePicker, {
+            props: { modelValue: null, minTime: '09:30', maxTime: '10:00' },
+        });
+        mounted.push(wrapper);
+        await wrapper.get('input').setValue('09:29');
+        expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([null]);
+        await wrapper.get('input').setValue('09:30');
+        expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['09:30']);
     });
 });

@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { Calendar as CalendarIcon, X } from '@lucide/vue';
-import {
-    CalendarDate,
-    DateFormatter,
-    getLocalTimeZone,
-    parseDate,
-} from '@internationalized/date';
-import { computed, ref } from 'vue';
+import { CalendarDate, parseDate } from '@internationalized/date';
+import { computed, ref, watch } from 'vue';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -19,21 +15,7 @@ import { useTranslator } from '@/composables/useTranslator';
 
 const { t, locale } = useTranslator();
 
-/**
- * One date, chosen from a calendar.
- *
- * The control every date in a panel is picked with: a resource form's date
- * field and a table's date-range filter both mount this, so a date looks and
- * behaves the same wherever it is asked for.
- *
- * It replaces `<input type="date">`, whose rendering, keyboard handling, and
- * clear affordance are the browser's rather than the panel's — Chrome, Firefox
- * and Safari each draw a different control, none of them themeable, and none
- * of them matching the rest of the panel. The value crossing the boundary is
- * unchanged: an ISO `YYYY-MM-DD` string, or `null` for no date. That is what
- * the server already validates and what `DateFilter::sanitize()` already
- * parses, so nothing behind this component had to move.
- */
+/** Editable ISO date with a calendar popover. */
 const props = withDefaults(
     defineProps<{
         /** ISO `YYYY-MM-DD`, or null for no date. */
@@ -102,33 +84,48 @@ const selected = computed(() => toCalendarDate(props.modelValue) ?? undefined);
 const minValue = computed(() => toCalendarDate(props.min) ?? undefined);
 const maxValue = computed(() => toCalendarDate(props.max) ?? undefined);
 
-/**
- * Medium rather than numeric: `01/02` is January the second on one side of the
- * Atlantic and the first of February on the other, and the trigger is read at
- * a glance. The same reasoning as the filter chip's own format.
- */
-// Rebuilt when the locale changes rather than constructed once: a date
-// written "Jan 5, 2026" is not how it reads anywhere the panel is not
-// English, and the locale is a prop the server resolved.
-const formatter = computed(
-    () => new DateFormatter(locale.value, { dateStyle: 'medium' }),
+const draft = ref('');
+const draftInvalid = ref(false);
+let pending: string | null | undefined;
+watch(
+    () => props.modelValue,
+    (value) => {
+        if (pending !== undefined && value === pending) {
+            pending = undefined;
+            return;
+        }
+        pending = undefined;
+        draft.value = toCalendarDate(value)?.toString() ?? '';
+        draftInvalid.value = false;
+    },
+    { immediate: true },
 );
 
-const label = computed(() => {
-    const date = selected.value;
+function publish(value: string | null): void {
+    pending = value;
+    emit('update:modelValue', value);
+}
 
-    return date === undefined
-        ? (props.placeholder ?? t('forms.pick_a_date'))
-        : formatter.value.format(date.toDate(getLocalTimeZone()));
-});
+function onInput(value: string | number): void {
+    draft.value = String(value);
+    const text = draft.value.trim();
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(text) ? toCalendarDate(text) : null;
+    draftInvalid.value =
+        text !== '' &&
+        (date === null ||
+            (minValue.value !== undefined &&
+                date.compare(minValue.value) < 0) ||
+            (maxValue.value !== undefined && date.compare(maxValue.value) > 0));
+    publish(draftInvalid.value || text === '' ? null : text);
+}
 
 const showClear = computed(
-    () => props.clearable && !props.disabled && selected.value !== undefined,
+    () => props.clearable && !props.disabled && draft.value !== '',
 );
 
 function onSelect(value: unknown): void {
     if (value === undefined || value === null) {
-        emit('update:modelValue', null);
+        onClear();
 
         return;
     }
@@ -136,38 +133,46 @@ function onSelect(value: unknown): void {
     // `CalendarDate.toString()` is already `YYYY-MM-DD`, and deliberately not
     // routed through a `Date`: converting to one applies a timezone, and a
     // date picked as the 1st can arrive at the server as the 31st.
-    emit('update:modelValue', String(value));
+    draft.value = String(value);
+    draftInvalid.value = false;
+    publish(draft.value);
     open.value = false;
 }
 
 function onClear(): void {
-    emit('update:modelValue', null);
+    draft.value = '';
+    draftInvalid.value = false;
+    publish(null);
     open.value = false;
 }
 </script>
 
 <template>
     <div :class="cn('relative', props.class)">
+        <Input
+            :id="id"
+            :model-value="draft"
+            :disabled="disabled"
+            :placeholder="placeholder ?? 'YYYY-MM-DD'"
+            :aria-label="ariaLabel ?? t('forms.date')"
+            :aria-describedby="describedBy"
+            :aria-invalid="invalid || draftInvalid ? true : undefined"
+            class="h-9 pr-16 font-normal tabular-nums"
+            autocomplete="off"
+            @update:model-value="onInput"
+            @keydown.alt.down.prevent="open = !disabled"
+        />
         <Popover v-model:open="open">
             <PopoverTrigger as-child>
                 <Button
-                    :id="id"
                     type="button"
-                    variant="outline"
+                    variant="ghost"
+                    size="icon"
+                    class="absolute top-0 right-0 size-9 text-muted-foreground"
                     :disabled="disabled"
-                    :aria-label="ariaLabel"
-                    :aria-describedby="describedBy"
-                    :aria-invalid="invalid ? true : undefined"
-                    :class="
-                        cn(
-                            'h-8 w-full justify-start text-left font-normal',
-                            showClear && 'pr-8',
-                            selected === undefined && 'text-muted-foreground',
-                        )
-                    "
+                    :aria-label="t('forms.pick_a_date')"
                 >
-                    <CalendarIcon class="size-4 shrink-0 opacity-60" />
-                    <span class="truncate">{{ label }}</span>
+                    <CalendarIcon class="size-4" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent class="w-auto p-0" align="start">
@@ -190,7 +195,7 @@ function onClear(): void {
         <button
             v-if="showClear"
             type="button"
-            class="absolute top-1/2 right-2 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            class="absolute top-1/2 right-10 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             :aria-label="t('forms.clear_date')"
             @click="onClear"
         >

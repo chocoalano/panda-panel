@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X } from '@lucide/vue';
+import { Clock, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import {
     Select,
@@ -8,33 +8,20 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useTranslator } from '@/composables/useTranslator';
-import { parseTime } from '@/panel/components/temporalValue';
+import { parseTime, timeWithinBounds } from '@/panel/components/temporalValue';
 
 const { t } = useTranslator();
 
-/**
- * One time of day, chosen from the panel's own controls.
- *
- * The control every time in a panel is picked with: a time field and the time
- * half of a datetime field both mount this, so a time looks and behaves the
- * same wherever it is asked for — the same reasoning, and the same shape, as
- * `PanelDatePicker`.
- *
- * It replaces `<input type="time">`, whose rendering, keyboard handling and
- * clear affordance belong to the browser rather than to the panel. Chrome,
- * Firefox and Safari each draw a different control, none of them themeable,
- * and a value carrying seconds is quietly rounded to the minute by some of
- * them. The value crossing the boundary is unchanged: `HH:mm`, or `HH:mm:ss`
- * when the field asks for seconds, or `null` for no time. That is what
- * `TimePicker::typeRules()` already validates with `date_format`, so nothing
- * behind this component had to move.
- *
- * Three selects rather than one: a single list of every minute in a day is
- * 1,440 options, and with seconds it is 86,400. Hours, minutes and seconds are
- * chosen separately, which is also what makes each one reachable by name.
- */
+/** Editable wall-clock time with a picker for each part. */
 const props = withDefaults(
     defineProps<{
         /** `HH:mm`, `HH:mm:ss`, or null for no time. */
@@ -101,10 +88,27 @@ const hour = ref<number | null>(null);
 const minute = ref<number | null>(null);
 const second = ref<number | null>(null);
 
+const open = ref(false);
+const draft = ref('');
+const draftInvalid = ref(false);
+let pending: string | null | undefined;
+
 watch(
     () => props.modelValue,
     (value) => {
+        if (pending !== undefined && value === pending) {
+            pending = undefined;
+            return;
+        }
+        pending = undefined;
         const parts = parseTime(value);
+        draft.value =
+            parts === null
+                ? ''
+                : props.seconds
+                  ? `${pad(parts.hour)}:${pad(parts.minute)}:${pad(parts.second)}`
+                  : `${pad(parts.hour)}:${pad(parts.minute)}`;
+        draftInvalid.value = false;
 
         if (parts === null) {
             // A value that arrives empty clears the draft; one that fails to
@@ -202,11 +206,36 @@ function assemble(): string | null {
 }
 
 function publish(): void {
-    const next = assemble();
+    const assembled = assemble();
+    const next =
+        assembled !== null &&
+        timeWithinBounds(assembled, props.minTime, props.maxTime)
+            ? assembled
+            : null;
+    draft.value = next ?? '';
+    draftInvalid.value = false;
 
     if (next !== props.modelValue) {
+        pending = next;
         emit('update:modelValue', next);
     }
+}
+
+function onInput(value: string | number): void {
+    draft.value = String(value);
+    const text = draft.value.trim();
+    const parts = parseTime(text);
+    const format = props.seconds ? /^\d{2}:\d{2}:\d{2}$/ : /^\d{2}:\d{2}$/;
+    const valid =
+        parts !== null &&
+        format.test(text) &&
+        timeWithinBounds(text, props.minTime, props.maxTime);
+    draftInvalid.value = text !== '' && !valid;
+    hour.value = valid ? parts.hour : null;
+    minute.value = valid ? parts.minute : null;
+    second.value = valid && props.seconds ? parts.second : null;
+    pending = valid ? text : null;
+    emit('update:modelValue', pending);
 }
 
 /**
@@ -266,7 +295,10 @@ const showClear = computed(
     () =>
         props.clearable &&
         !props.disabled &&
-        (hour.value !== null || minute.value !== null || second.value !== null),
+        (draft.value !== '' ||
+            hour.value !== null ||
+            minute.value !== null ||
+            second.value !== null),
 );
 
 const groupLabel = computed(() => props.ariaLabel ?? t('forms.time'));
@@ -287,105 +319,143 @@ function partId(part: string): string | undefined {
         role="group"
         :aria-label="labelledBy === undefined ? groupLabel : undefined"
         :aria-labelledby="labelledBy"
-        :class="cn('flex items-center gap-1', props.class)"
+        :class="cn('relative w-full min-w-0 sm:w-44', props.class)"
     >
-        <Select
-            :model-value="hourValue"
+        <Input
+            :id="id"
+            :model-value="draft"
             :disabled="disabled"
-            @update:model-value="(value) => onHour(String(value))"
-        >
-            <!--
+            :placeholder="seconds ? 'HH:mm:ss' : 'HH:mm'"
+            :aria-label="labelledBy === undefined ? groupLabel : undefined"
+            :aria-labelledby="labelledBy"
+            :aria-describedby="describedBy"
+            :aria-invalid="invalid || draftInvalid ? true : undefined"
+            class="h-9 pr-16 tabular-nums"
+            autocomplete="off"
+            @update:model-value="onInput"
+            @keydown.alt.down.prevent="open = !disabled"
+        />
+        <Popover v-model:open="open">
+            <PopoverTrigger as-child>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    class="absolute top-0 right-0 size-9 text-muted-foreground"
+                    :disabled="disabled"
+                    :aria-label="groupLabel"
+                >
+                    <Clock class="size-4" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent class="w-auto p-3" align="start">
+                <div class="flex items-center gap-1">
+                    <Select
+                        :model-value="hourValue"
+                        :disabled="disabled"
+                        @update:model-value="(value) => onHour(String(value))"
+                    >
+                        <!--
                 `aria-describedby` and `aria-invalid` are on each trigger
                 rather than on the group: the trigger is what takes focus, and
                 an attribute on a wrapper is an attribute on something nobody
                 lands on.
             -->
-            <SelectTrigger
-                :id="partId('hour')"
-                size="sm"
-                class="w-[4.5rem]"
-                :aria-label="t('forms.hour')"
-                :aria-describedby="describedBy"
-                :aria-invalid="invalid ? true : undefined"
-            >
-                <SelectValue placeholder="HH" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem
-                    v-for="value in HOURS"
-                    :key="value"
-                    :value="String(value).padStart(2, '0')"
-                    :disabled="hourDisabled(value)"
-                >
-                    {{ String(value).padStart(2, '0') }}
-                </SelectItem>
-            </SelectContent>
-        </Select>
+                        <SelectTrigger
+                            :id="partId('hour')"
+                            size="sm"
+                            class="w-[4.5rem]"
+                            :aria-label="t('forms.hour')"
+                            :aria-describedby="describedBy"
+                            :aria-invalid="invalid ? true : undefined"
+                        >
+                            <SelectValue placeholder="HH" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                v-for="value in HOURS"
+                                :key="value"
+                                :value="String(value).padStart(2, '0')"
+                                :disabled="hourDisabled(value)"
+                            >
+                                {{ String(value).padStart(2, '0') }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
 
-        <span aria-hidden="true" class="text-muted-foreground">:</span>
-
-        <Select
-            :model-value="minuteValue"
-            :disabled="disabled"
-            @update:model-value="(value) => onMinute(String(value))"
-        >
-            <SelectTrigger
-                :id="partId('minute')"
-                size="sm"
-                class="w-[4.5rem]"
-                :aria-label="t('forms.minute')"
-                :aria-describedby="describedBy"
-                :aria-invalid="invalid ? true : undefined"
-            >
-                <SelectValue placeholder="MM" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem
-                    v-for="value in MINUTES"
-                    :key="value"
-                    :value="String(value).padStart(2, '0')"
-                    :disabled="minuteDisabled(value)"
-                >
-                    {{ String(value).padStart(2, '0') }}
-                </SelectItem>
-            </SelectContent>
-        </Select>
-
-        <template v-if="seconds">
-            <span aria-hidden="true" class="text-muted-foreground">:</span>
-
-            <Select
-                :model-value="secondValue"
-                :disabled="disabled"
-                @update:model-value="(value) => onSecond(String(value))"
-            >
-                <SelectTrigger
-                    :id="partId('second')"
-                    size="sm"
-                    class="w-[4.5rem]"
-                    :aria-label="t('forms.second')"
-                    :aria-describedby="describedBy"
-                    :aria-invalid="invalid ? true : undefined"
-                >
-                    <SelectValue placeholder="SS" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem
-                        v-for="value in MINUTES"
-                        :key="value"
-                        :value="String(value).padStart(2, '0')"
-                        :disabled="secondDisabled(value)"
+                    <span aria-hidden="true" class="text-muted-foreground"
+                        >:</span
                     >
-                        {{ String(value).padStart(2, '0') }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
-        </template>
+
+                    <Select
+                        :model-value="minuteValue"
+                        :disabled="disabled"
+                        @update:model-value="(value) => onMinute(String(value))"
+                    >
+                        <SelectTrigger
+                            :id="partId('minute')"
+                            size="sm"
+                            class="w-[4.5rem]"
+                            :aria-label="t('forms.minute')"
+                            :aria-describedby="describedBy"
+                            :aria-invalid="invalid ? true : undefined"
+                        >
+                            <SelectValue placeholder="MM" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                v-for="value in MINUTES"
+                                :key="value"
+                                :value="String(value).padStart(2, '0')"
+                                :disabled="minuteDisabled(value)"
+                            >
+                                {{ String(value).padStart(2, '0') }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <template v-if="seconds">
+                        <span aria-hidden="true" class="text-muted-foreground"
+                            >:</span
+                        >
+
+                        <Select
+                            :model-value="secondValue"
+                            :disabled="disabled"
+                            @update:model-value="
+                                (value) => onSecond(String(value))
+                            "
+                        >
+                            <SelectTrigger
+                                :id="partId('second')"
+                                size="sm"
+                                class="w-[4.5rem]"
+                                :aria-label="t('forms.second')"
+                                :aria-describedby="describedBy"
+                                :aria-invalid="invalid ? true : undefined"
+                            >
+                                <SelectValue placeholder="SS" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="value in MINUTES"
+                                    :key="value"
+                                    :value="String(value).padStart(2, '0')"
+                                    :disabled="secondDisabled(value)"
+                                >
+                                    {{ String(value).padStart(2, '0') }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </template>
+                </div>
+            </PopoverContent>
+        </Popover>
 
         <button
             v-if="showClear"
             type="button"
-            class="rounded-sm p-1 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            class="absolute top-1/2 right-9 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             :aria-label="t('forms.clear_time')"
             @click="onClear"
         >

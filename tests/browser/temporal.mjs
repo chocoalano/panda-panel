@@ -50,7 +50,7 @@ const READ = (selector) => `(() => {
     const rect = el.getBoundingClientRect();
 
     return {
-        text: (el.textContent ?? '').trim(),
+        text: el instanceof HTMLInputElement ? el.value : (el.textContent ?? '').trim(),
         describedBy: el.getAttribute('aria-describedby'),
         invalid: el.getAttribute('aria-invalid'),
         id: el.id === '' ? null : el.id,
@@ -82,62 +82,38 @@ await withPage(async (page) => {
     /*
      * B2 / B3 — the panel's own controls are what render
      */
-    const dateTrigger = await page.evaluate(
-        READ('#date-field button[aria-haspopup="dialog"]'),
-    );
+    const dateTrigger = await page.evaluate(READ('#date-field input'));
 
     report.check(
-        'B2 — the date field renders a panel trigger showing its value',
-        dateTrigger !== null && /Sep|Sept/.test(dateTrigger.text),
-        dateTrigger === null ? 'not found' : `trigger reads "${dateTrigger.text}"`,
+        'B2 — the date input shows its value',
+        dateTrigger !== null && dateTrigger.text === '2026-09-10',
+        dateTrigger === null
+            ? 'not found'
+            : `trigger reads "${dateTrigger.text}"`,
     );
 
-    // The unit tests cannot assert this: a closed Reka select resolves its
-    // label from items that only exist while the listbox is open, so what the
-    // trigger *shows* is a question for an engine.
-    const hour = await page.evaluate(READ('#time-field [aria-label="Hour"]'));
-    const minute = await page.evaluate(READ('#time-field [aria-label="Minute"]'));
-
+    const hour = await page.evaluate(READ('#time-field input'));
     report.check(
-        'B3 — the time field renders selects showing 09 and 05',
-        hour?.text === '09' && minute?.text === '05',
-        `hour "${hour?.text ?? '?'}", minute "${minute?.text ?? '?'}"`,
+        'B3 — time input shows its value',
+        hour?.text === '09:05',
+        hour?.text,
     );
-
-    const second = await page.evaluate(
-        READ('#seconds-field [aria-label="Second"]'),
-    );
-
+    const second = await page.evaluate(READ('#seconds-field input'));
     report.check(
-        'B3 — a seconds field renders a third select',
-        second?.text === '07',
-        `second "${second?.text ?? 'absent'}"`,
+        'B3 — seconds are preserved',
+        second?.text === '09:05:07',
+        second?.text,
     );
-
-    const noSecond = await page.evaluate(
-        READ('#time-field [aria-label="Second"]'),
-    );
-
-    report.check(
-        'B3 — a field without seconds renders no seconds select',
-        noSecond === null,
-        noSecond === null ? 'absent, as declared' : 'present',
-    );
-
-    /*
-     * B4 — the datetime composes both halves
-     */
     const dtDate = await page.evaluate(
-        READ('#datetime-field button[aria-haspopup="dialog"]'),
+        READ('#datetime-field input[aria-label="Date"]'),
     );
-    const dtHour = await page.evaluate(
-        READ('#datetime-field [aria-label="Hour"]'),
+    const dtTime = await page.evaluate(
+        READ('#datetime-field input[aria-label="Time"]'),
     );
-
     report.check(
-        'B4 — the datetime field renders a date trigger and a time group',
-        dtDate !== null && dtHour !== null,
-        `date "${dtDate?.text ?? '?'}", hour "${dtHour?.text ?? '?'}"`,
+        'B4 — datetime has editable date and time',
+        dtDate?.text === '2026-09-11' && dtTime?.text === '10:00',
+        `${dtDate?.text} ${dtTime?.text}`,
     );
 
     const before = await page.evaluate(STATE);
@@ -154,20 +130,20 @@ await withPage(async (page) => {
      * B13 — the description reaches the control that takes focus
      */
     report.check(
-        'B13 — the date trigger carries aria-describedby',
+        'B13 — the date input carries aria-describedby',
         typeof dateTrigger?.describedBy === 'string' &&
             dateTrigger.describedBy !== '',
         `describedby = ${JSON.stringify(dateTrigger?.describedBy)}`,
     );
 
     report.check(
-        'B13 — every time select carries aria-describedby',
-        [hour, minute].every(
+        'B13 — the time input carries aria-describedby',
+        [hour].every(
             (part) =>
-                typeof part?.describedBy === 'string' && part.describedBy !== '',
+                typeof part?.describedBy === 'string' &&
+                part.describedBy !== '',
         ),
-        `hour ${JSON.stringify(hour?.describedBy)}, ` +
-            `minute ${JSON.stringify(minute?.describedBy)}`,
+        `time ${JSON.stringify(hour?.describedBy)}`,
     );
 
     // The wrapper is not what a reader lands on. Before this change the
@@ -180,7 +156,7 @@ await withPage(async (page) => {
 
     report.check(
         'B13 — the first described element is focusable, not a div',
-        wrapperDescribed === 'button',
+        wrapperDescribed === 'input',
         `first described element is <${wrapperDescribed}>`,
     );
 
@@ -204,13 +180,7 @@ await withPage(async (page) => {
     );
 
     const entryValues = await page.evaluate(`(() => {
-        const groups = [...document.querySelectorAll('#repeated [role="group"]')];
-
-        return groups.map((group) =>
-            [...group.querySelectorAll('[aria-label="Hour"], [aria-label="Minute"]')]
-                .map((el) => (el.textContent ?? '').trim())
-                .join(':'),
-        );
+        return [...document.querySelectorAll('#repeated input')].map((el) => el.value);
     })()`);
 
     report.check(
@@ -327,8 +297,10 @@ await withPage(async (page) => {
     /*
      * B5 — the hour select is operable from the keyboard
      */
+    await page.press('Escape');
+    await openTime('#time-field');
     const keyboard = await page.evaluate(`(() => {
-        const trigger = document.querySelector('#time-field [aria-label="Hour"]');
+        const trigger = document.querySelector('[role="dialog"] [aria-label="Hour"]');
 
         trigger.focus();
 
@@ -357,7 +329,7 @@ await withPage(async (page) => {
     // checks pass against the wrong listbox, and leaving one in place is
     // leaving the next person a pattern to copy.
     const opened = await page.evaluate(`(() => {
-        const trigger = document.querySelector('#time-field [aria-label="Hour"]');
+        const trigger = document.querySelector('[role="dialog"] [aria-label="Hour"]');
         const listbox = document.getElementById(
             trigger.getAttribute('aria-controls'),
         );
@@ -489,10 +461,23 @@ await withPage(async (page) => {
      * rather than a document-wide query, so a stray listbox cannot answer for
      * this one.
      */
+    async function openTime(container) {
+        await page.evaluate(
+            `document.querySelector('${container} button[aria-haspopup="dialog"][aria-label="Time"]').click()`,
+        );
+        await waitFor(
+            `document.querySelector('[role="dialog"] [aria-label="Hour"]') !== null`,
+            'time picker',
+        );
+    }
+
     async function options(selector) {
         // A fresh document rather than closing overlays by clicking: the
         // clicks that would close them are themselves clicks.
         await page.go('temporal');
+        const container = selector.split(' ')[0];
+        await openTime(container);
+        selector = selector.replace(container, '[role="dialog"]');
 
         const listbox = await page.evaluate(`(() => {
             const trigger = document.querySelector(${JSON.stringify(selector)});
@@ -507,7 +492,9 @@ await withPage(async (page) => {
         })()`);
 
         if (typeof listbox !== 'string' || listbox === '') {
-            throw new Error(`${selector} was not found, or controls no listbox`);
+            throw new Error(
+                `${selector} was not found, or controls no listbox`,
+            );
         }
 
         await page.press('Enter');
@@ -527,7 +514,7 @@ await withPage(async (page) => {
         }))`);
     }
 
-
+    await page.press('Escape');
     const pickedMin = await pickDay('#datetime-field', '10');
 
     report.check(
@@ -566,7 +553,8 @@ await withPage(async (page) => {
         'B6 — hours before the bound are unselectable on the minimum date',
         minHours.length === 24 &&
             blockedHours.join(',') === '00,01,02,03,04,05,06,07,08' &&
-            minHours.find((option) => option.value === '09')?.disabled === false,
+            minHours.find((option) => option.value === '09')?.disabled ===
+                false,
         `${minHours.length} options; disabled: ${blockedHours.join(',') || 'none'}`,
     );
 
@@ -606,7 +594,8 @@ await withPage(async (page) => {
         'B7 — hours after the bound are unselectable on the maximum date',
         maxHours.length === 24 &&
             blockedLate.join(',') === '18,19,20,21,22,23' &&
-            maxHours.find((option) => option.value === '17')?.disabled === false,
+            maxHours.find((option) => option.value === '17')?.disabled ===
+                false,
         `${maxHours.length} options; disabled: ${blockedLate.join(',') || 'none'}`,
     );
 
@@ -614,6 +603,31 @@ await withPage(async (page) => {
     // suite opened: the guarantee is about what the renderers produce, not
     // about what survives one lucky first paint.
     await page.go('temporal');
+
+    async function typeValue(selector, value) {
+        await page.evaluate(`(() => {
+            const input = document.querySelector(${JSON.stringify(selector)});
+            input.value = ${JSON.stringify(value)};
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        })()`);
+    }
+    await typeValue('#date-field input', '2026-09-12');
+    await typeValue('#time-field input', '14:25');
+    await typeValue('#seconds-field input', '00:00:09');
+    const typed = await page.evaluate(STATE);
+    report.check(
+        'manual input updates date and time values',
+        typed.date === '2026-09-12' && typed.time === '14:25',
+        JSON.stringify(typed),
+    );
+    await typeValue('#datetime-field input[aria-label="Date"]', '2026-09-');
+    await typeValue('#datetime-field input[aria-label="Date"]', '2026-09-12');
+    const edited = await page.evaluate(STATE);
+    report.check(
+        'datetime keeps time through a partial date edit',
+        edited.datetime === '2026-09-12 10:00',
+        edited.datetime,
+    );
 
     const finalSweep = await page.evaluate(COUNT_FORBIDDEN);
 
