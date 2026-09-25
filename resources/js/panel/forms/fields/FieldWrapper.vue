@@ -56,6 +56,8 @@ useFieldRegistration(identity, () => props.label);
 
 const invalid = computed(() => props.error !== undefined && props.error !== '');
 
+const labelId = computed(() => `${identity.value.controlId}-label`);
+
 /** What the slot hands the control, and the only thing it should bind. */
 const slotProps = computed(() => ({
     controlId: identity.value.controlId,
@@ -63,10 +65,14 @@ const slotProps = computed(() => ({
     invalid: invalid.value ? true : undefined,
     required: props.required ? true : undefined,
     /** For a group: the label names the set rather than one control. */
-    labelledBy: props.group ? `${identity.value.controlId}-label` : undefined,
+    labelledBy: props.group ? labelId.value : undefined,
+    /**
+     * The label's own id, for a control whose name `<label for>` cannot
+     * reach — a combobox trigger is labelled "Show popup" by reka-ui, and
+     * that wins over the `<label>` unless something names it explicitly.
+     */
+    labelId: labelId.value,
 }));
-
-const labelId = computed(() => `${identity.value.controlId}-label`);
 </script>
 
 <template>

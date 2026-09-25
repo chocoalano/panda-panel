@@ -68,6 +68,7 @@ describe('the strings this wave added', () => {
         'remove_rule',
         'rule',
         'search_field_placeholder',
+        'select_more',
         'remove_file',
         'move_item_up',
         'move_item_down',

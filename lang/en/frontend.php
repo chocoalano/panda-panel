@@ -175,6 +175,7 @@ return [
 
         'select_placeholder' => 'Select...',
         'select_empty' => 'Nothing to choose from.',
+        'select_more' => '+:count more',
         'search_field' => 'Search :field',
         'select_no_matches' => 'Nothing matches that search.',
         'select_failed' => 'The list could not be loaded.',

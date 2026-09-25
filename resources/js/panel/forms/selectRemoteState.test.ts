@@ -40,6 +40,7 @@ vi.mock('@inertiajs/vue3', () => ({
                 forms: {
                     select_placeholder: 'Select...',
                     select_empty: 'Nothing to choose from.',
+                    select_more: '+:count more',
                     select_no_matches: 'Nothing matches that search.',
                     select_failed: 'The list could not be loaded.',
                     select_stale:
@@ -119,18 +120,56 @@ function render(field: FieldDefinition, props: Record<string, unknown> = {}) {
     return wrapper;
 }
 
+/*
+ * The search lives in the combobox's popup, which is portalled to the body:
+ * everything inside it is read from `document`, not from the wrapper.
+ */
+function trigger(wrapper: ReturnType<typeof render>) {
+    return wrapper.get('button[role="combobox"]');
+}
+
+function searchBox(): HTMLInputElement | null {
+    return document.querySelector<HTMLInputElement>('input[role="combobox"]');
+}
+
+async function open(wrapper: ReturnType<typeof render>) {
+    if (searchBox() === null) {
+        await trigger(wrapper).trigger('click');
+        await flushPromises();
+    }
+}
+
 async function type(wrapper: ReturnType<typeof render>, term: string) {
-    await wrapper.get('input[type="search"]').setValue(term);
+    await open(wrapper);
+
+    const input = searchBox() as HTMLInputElement;
+
+    input.value = term;
+    input.dispatchEvent(new Event('input'));
+
     await flushPromises();
     await new Promise((resolve) => setTimeout(resolve, 300));
     await flushPromises();
 }
 
-function labels(wrapper: ReturnType<typeof render>): string[] {
-    return wrapper
-        .findAll('label')
-        .map((label) => label.text().trim())
-        .filter((text) => text !== 'Owner');
+function options(): HTMLElement[] {
+    return [...document.querySelectorAll<HTMLElement>('[role="option"]')];
+}
+
+function labels(): string[] {
+    return options().map((option) => option.textContent?.trim() ?? '');
+}
+
+function button(text: string): HTMLButtonElement {
+    const found = [...document.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent?.trim() === text,
+    );
+
+    if (found === undefined) {
+        throw new Error(`No button reads "${text}".`);
+    }
+
+    return found;
 }
 
 /*
@@ -149,16 +188,12 @@ describe('a searchable select', () => {
 
         await type(wrapper, 'bo');
 
-        expect(
-            wrapper.get('input[type="search"]').attributes('aria-busy'),
-        ).toBe('true');
+        expect(searchBox()?.getAttribute('aria-busy')).toBe('true');
 
         settle([{ value: 'bob', label: 'Bob' }]);
         await flushPromises();
 
-        expect(
-            wrapper.get('input[type="search"]').attributes('aria-busy'),
-        ).toBeUndefined();
+        expect(searchBox()?.hasAttribute('aria-busy')).toBe(false);
     });
 
     it('separates a search that matched nothing from one that failed', async () => {
@@ -168,8 +203,10 @@ describe('a searchable select', () => {
 
         await type(wrapper, 'zz');
 
-        expect(wrapper.text()).toContain('Nothing matches that search.');
-        expect(wrapper.text()).not.toContain('could not be loaded');
+        expect(document.body.textContent).toContain(
+            'Nothing matches that search.',
+        );
+        expect(document.body.textContent).not.toContain('could not be loaded');
     });
 
     it("does not present an earlier query's options as this one's", async () => {
@@ -182,7 +219,7 @@ describe('a searchable select', () => {
 
         await type(wrapper, 'ali');
 
-        expect(labels(wrapper)).toEqual(['Alice', 'Alina']);
+        expect(labels()).toEqual(['Alice', 'Alina']);
 
         fetchOptions.mockResolvedValueOnce(null);
 
@@ -191,8 +228,8 @@ describe('a searchable select', () => {
         // Alice and Alina are still readable — blanking the list would read as
         // "nothing matches bob", which is a claim nobody made — but the field
         // now says they are not the answer to this query.
-        expect(labels(wrapper)).toEqual(['Alice', 'Alina']);
-        expect(wrapper.text()).toContain('Showing earlier results');
+        expect(labels()).toEqual(['Alice', 'Alina']);
+        expect(document.body.textContent).toContain('Showing earlier results');
     });
 
     it('offers a retry that asks for the same term', async () => {
@@ -202,19 +239,17 @@ describe('a searchable select', () => {
 
         await type(wrapper, 'bob');
 
-        expect(wrapper.text()).toContain('The list could not be loaded.');
+        expect(document.body.textContent).toContain(
+            'The list could not be loaded.',
+        );
 
         fetchOptions.mockResolvedValueOnce([{ value: 'bob', label: 'Bob' }]);
 
-        const retry = wrapper
-            .findAll('button')
-            .filter((button) => button.text() === 'Try again')[0];
-
-        await retry.trigger('click');
+        button('Try again').click();
         await flushPromises();
 
         expect(fetchOptions.mock.calls.at(-1)?.[2]).toBe('bob');
-        expect(labels(wrapper)).toContain('Bob');
+        expect(labels()).toContain('Bob');
     });
 
     it('keeps a chosen value when the list fails to load', async () => {
@@ -226,14 +261,15 @@ describe('a searchable select', () => {
 
         // A network failure must not quietly unpick what the user already
         // chose: the selection and the option list are different things.
-        const checked = wrapper
-            .findAll('[role="checkbox"]')
-            .filter((box) => box.attributes('aria-checked') === 'true');
+        const checked = options().filter(
+            (option) => option.getAttribute('aria-selected') === 'true',
+        );
 
         expect(checked).toHaveLength(1);
         // And the chosen option stays in the list whatever the search did, or
         // the control would lose its own label.
-        expect(labels(wrapper)).toContain('Alice');
+        expect(labels()).toContain('Alice');
+        expect(trigger(wrapper).text()).toContain('Alice');
     });
 
     it('retries a dependent search against the current form state', async () => {
@@ -275,15 +311,123 @@ describe('a searchable select', () => {
         await wrapper.get('input[type="text"]').setValue('red');
         await flushPromises();
 
-        const retry = wrapper
-            .findAll('button')
-            .filter((button) => button.text() === 'Try again')[0];
-
-        await retry.trigger('click');
+        button('Try again').click();
         await flushPromises();
 
         expect(fetchOptions.mock.calls.at(-1)?.[3]).toMatchObject({
             team: 'red',
         });
+    });
+});
+
+/*
+ * The combobox: a searchable select reads like any other select until it is
+ * opened, and the search it opens onto is still the server's.
+ */
+
+describe('a searchable select as a combobox', () => {
+    it('lists what the server matched, even when the label does not contain the term', async () => {
+        // The server searched a column the label does not show. reka-ui's
+        // own filter would hide Bob for not containing "bob@"; it is off.
+        fetchOptions.mockResolvedValueOnce([{ value: 'bob', label: 'Bob' }]);
+
+        const wrapper = render(select({ multiple: false }));
+
+        await type(wrapper, 'bob@example.test');
+
+        expect(fetchOptions.mock.calls.at(-1)?.[2]).toBe('bob@example.test');
+        expect(labels()).toEqual(['Bob']);
+    });
+
+    it('keeps the name of a record found by searching once the popup closes', async () => {
+        fetchOptions.mockResolvedValueOnce([{ value: 'zed', label: 'Zed' }]);
+
+        const wrapper = render(select({ multiple: false }));
+
+        await type(wrapper, 'ze');
+
+        options()[0].click();
+        await flushPromises();
+
+        // Zed was never in the page the form arrived with. Closing dropped
+        // the search and put that page back — the trigger still has to say
+        // what was chosen, not fall back to the placeholder.
+        expect(searchBox()).toBeNull();
+        expect(trigger(wrapper).text()).toContain('Zed');
+        expect(trigger(wrapper).text()).not.toContain('Select...');
+
+        // And reopening lists it, marked as the choice, above the first page.
+        await open(wrapper);
+
+        expect(labels()).toEqual(['Zed', 'Alice', 'Alina']);
+        expect(options()[0].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('never sends the chosen key to the server as a search', async () => {
+        const wrapper = render(select({ multiple: false, value: 'alice' }));
+
+        await open(wrapper);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await flushPromises();
+
+        expect(searchBox()?.value).toBe('');
+        expect(fetchOptions).not.toHaveBeenCalled();
+    });
+
+    it('is named by the field label, not by reka-ui', () => {
+        const wrapper = render(select({ multiple: false }));
+
+        const labelledBy = trigger(wrapper).attributes('aria-labelledby');
+
+        expect(labelledBy).toBeDefined();
+        expect(
+            document.getElementById(labelledBy as string)?.textContent?.trim(),
+        ).toBe('Owner');
+    });
+
+    it('summarises a long selection on the trigger', () => {
+        const wrapper = render(
+            select({
+                value: ['a', 'b', 'c', 'd', 'e'],
+                options: ['a', 'b', 'c', 'd', 'e'].map((value) => ({
+                    value,
+                    label: value.toUpperCase(),
+                })),
+            }),
+        );
+
+        const text = trigger(wrapper).text();
+
+        expect(text).toContain('A');
+        expect(text).toContain('C');
+        expect(text).not.toContain('D');
+        expect(text).toContain('+2 more');
+    });
+
+    it('stays open while several values are picked', async () => {
+        fetchOptions.mockResolvedValueOnce([
+            { value: 'bob', label: 'Bob' },
+            { value: 'bea', label: 'Bea' },
+        ]);
+
+        const wrapper = render(select());
+
+        await type(wrapper, 'b');
+
+        options()[0].click();
+        await flushPromises();
+
+        // A multiple select keeps both the popup and the search open, so the
+        // second pick comes from the same results as the first.
+        expect(searchBox()?.value).toBe('b');
+        expect(labels()).toContain('Bea');
+
+        options()
+            .find((option) => option.textContent?.trim() === 'Bea')
+            ?.click();
+        await flushPromises();
+
+        expect(trigger(wrapper).text()).toContain('Bob');
+        expect(trigger(wrapper).text()).toContain('Bea');
     });
 });

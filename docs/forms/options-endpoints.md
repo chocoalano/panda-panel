@@ -159,13 +159,14 @@ The controller calls it with a hard limit of 50 that the request cannot raise. T
 
 ## What the browser does
 
-`resources/js/panel/forms/fields/SelectField.vue` shows a search box when the field is `searchable` **and** the form provided an options URL.
+`resources/js/panel/forms/fields/SelectField.vue` renders a combobox — a select-style trigger that opens onto a search box and the list — when the field is `searchable` **and** the form provided an options URL. reka-ui's client-side filter is switched off (`ignore-filter`): the list is exactly what the server answered.
 
 - Typing debounces 250ms, then requests.
 - An empty term clears the result rather than asking for an unfiltered page the field already has.
 - An answer for a term that is no longer what is typed is discarded.
 - A failed request leaves the list as it was. An empty list would read as "nothing matches", which is a different and wrong answer.
 - Options already selected are kept in the list whatever the search returned, or choosing one and then typing would blank the control's own label.
+- Closing the popup drops the search. Labels the field has been shown are remembered, so the trigger still names a record that only a search found.
 
 The serialized field carries `options`, `searchable`, `multiple`, and `usesRelationship`.
 

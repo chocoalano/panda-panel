@@ -174,6 +174,7 @@ return [
 
         'select_placeholder' => 'Pilih...',
         'select_empty' => 'Tidak ada pilihan.',
+        'select_more' => '+:count lainnya',
         'search_field' => 'Cari :field',
         'select_no_matches' => 'Tidak ada yang cocok dengan pencarian itu.',
         'select_failed' => 'Daftar tidak dapat dimuat.',

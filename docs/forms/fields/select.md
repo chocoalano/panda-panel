@@ -115,7 +115,7 @@ A `relationship()` fills this in for you from the related model's table and key,
 
 ### `multiple(bool $multiple = true): self`
 
-Default `false`. The value becomes an array, and the renderer draws a checkbox list rather than a dropdown.
+Default `false`. The value becomes an array. Without a search the renderer draws a checkbox list rather than a dropdown; a `searchable()` one is a multi-select combobox instead, whose trigger names the first three choices and counts the rest.
 
 ```php
 Select::make('tags')
@@ -129,13 +129,13 @@ Rules split in two: the field itself validates as `array`, and each element vali
 
 ### `searchable(bool $searchable = true): self`
 
-Default `false`. Draws a search box above the control, debounced at 250 ms, which asks the panel's `options` endpoint for a filtered list.
+Default `false`. Renders the field as a combobox: the trigger reads like any other select, and opening it shows a search box over the list. Typing is debounced at 250 ms and asks the panel's `options` endpoint for a filtered list — the combobox does no filtering of its own, so a record the server matched is listed even when its label does not contain what was typed.
 
 ```php
 Select::make('author')->relationship('author', 'name')->searchable();
 ```
 
-The search runs on the server: `resolveOptions()` applies `where($title, 'like', '%term%')` with `\`, `%` and `_` escaped, orders by the title attribute, and limits to `optionLimit()`. The already-selected options are kept in the list whatever the search returns, or choosing one and then typing would blank the control's own label.
+The search runs on the server: `resolveOptions()` applies `where($title, 'like', '%term%')` with `\`, `%` and `_` escaped, orders by the title attribute, and limits to `optionLimit()`. The already-selected options are kept in the list whatever the search returns, or choosing one and then typing would blank the control's own label. The field also remembers the label of every option it has been shown, so a record picked from a search keeps its name on the trigger after the popup closes and the list goes back to the first page.
 
 A failed request leaves the list as it was rather than emptying it — an empty list reads as "nothing matches", which is a different and wrong answer.
 
@@ -207,8 +207,8 @@ A field the schema does not declare does not exist, however the request spells i
 
 ## Gotchas
 
-- **`searchable()` needs a form that provided an endpoint.** Resource create and edit pages and relation form dialogs do. An action's form and a widget filter do not, so the search box is not drawn there at all — the field shows the options it was given and nothing more.
-- **`searchable()` on a static list does not filter.** The box appears when an endpoint exists, but `resolveOptions()` ignores the search term for a static list and returns the same array. Use a relation, or leave the list short enough not to need searching.
+- **`searchable()` needs a form that provided an endpoint.** Resource create and edit pages and relation form dialogs do. An action's form and a widget filter do not, so the field falls back to a plain dropdown (or checkbox list) there — it shows the options it was given and nothing more.
+- **`searchable()` on a static list does not filter.** The combobox appears when an endpoint exists, but `resolveOptions()` ignores the search term for a static list and returns the same array. Use a relation, or leave the list short enough not to need searching.
 - **A relationship select needs `FormSchema::model()`.** Resources set it. A schema built by hand without `->model(Post::class)` renders the relation field with no options and no `exists` rule, silently — there is nothing at that layer that could say what the relation points at.
 - **Values arrive as strings.** `castForForm()` keeps a single value only when it is a string or an int, and maps a multiple value to `list<string>`. Compare with `==` or cast when a `visibleWhen()` condition depends on a select — conditions compare as strings for exactly this reason.
 - **A multiple select's own rules are only `array`.** The `in` / `exists` check lives under `name.*`. Adding `Rule::in(...)` to `rules()` on a multiple select would apply it to the array, not to its elements.
