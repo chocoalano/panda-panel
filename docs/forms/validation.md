@@ -73,6 +73,7 @@ Every list below is prefixed by `required` or `nullable`.
 | `Textarea` | `string`; `max:{n}` from `maxLength()`, unset by default |
 | `PasswordInput` | `string`; `confirmed` with `confirmed()` |
 | `NumberInput` | `numeric`, or `integer` with `integer()`; `min:{n}`; `max:{n}` |
+| `MoneyInput` | `numeric`, `decimal:0,{decimals}`; `min:{n}`; `max:{n}` |
 | `HiddenInput` | none of its own |
 | `Checkbox`, `Toggle` | `boolean` |
 | `Select` (single, static options) | `Rule::in()` over the option keys |

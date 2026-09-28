@@ -397,10 +397,15 @@ return [
     | the message is useful where a developer is looking, and an exception
     | costs more than the bug where a user is.
     |
+    | `currency` is what a MoneyInput uses when it does not name one: an ISO
+    | 4217 code such as 'IDR' or 'USD'. An application that deals in one
+    | currency sets it here once rather than on every field.
+    |
     */
 
     'forms' => [
         'diagnostics' => env('PANDA_PANEL_FORM_DIAGNOSTICS'),
+        'currency' => env('PANDA_PANEL_CURRENCY', 'USD'),
     ],
 
 ];

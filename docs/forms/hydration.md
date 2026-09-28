@@ -46,6 +46,7 @@ $schema->dehydrate(['title' => 'Renamed', 'slug' => 'renamed'], $post);
 | `TextInput`, `Textarea` | anything | `?string` — `null` stays null, everything else is cast |
 | `PasswordInput` | anything | always `null` |
 | `NumberInput`, `Slider` | numeric | `int\|float`, otherwise `null` |
+| `MoneyInput` | numeric, or minor units with `storedAsMinorUnits()` | `?string` rounded to the currency's decimals |
 | `Checkbox`, `Toggle` | anything | `bool` |
 | `Select` (single) | `string\|int` | as given, otherwise `null` |
 | `Select` (multiple) | `array` | `list<string>`, otherwise `[]` |

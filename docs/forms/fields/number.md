@@ -55,7 +55,7 @@ All four accept `null` to clear a previously set value, except `integer()`, whic
 'step' => $this->step ?? ($this->integer ? 1 : null),
 ```
 
-So an `integer()` field steps by one without being told, and a decimal field has no step at all — which in HTML means `step="1"` is *not* applied and the browser accepts decimals. Set `step(0.01)` for money, and `step(0.5)` for half units.
+So an `integer()` field steps by one without being told, and a decimal field has no step at all — which in HTML means `step="1"` is *not* applied and the browser accepts decimals. Set `step(0.01)` for cents and `step(0.5)` for half units — though an amount of money is better served by [Money](money.md).
 
 ## Validation
 
@@ -171,6 +171,7 @@ interface NumberFieldDefinition extends BaseFieldDefinition {
 
 ## See also
 
+- [Money](money.md) — for amounts of money: currency, decimals, minor units
 - [Slider](slider.md) — the same bounded number, dragged rather than typed
 - [Text](text.md) — for numbers that are really identifiers
 - [Date and Time](date.md) — the other bounded scalar

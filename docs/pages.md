@@ -150,6 +150,7 @@ Every field type, one page each.
 - [File Upload](forms/fields/file-upload.md)
 - [Key Value](forms/fields/key-value.md)
 - [Markdown Editor](forms/fields/markdown.md)
+- [Money](forms/fields/money.md)
 - [Number](forms/fields/number.md)
 - [Radio](forms/fields/radio.md)
 - [Repeater](forms/fields/repeater.md)
@@ -544,5 +545,5 @@ Working on the package itself.
 
 ---
 
-359 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
+360 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
 a navigation bar.

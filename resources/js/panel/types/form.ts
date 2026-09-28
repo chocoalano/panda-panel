@@ -125,6 +125,22 @@ export interface NumberFieldDefinition extends BaseFieldDefinition {
     step: number | null;
 }
 
+/**
+ * An amount of money. The value is a plain decimal string — `12500.50` — in
+ * both directions, never a float and never the formatted text on screen.
+ */
+export interface MoneyFieldDefinition extends BaseFieldDefinition {
+    type: 'money';
+    /** ISO 4217 code. */
+    currency: string;
+    /** Digits after the decimal separator; also what validation allows. */
+    decimals: number;
+    /** BCP 47 tag, or null to follow the panel's locale. */
+    locale: string | null;
+    min: number | null;
+    max: number | null;
+}
+
 export interface HiddenFieldDefinition extends BaseFieldDefinition {
     type: 'hidden';
 }
@@ -314,6 +330,7 @@ export type FieldDefinition =
     | TextareaFieldDefinition
     | PasswordFieldDefinition
     | NumberFieldDefinition
+    | MoneyFieldDefinition
     | HiddenFieldDefinition
     | CheckboxFieldDefinition
     | ToggleFieldDefinition

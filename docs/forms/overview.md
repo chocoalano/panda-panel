@@ -134,6 +134,7 @@ Every field extends `PandaPanel\Forms\Components\Field` and is constructed with 
 | `Textarea` | `textarea` | `?string` | [Text](fields/text.md) |
 | `PasswordInput` | `password` | `?string`, never sent back | [Text](fields/text.md) |
 | `NumberInput` | `number` | `int\|float\|null` | [Number](fields/number.md) |
+| `MoneyInput` | `money` | `?string` (`12500.50`) | [Money](fields/money.md) |
 | `HiddenInput` | `hidden` | untouched | [Disabled and hidden](disabled-hidden.md) |
 | `Slider` | `slider` | `float\|int\|null` | [Slider](fields/slider.md) |
 | `ColorPicker` | `color_picker` | `?string` | [Color](fields/color.md) |

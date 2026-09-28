@@ -14,6 +14,7 @@ enum FieldType: string
     case Textarea = 'textarea';
     case Password = 'password';
     case Number = 'number';
+    case Money = 'money';
     case Hidden = 'hidden';
     case Checkbox = 'checkbox';
     case Toggle = 'toggle';

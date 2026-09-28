@@ -10,6 +10,7 @@ import DateTimeField from '@/panel/forms/fields/DateTimeField.vue';
 import FileUploadField from '@/panel/forms/fields/FileUploadField.vue';
 import KeyValueField from '@/panel/forms/fields/KeyValueField.vue';
 import MarkdownEditorField from '@/panel/forms/fields/MarkdownEditorField.vue';
+import MoneyField from '@/panel/forms/fields/MoneyField.vue';
 import NumberField from '@/panel/forms/fields/NumberField.vue';
 import PasswordField from '@/panel/forms/fields/PasswordField.vue';
 import RadioField from '@/panel/forms/fields/RadioField.vue';
@@ -54,6 +55,7 @@ function ensureHandled(field: FieldDefinition): void {
         case 'textarea':
         case 'password':
         case 'number':
+        case 'money':
         case 'hidden':
         case 'checkbox':
         case 'toggle':
@@ -119,6 +121,14 @@ ensureHandled(props.field);
 
     <NumberField
         v-else-if="field.type === 'number'"
+        :field="field"
+        :model-value="values[field.name]"
+        :error="errors[field.name]"
+        @update:model-value="(value) => emit('change', field.name, value)"
+    />
+
+    <MoneyField
+        v-else-if="field.type === 'money'"
         :field="field"
         :model-value="values[field.name]"
         :error="errors[field.name]"
