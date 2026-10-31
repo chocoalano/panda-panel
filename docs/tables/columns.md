@@ -378,7 +378,7 @@ TextColumn::make('author_name')->sortableByRelation('author', 'name');
 
 ## Gotchas
 
-- **`sortable()` resets a sort column set earlier.** Its second parameter defaults to `null` and is assigned unconditionally, so `->counts('posts')->sortable()` clears the aggregate alias that `counts()` had filled in. Name an aggregate column after the attribute Eloquent generates (`posts_count`) and the two agree either way.
+- **An aggregate column sorts by its generated attribute** whatever the column is named and whichever of `counts()` and `sortable()` comes first. Only an explicit `sortable(column: ...)` overrides it.
 - **`default()` goes through `formatUsing()`, `placeholder()` does not.** Reach for the placeholder when you want to say "nothing here", and for the default when you want a stand-in value treated as real.
 - **A `DateColumn` over an uncast attribute renders empty.** The cell requires a `CarbonInterface`; a raw string is not one.
 - **`ColorColumn` silently renders nothing for an unrecognised value.** That is deliberate — the alternative is repairing a string into something plausible and putting it in a style attribute.

@@ -45,6 +45,17 @@ final class Project extends Model
     }
 
     /**
+     * The same rows under a camelCase name, which Eloquent snake-cases when
+     * it names an aggregate: `projectTasks_count` is never what it writes.
+     *
+     * @return HasMany<Task, $this>
+     */
+    public function projectTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'project_id');
+    }
+
+    /**
      * @return BelongsToMany<Label, $this>
      */
     public function labels(): BelongsToMany

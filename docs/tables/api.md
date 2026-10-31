@@ -349,7 +349,7 @@ public function applyQuery(Builder $query): void;
 public function applyRelationshipSort(Builder $query, SortDirection $direction): void;
 ```
 
-Generated attribute names follow Eloquent's own rule: `{relation}_count`, `{relation}_exists`, `{relation}_{aggregate}_{column}`.
+Generated attribute names follow Eloquent's own rule, snake-cased: `{relation}_count`, `{relation}_exists`, `{relation}_{aggregate}_{column}` — so `lineItems` gives `line_items_count`.
 
 ## `Filter`
 

@@ -120,6 +120,44 @@ it('reads the attribute eloquent generated, not one the column invented', functi
         ->toBe('tasks_exists');
 });
 
+it('reads an aggregate over a camelCase relation', function (): void {
+    // Eloquent snake-cases the relation when it names the alias, so a column
+    // reading `projectTasks_count` would find nothing and render every row
+    // empty.
+    $schema = TableSchema::make()->columns([
+        NumberColumn::make('task_total')->counts('projectTasks'),
+        BooleanColumn::make('has_tasks')->exists('projectTasks'),
+        NumberColumn::make('task_id_sum')->sum('projectTasks', 'id'),
+    ]);
+
+    $rows = collect(paginateWith($schema)->items())
+        ->mapWithKeys(fn ($record): array => [$record->getAttribute('name') => $schema->toRow($record)['cells']]);
+
+    expect($rows['Apollo']['task_total']['raw'])->toBe(2)
+        ->and($rows['Gemini']['task_total']['raw'])->toBe(0)
+        ->and($rows['Apollo']['has_tasks']['value'])->toBeTrue()
+        ->and($rows['Gemini']['has_tasks']['value'])->toBeFalse()
+        ->and($rows['Apollo']['task_id_sum']['raw'])->toBe((int) $this->apollo->tasks()->sum('id'))
+        ->and(NumberColumn::make('anything')->counts('projectTasks')->aggregateAttribute())
+        ->toBe('project_tasks_count');
+});
+
+it('sorts by an aggregate over a camelCase relation', function (): void {
+    $schema = TableSchema::make()->columns([
+        TextColumn::make('name'),
+        NumberColumn::make('task_total')->counts('projectTasks')->sortable(),
+    ]);
+
+    // Ascending, against insertion order: SQLite reads an unknown quoted
+    // identifier as a string literal, so a wrong alias would sort by a
+    // constant and leave the rows as they were inserted.
+    $names = collect(paginateWith($schema, ['sort' => 'task_total', 'direction' => 'asc'])->items())
+        ->pluck('name')
+        ->all();
+
+    expect($names)->toBe(['Gemini', 'Apollo']);
+});
+
 it('sorts by an aggregate as an ordinary column', function (): void {
     $schema = TableSchema::make()->columns([
         TextColumn::make('name'),

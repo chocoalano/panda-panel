@@ -7,6 +7,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **An aggregate over a camelCase relation no longer renders empty.**
+  Eloquent snake-cases the relation when it names an aggregate, so
+  `withCount('lineItems')` writes `line_items_count`. The column derived its
+  name by only replacing dots, read `lineItems_count`, found nothing, and
+  showed every row blank — for `counts()`, `exists()`, `sum()`, `avg()`,
+  `min()` and `max()` alike. The name is now derived with Eloquent's rule and
+  passed to the query as an explicit `as` alias, so the two cannot disagree.
+  Names for single-word relations (`posts_count`) are unchanged.
+- **`->counts(...)->sortable()` sorts by the aggregate again.** `sortable()`
+  reset the sort column `counts()` had set, so a column not named after the
+  generated attribute ordered by a column that is not in the select — an
+  error on MySQL and PostgreSQL, a silent no-op on SQLite. The aggregate
+  attribute is now the fallback whichever order the two are called in.
+
 ## [0.5.4] - 2026-09-15
 
 ### Fixed

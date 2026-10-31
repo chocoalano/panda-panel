@@ -6,6 +6,7 @@ namespace PandaPanel\Tables\Enums;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * What a column computes over a relation.
@@ -24,21 +25,25 @@ enum RelationshipAggregate: string
     case Max = 'max';
 
     /**
-     * The attribute Eloquent lands the result on.
+     * The attribute the result lands on.
      *
-     * Derived with the same rule Eloquent uses, so the column reads exactly
-     * what the query wrote rather than a name the two have to agree on
-     * separately.
+     * Eloquent's own rule — strip punctuation, then snake-case the relation,
+     * function, and column — so `counts('lineItems')` reads
+     * `line_items_count`, the name a Laravel developer expects. A dot becomes
+     * an underscore first rather than vanishing, so a dotted path keeps a
+     * readable name. `apply()` then hands this name to the query as an
+     * explicit alias, so the cell and the select cannot drift apart even if
+     * Eloquent's rule ever changes.
      */
     public function attributeFor(string $relation, ?string $column): string
     {
-        $base = str_replace('.', '_', $relation);
+        $name = sprintf('%s %s %s', $relation, $this->value, strtolower($column ?? ''));
 
-        return match ($this) {
-            self::Count => $base.'_count',
-            self::Exists => $base.'_exists',
-            default => $base.'_'.$this->value.'_'.str_replace('.', '_', (string) $column),
-        };
+        return Str::snake((string) preg_replace(
+            '/[^[:alnum:][:space:]_]/u',
+            '',
+            str_replace('.', '_', $name),
+        ));
     }
 
     /**
@@ -46,12 +51,14 @@ enum RelationshipAggregate: string
      */
     public function apply(Builder $query, string $relation, ?string $column): void
     {
+        $aliased = $relation.' as '.$this->attributeFor($relation, $column);
+
         match ($this) {
-            self::Count => $query->withCount($relation),
-            self::Exists => $query->withExists($relation),
+            self::Count => $query->withCount($aliased),
+            self::Exists => $query->withExists($aliased),
             default => $column === null
                 ? null
-                : $query->withAggregate($relation, $column, $this->value),
+                : $query->withAggregate($aliased, $column, $this->value),
         };
     }
 }

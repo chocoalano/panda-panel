@@ -185,11 +185,6 @@ trait HasRelationshipState
         $this->aggregate = $aggregate;
         $this->aggregateColumn = $column;
 
-        // The generated attribute is a real column of the result set, so
-        // sorting it needs no special strategy — but the column still has to
-        // be told it may be sorted.
-        $this->sortColumn ??= $this->aggregateAttribute();
-
         return $this;
     }
 }

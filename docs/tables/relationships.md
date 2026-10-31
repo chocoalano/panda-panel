@@ -69,7 +69,7 @@ Each case maps to one Eloquent call and to the attribute Eloquent generates for 
 | `min('orders', 'total')` | `Min` | `withAggregate(..., 'min')` | `orders_min_total` |
 | `max('orders', 'total')` | `Max` | `withAggregate(..., 'max')` | `orders_max_total` |
 
-A dotted relation path has its dots replaced with underscores in the attribute name, exactly as Eloquent does it: `counts('posts.comments')` lands on `posts_comments_count`.
+The relation name is snake-cased, as Eloquent does it: `counts('lineItems')` lands on `line_items_count`, not `lineItems_count`. A dotted relation path has its dots replaced with underscores: `counts('posts.comments')` lands on `posts_comments_count`. The name is passed to the query as an explicit alias (`withCount('lineItems as line_items_count')`), so the select and the cell always agree.
 
 The cell reads that generated attribute, not the column's own name:
 

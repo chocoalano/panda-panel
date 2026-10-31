@@ -599,10 +599,14 @@ abstract class Column
      * A dotted name is left alone: sorting across a relation needs its own
      * strategy, which `applySort()` supplies, and silently sorting by a
      * column that does not exist would be worse than not sorting.
+     *
+     * An aggregate sorts by its generated attribute, resolved here rather
+     * than stored, so `->counts()->sortable()` and `->sortable()->counts()`
+     * order by the same thing.
      */
     public function getSortColumn(): string
     {
-        return $this->sortColumn ?? $this->name;
+        return $this->sortColumn ?? $this->aggregateAttribute() ?? $this->name;
     }
 
     /**
