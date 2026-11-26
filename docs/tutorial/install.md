@@ -240,7 +240,7 @@ compare against after step 5.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `composer require` refuses | A constraint from [step 1](prepare) is unmet | Read composer's message — it names the package and the version |
+| `composer require` refuses | A constraint from [step 1](prepare.md) is unmet | Read composer's message — it names the package and the version |
 | `/admin` 404s | The provider is not in `panels` | Add the line in `config/panda-panel.php` |
 | `/admin` renders unstyled HTML | The frontend was never built | `npm run build` |
 | Every panel screen 500s | No Inertia root view or middleware | `php artisan inertia:middleware` |
@@ -250,7 +250,7 @@ compare against after step 5.
 
 The panel exists. Nobody can sign into it yet.
 
-**→ [4 · First account, first login](first-login)**
+**→ [4 · First account, first login](first-login.md)**
 
 ## See also
 

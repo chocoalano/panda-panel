@@ -44,20 +44,23 @@ Inertia must resolve by name lives there and everything else does not.
 
 ```text
 resources/js/panel/
-├── actions/       ActionButton, ActionGroup, ActionDialog
+├── actions/       ActionButton, ActionGroup, ActionDialog, ActionModal
 ├── components/    PanelSidebar, PanelNavigation, PanelHeader, PanelBreadcrumb, PageHeader, …
-├── composables/   usePanel, useNavigation, usePanelPage, useResource, useActions
+├── composables/   usePanel, useNavigation, usePanelPage, useResource, useActions, …
 ├── forms/         FormRenderer, FormComponentRenderer, FormSection, FormGrid, FormField, fields/*
 ├── hooks/         render hook plumbing
 ├── icons/         registry.ts — the build-time icon allowlist
 ├── infolists/     InfolistRenderer and its entries
-├── layouts/       PanelLayout, SidebarPanelLayout, HeaderPanelLayout, PanelBlankLayout
+├── layouts/       PanelLayout, SidebarPanelLayout, HeaderPanelLayout, PanelBlankLayout, PanelAuthLayout
 ├── lib/           grid.ts and shared helpers
 ├── relations/     relation manager UI
 ├── shell/         the panel chrome
-├── tables/        DataTable, DataTableToolbar, DataTableFilters, DataTablePagination, …
-├── types/         panel, navigation, breadcrumb, page, table, form, action, widget, guards
-└── widgets/       WidgetGrid, WidgetRenderer, StatsWidget, TableWidget, ChartWidget, CustomWidget
+├── tables/        DataTable, DataTableGrid, DataTableToolbar, DataTableFilters, DataTablePagination, …
+├── tour/          PanelTour — the guided tour a page may offer
+├── types/         panel, navigation, breadcrumb, page, table, form, action, widget, tour, guards
+├── widgets/       WidgetGrid, WidgetRenderer, StatsWidget, TableWidget, ChartWidget, CustomWidget
+├── contract.ts    the frontend protocol version
+└── palette.ts     the badge and icon colour classes
 ```
 
 Nothing here is resolvable by Inertia, and nothing here needs to be: these are imported by the

@@ -437,6 +437,12 @@ They share the resource's scope, its labels, its policy, and its render hook sco
 - **Two resources claiming one path shape fail at boot**, not at request time — including a `ManageRelatedRecords` page and a nested resource that would share a shape. Two *pages of the same resource* sharing a shape do not throw: the claim is recorded against the resource, so one page silently shadows the other.
 - **Widget props are three keys, not one.** A component that reads `widgets` (like `panel/Page`) will not see `headerWidgets` and `footerWidgets`.
 
+## Tours
+
+Every resource page asks its resource for a tour, and any page may answer for itself by overriding `tour(?Model $record = null)`. Both answer `null` by default. See [Page tours](../pages-navigation/tours.md).
+
+A custom page builds its own metadata, so it spreads `...$this->tourMetadata($record)` into it and declares its own `protected static string $page`.
+
 ## See also
 
 - [List, create, view and edit pages](crud-pages.md)

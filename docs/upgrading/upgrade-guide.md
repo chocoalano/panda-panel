@@ -219,10 +219,10 @@ resources you expect, an icon renders, and the browser console is empty.
 
 ## Version-specific notes
 
-### Unreleased
+### 0.5.10
 
 Republish the frontend — the contract is version 3. Then check the four entries under
-[Breaking changes](breaking-changes.md#unreleased).
+[Breaking changes](breaking-changes.md#0510).
 
 | # | Change | What you notice |
 | --- | --- | --- |

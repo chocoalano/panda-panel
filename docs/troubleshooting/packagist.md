@@ -225,11 +225,13 @@ is reproduced in full in [Vite build errors](vite.md#failure-2-a-missing-npm-dep
 
 ```bash
 npm install \
-  @inertiajs/vue3@^3.0.0 @internationalized/date@^3.12.0 @laravel/echo-vue@^2.4.0 \
-  @laravel/passkeys@^0.4.0 @lucide/vue@^1.31.0 @tailwindcss/vite@^4.1.0 \
-  @tanstack/vue-table@^9.0.0 @vueuse/core@^14.0.0 class-variance-authority@^0.7.0 \
-  clsx@^2.1.0 reka-ui@^2.0.0 tailwind-merge@^3.0.0 tailwindcss@^4.1.0 \
-  tw-animate-css@^1.2.0 vue@^3.5.0 vue-input-otp@^0.4.0 vue-sonner@^2.0.0
+  @guolao/vue-monaco-editor@^1.6.0 @inertiajs/vue3@^3.0.0 @internationalized/date@^3.12.0 \
+  @laravel/echo-vue@^2.4.0 @laravel/passkeys@^0.4.0 @lucide/vue@^1.31.0 \
+  @tailwindcss/vite@^4.1.0 @tanstack/vue-table@^9.0.0 @tiptap/pm@^3.31.3 \
+  @tiptap/starter-kit@^3.31.3 @tiptap/vue-3@^3.31.3 @vueuse/core@^14.0.0 \
+  class-variance-authority@^0.7.0 clsx@^2.1.0 md-editor-v3@^7.0.0 monaco-editor@^0.56.0 \
+  reka-ui@^2.0.0 tailwind-merge@^3.0.0 tailwindcss@^4.1.0 tw-animate-css@^1.2.0 vue@^3.5.0 \
+  vue-input-otp@^0.4.0 vue-sonner@^2.0.0
 npm run build
 ```
 

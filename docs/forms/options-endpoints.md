@@ -172,7 +172,7 @@ The serialized field carries `options`, `searchable`, `multiple`, and `usesRelat
 
 ## Where the endpoint is available
 
-`optionsUrl` is provided by the resource create and edit pages and by relation forms. A form rendered anywhere else — a widget filter, for instance — has no URL to ask, and a searchable select there simply shows the options it was given.
+`optionsUrl` is provided by the resource create and edit pages, by action dialogs, and by relation forms. A form rendered anywhere else — a widget filter, for instance — has no URL to ask, and a searchable select there simply shows the options it was given.
 
 ## Notes
 

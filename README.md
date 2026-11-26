@@ -2,8 +2,8 @@
 
 An admin panel framework for Laravel, built on Inertia and Vue. Resources, tables, forms,
 infolists, widgets, actions, relation managers, global search, imports and exports, a
-notification centre, and as many panels as an application needs — each with its own path,
-navigation, middleware and access rule.
+notification centre, guided page tours, and as many panels as an application needs — each with its
+own path, navigation, middleware and access rule.
 
 Every screen is a real Vue component in your application's `resources/js`, not a black box:
 published on install, in your repository, in your build, and editable.
@@ -30,9 +30,10 @@ fast paths from here:
 | Install it and see a panel | [Installation](docs/getting-started/installation.md) → [Opening your first panel](docs/getting-started/first-panel.md) |
 | Understand how it works | [Architecture](docs/introduction/architecture.md), [Request lifecycle](docs/concepts/request-lifecycle.md) |
 | Build a CRUD screen | [Creating resources](docs/resources/creating-resources.md), [Forms](docs/forms/overview.md), [Tables](docs/tables/overview.md) |
+| Walk a user through a screen | [Page tours](docs/pages-navigation/tours.md) |
 | Ship it | [Production checklist](docs/deployment/production-checklist.md) |
 | Fix something | [Troubleshooting](docs/troubleshooting/panel-routes-404.md) |
-| Run it in another language | [Translations](docs/localization/translations.md) |
+| Run it in another language | [Translations](docs/configuration/localization.md) |
 
 ## Installation
 
@@ -123,6 +124,30 @@ The panel itself is registered explicitly; the classes inside it are discovered.
 A working two-panel application — resources, forms, tables, infolists, imports, exports, widgets,
 custom pages, and the policies behind them — is in [examples/](examples/). It is also what the
 test suite runs against, so it cannot drift out of date.
+
+## Page tours
+
+A resource or a page may explain itself in a few steps. It is optional: declare nothing and
+nothing is drawn.
+
+```php
+use PandaPanel\Tours\Tour;
+use PandaPanel\Tours\TourStep;
+
+public static function tour(string $page): ?Tour
+{
+    return $page === 'index'
+        ? Tour::make()->steps([
+            TourStep::make('Your team')->description('Everyone who can sign in.'),
+            TourStep::make('Add a colleague')->action('create'),
+        ])
+        : null;
+}
+```
+
+The tour opens by itself on a reader's first visit, and from the **?** button in the page header
+after that. [docs/pages-navigation/tours.md](docs/pages-navigation/tours.md) covers every target a
+step can point at.
 
 ## Generators
 
@@ -269,7 +294,7 @@ const { t, locale } = useTranslator();
 </template>
 ```
 
-See [Translations](docs/localization/translations.md).
+See [Translations](docs/configuration/localization.md).
 
 ## What the panel asks of your user model
 

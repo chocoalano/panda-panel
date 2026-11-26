@@ -10,7 +10,7 @@ git switch -c fix/table-sort-whitelist
 # ... make the change, add the test ...
 
 composer ci      # pint --test, phpstan, pest
-npm run ci       # prettier --check, eslint, vue-tsc, vite build
+npm run ci       # prettier --check, eslint, vue-tsc, vitest, vite build
 
 git add -A
 git commit -m "Ignore a sort column the schema never declared sortable"
@@ -28,7 +28,7 @@ Ten questions, in the order they usually go wrong.
 1. **Does a test fail without the change?** A fix with no test is a fix that comes back. See [Running the tests](testing.md) for where it goes.
 2. **Does the negative suite need a counterpart?** A change to authorization, to a query parameter, to a file download, or to what a schema accepts belongs in `tests/Feature/Panel/Negative/` as well as in its own file. The standard is that deleting the guard makes the test fail.
 3. **Does `composer ci` pass?** Style, static analysis, tests.
-4. **Does `npm run ci` pass?** Formatting, lint, types, build. Skipping it because the change "is only PHP" is how the published components stop compiling.
+4. **Does `npm run ci` pass?** Formatting, lint, types, tests, build. Skipping it because the change "is only PHP" is how the published components stop compiling.
 5. **Is there a matching change on the other side of the boundary?** A new column, field, entry or widget type is a PHP class, an enum case, and a branch in the Vue renderer. The union is exhaustive, so a missing branch is a compile error rather than an empty cell — but only if you ran the type-check.
 6. **Does anything in the fixed set need to move with it?** The table in [Coding standards](coding-standards.md#changes-that-are-never-one-edit) lists them: `NavigationItem` fields, `Page::metadata()` keys, lifecycle hooks, icon names, asset entrypoints, CSS hook names.
 7. **Is there a `CHANGELOG.md` entry?** Under `## [Unreleased]`, in the right section. See [Releases](releases.md#the-changelog).

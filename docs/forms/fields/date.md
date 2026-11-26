@@ -1,6 +1,6 @@
 # Date and Time
 
-Three fields, not one with flags: `PandaPanel\Forms\Components\DatePicker`, `PandaPanel\Forms\Components\DateTimePicker`, and `PandaPanel\Forms\Components\TimePicker`. They format their value differently, validate differently, and render a different native control, so a flag on one class would have made every one of those a branch. Reach for the one whose value shape matches the column.
+Three fields, not one with flags: `PandaPanel\Forms\Components\DatePicker`, `PandaPanel\Forms\Components\DateTimePicker`, and `PandaPanel\Forms\Components\TimePicker`. They format their value differently, validate differently, and render a different control, so a flag on one class would have made every one of those a branch. Reach for the one whose value shape matches the column.
 
 ## The minimal example
 
@@ -33,9 +33,9 @@ protected function casts(): array
 
 | Field | `FieldType` | Control | Value format | Type rules |
 | --- | --- | --- | --- | --- |
-| `DatePicker` | `Date` (`'date'`) | `PanelDatePicker` — a popover calendar | `Y-m-d` | `date` |
+| `DatePicker` | `Date` (`'date'`) | `PanelDatePicker` — a typed date and a calendar | `Y-m-d` | `date` |
 | `DateTimePicker` | `DateTime` (`'datetime'`) | `PanelDatePicker` + `PanelTimePicker` | `Y-m-d H:i` on submit | `date` |
-| `TimePicker` | `Time` (`'time'`) | `PanelTimePicker` — hour, minute, optional second | `H:i` or `H:i:s` | `date_format:H:i[:s]` |
+| `TimePicker` | `Time` (`'time'`) | `PanelTimePicker` — a typed time and an hour, minute, optional second picker | `H:i` or `H:i:s` | `date_format:H:i[:s]` |
 
 None of the three creates a browser-native temporal input. `<input type="date">`,
 `type="time"` and `type="datetime-local"` are drawn by the browser rather than by the panel:
@@ -48,6 +48,30 @@ A source guard (`resources/js/panel/temporalGuard.test.ts`) and a browser guard
 (`tests/browser/temporal.mjs`) both assert this, because the two catch different mistakes: the
 last violation to be found was a `:type` binding that resolved to `date` at runtime, with no
 literal attribute anywhere for a search to land on.
+
+## In the browser
+
+Each control is a text input with a button beside it, so a value can be typed or picked.
+
+| | Typed as | The button opens |
+| --- | --- | --- |
+| Date | `YYYY-MM-DD` | a calendar |
+| Time | `HH:mm`, or `HH:mm:ss` with `seconds()` | an hour, minute, and second picker |
+
+- `Alt` + `↓` in the input opens the picker.
+- The calendar opens on the month of the date held. An empty field opens on today, moved inside
+  `minDate` / `maxDate` when today is outside them.
+- A day or a time outside its bounds cannot be picked, and typing one marks the input invalid.
+- A field that is not `required()` has a clear button.
+- A datetime holds its two halves apart. Changing the date keeps the time unless the new date makes
+  that time illegal, in which case the time is cleared rather than moved. While either half is
+  missing the value is `null`.
+- The bounds of a datetime apply to the time on the boundary day only: with
+  `minDate('2026-09-10 09:30')`, 08:00 is refused on the 10th and accepted on the 11th.
+
+**Typed text that is not a value holds the submit.** `2026-02-30`, `25:00`, or a date outside the
+bounds leaves the field `null`, which an optional field accepts. The form therefore refuses to
+submit, with a message against the field, until the text is corrected or removed.
 
 ## `DatePicker`
 
@@ -113,7 +137,7 @@ DateTimePicker::make('published_at')
     ->helperText('Stored and displayed in the application timezone.');
 ```
 
-`seconds()` decides the format the value is rendered in — `Y-m-d\TH:i:s` rather than `Y-m-d\TH:i` — and sets the control's `step` to `1`, which is the only thing that makes a browser show a seconds spinner at all. Without it the control rounds to the minute and a value carrying seconds is truncated on the first edit.
+`seconds()` decides the format the value is rendered in — `Y-m-d\TH:i:s` rather than `Y-m-d\TH:i` — and makes the time half expect and offer seconds. Without it a value carrying seconds loses them on the first edit.
 
 The rules are `date` plus the same `after_or_equal` / `before_or_equal` pair as `DatePicker`. `seconds()` adds no rule: `date` accepts both precisions.
 

@@ -208,7 +208,9 @@ The response:
   "submitLabel": "Reject it",
   "form": { "columns": 1, "schema": [] },
   "submitUrl": "/admin/actions/form",
+  "optionsUrl": "/admin/options?resource=orders&action=reject&scope=record&record=42",
   "uploadUrl": "/admin/uploads?resource=orders&action=reject&scope=record&record=42",
+  "formStateUrl": "/admin/form-state?resource=orders&action=reject&scope=record&record=42",
   "context": { "resource": "orders", "action": "reject", "scope": "record" },
   "modal": { "width": "md" }
 }
@@ -265,6 +267,8 @@ A scope outside the list is a 422 before anything else happens. Each scope is a 
 
 A failed validation is an ordinary Laravel `ValidationException`: the response redirects back with the errors, and the dialog renders them against the fields that produced them. Nothing runs.
 
+The dialog stays open with what was typed. It closes only once the submit goes through. A dialog opened and then replaced by another before its form arrived shows the form asked for last.
+
 ```php
 it('validates the submitted data against the action\'s own schema', function (): void {
     $this->post('/admin/actions/form', [
@@ -280,7 +284,7 @@ it('validates the submitted data against the action\'s own schema', function ():
 
 ## Gotchas
 
-- **The dialog has no options endpoint and no live-field endpoint.** The frontend passes the form an upload URL and nothing else, so a `Select` that fetches options as you type falls back to whatever options the schema serialized, and a field marked `live()` never asks the server to rebuild the schema. Declare the options up front, or use a full page for a form that needs to react.
+- **The dialog's form behaves like a page's.** It is sent its own `optionsUrl`, `uploadUrl`, and `formStateUrl`, each carrying the action's context, so a searchable `Select`, a file field, and a `live()` field work and are authorized as the action.
 - **`$record` is `null` on a table or bulk form.** A schema closure that dereferences it fails when the dialog is opened rather than when the line is written.
 - **The schema is rebuilt on submit.** `resolveSchema()` is called again by the submit request, so a closure that depends on request state must produce the same rules both times.
 - **`schema()` and `form()` both make the action a `form`.** `form()` wins in the payload: `formUrl` is sent and the frontend prefers it over the panel's endpoint.

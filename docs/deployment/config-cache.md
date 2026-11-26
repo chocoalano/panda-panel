@@ -56,8 +56,9 @@ Two namespaces, and that is the whole surface.
 | `broadcasting.connections.{default}.driver` | same | `null` and `log` count as no broadcaster |
 | `app.name` | `PandaPanel\Core\Panel::getBrandName()` | the brand name a panel that never called `brandName()` shows in its shell |
 
-Nothing else. There are no `PANDA_*` environment variables, because every
-setting is a literal in the config file rather than an `env()` call.
+Nothing else from Laravel. The package's own two variables, `PANDA_PANEL_CURRENCY` and
+`PANDA_PANEL_FORM_DIAGNOSTICS`, are read in the config file, so `config:cache` freezes them like
+any other value — rebuild the cache after changing either.
 
 ## Why the panel is safe to cache
 

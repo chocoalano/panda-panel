@@ -68,7 +68,7 @@ The key is `Field::getDehydrateKey()` — `dehydrateTo()` or the field name — 
 | --- | --- | --- | --- |
 | `formatUsing()` | `Closure(mixed $value, ?Model $record): mixed` | On the way in, instead of the type's cast | The value the control binds to |
 | `afterStateHydrated()` | `Closure(mixed $value, ?Model $record): mixed` | On the way in, after the value is settled | Ignored |
-| `afterStateUpdated()` | `Closure(mixed $new, mixed $old, ?Model $record): void` | When a `live()` field changes | Nothing |
+| `afterStateUpdated()` | `Closure(mixed $new, mixed $old, ?Model $record): void`, plus any of `Get`, `Set`, `FormState` it type-hints | When a `live()` field changes | Nothing |
 | `dehydrateStateUsing()` | `Closure(mixed $value, ?Model $record): mixed` | On the way out | The value to write |
 | `mutateUsing()` | `Closure(mixed $value, ?Model $record): mixed` | On the way out | The value to write |
 
@@ -105,7 +105,7 @@ TextInput::make('name')->afterStateHydrated(
 
 ### `afterStateUpdated()`
 
-Runs only for a field that declared itself `live()`, whatever the request claims changed, and only through the `form-state` endpoint. See [Live fields](live-fields.md).
+Runs only for a field that declared itself `live()`, whatever the request claims changed, and only through the `form-state` endpoint. To read or change other fields, type-hint `Get` or `Set` — see [Live fields](live-fields.md#reading-and-changing-other-fields).
 
 ```php
 use Illuminate\Database\Eloquent\Model;

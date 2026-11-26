@@ -9,7 +9,7 @@ of those are ones a passing test suite cannot catch.
 
 ```bash
 composer ci                                          # pint --test, phpstan, pest
-npm run ci                                           # prettier, eslint, vue-tsc, vite build
+npm run ci                                           # prettier, eslint, vue-tsc, vitest, vite build
 
 git archive HEAD | tar -t | awk -F/ '{print $1}' | sort -u   # what a composer install gets
 
@@ -27,8 +27,8 @@ cannot drift from what the pipeline does:
 
 ```json
 "scripts": {
-    "test": "vendor/bin/pest",
-    "test-coverage": "vendor/bin/pest --coverage",
+    "test": "@php -d memory_limit=512M vendor/bin/pest",
+    "test-coverage": "@php -d memory_limit=512M vendor/bin/pest --coverage",
     "format": "vendor/bin/pint",
     "format-check": "vendor/bin/pint --test",
     "analyse": "vendor/bin/phpstan analyse --memory-limit=1G",
@@ -43,8 +43,9 @@ cannot drift from what the pipeline does:
     "format": "prettier --write resources/js frontend resources/css",
     "format:check": "prettier --check resources/js frontend resources/css",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
-    "build": "vite build",
-    "ci": "npm run format:check && npm run lint && npm run typecheck && npm run build"
+    "build": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
+    "test": "vitest run",
+    "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
 }
 ```
 
@@ -296,7 +297,7 @@ two places is a number that disagrees with itself. Composer derives it from the 
 `PluginCompatibility` treats as "no question to answer".
 
 ```bash
-git tag                                   # v0.1.0, v0.1.1, v0.1.2
+git tag --sort=v:refname                  # every release so far
 composer show chocoalano/panel --all      # what Packagist knows about
 ```
 

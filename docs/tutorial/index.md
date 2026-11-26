@@ -12,7 +12,7 @@ Allow about 45 minutes. Nothing in it is thrown away afterwards — the panel yo
 one you keep building on.
 
 ::: tip Already have a Laravel application?
-Skip to [step 3](install) and install into it. Step 2 exists because a Laravel Vue starter kit is
+Skip to [step 3](install.md) and install into it. Step 2 exists because a Laravel Vue starter kit is
 the shortest path to a working frontend, not because the package requires one.
 :::
 
@@ -32,14 +32,14 @@ the shortest path to a working frontend, not because the package requires one.
 
 | Step | What happens | Time |
 | --- | --- | --- |
-| [1 · Prepare your environment](prepare) | Check PHP, Node, the extensions, the database | 5 min |
-| [2 · Create the project](project) | A Laravel Vue starter kit application that runs | 5 min |
-| [3 · Install Panda Panel](install) | `composer require`, `panel:install`, and reading its report | 10 min |
-| [4 · First account, first login](first-login) | `panel:user`, and what the two access rules mean | 5 min |
-| [5 · Your first resource](resource) | A model, a migration, a resource, and the policy it needs | 10 min |
-| [6 · Shape the form and the table](form-and-table) | Real fields, real columns, filters and search | 10 min |
-| [7 · Actions and dashboard widgets](actions-and-widgets) | A publish action and a stats widget | 10 min |
-| [8 · Go to production](production) | Build, cache, and the checklist before you deploy | 5 min |
+| [1 · Prepare your environment](prepare.md) | Check PHP, Node, the extensions, the database | 5 min |
+| [2 · Create the project](project.md) | A Laravel Vue starter kit application that runs | 5 min |
+| [3 · Install Panda Panel](install.md) | `composer require`, `panel:install`, and reading its report | 10 min |
+| [4 · First account, first login](first-login.md) | `panel:user`, and what the two access rules mean | 5 min |
+| [5 · Your first resource](resource.md) | A model, a migration, a resource, and the policy it needs | 10 min |
+| [6 · Shape the form and the table](form-and-table.md) | Real fields, real columns, filters and search | 10 min |
+| [7 · Actions and dashboard widgets](actions-and-widgets.md) | A publish action and a stats widget | 10 min |
+| [8 · Go to production](production.md) | Build, cache, and the checklist before you deploy | 5 min |
 
 ## How this tutorial is written
 
@@ -72,6 +72,6 @@ finish this tutorial.
 
 <div class="tutorial-next">
 
-**Start here → [1 · Prepare your environment](prepare)**
+**Start here → [1 · Prepare your environment](prepare.md)**
 
 </div>

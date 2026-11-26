@@ -167,9 +167,9 @@ A worker running old code with a new database is the failure that produces
 Outside its own namespace the panel reads three keys at runtime:
 `broadcasting.default`, the `driver` of the connection that names, and
 `app.name` — the brand name a panel that never called `brandName()` shows in
-its shell. There are no `PANDA_*` environment variables — every setting is a
-literal in `config/panda-panel.php`, so `.env` matters only where Laravel's own
-does.
+its shell. The package's own variables are `PANDA_PANEL_CURRENCY` and
+`PANDA_PANEL_FORM_DIAGNOSTICS`, both optional and both read in
+`config/panda-panel.php`.
 
 | Variable | Matters because |
 | --- | --- |

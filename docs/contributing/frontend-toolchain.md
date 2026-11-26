@@ -9,11 +9,11 @@ npm ci
 npm run ci
 ```
 
-`npm run ci` is `format:check`, then `lint`, then `typecheck`, then `build` — in that order, because a type error is a better message than the bundler's version of the same problem. It is what the blocking CI job runs, across Node 20, 22 and 24.
+`npm run ci` is `format:check`, then `lint`, then `typecheck`, then `test`, then `build` — in that order, because a type error is a better message than the bundler's version of the same problem. The blocking CI job runs each of them except `test` as its own step, across Node 20, 22 and 24, so the Vitest suite is checked only where you run it.
 
 ## The scripts
 
-All seven, from `package.json`:
+From `package.json`, besides the browser scripts [Testing](testing.md) describes:
 
 | Script | Command |
 | --- | --- |
@@ -22,8 +22,9 @@ All seven, from `package.json`:
 | `format` | `prettier --write resources/js frontend resources/css` |
 | `format:check` | `prettier --check resources/js frontend resources/css` |
 | `typecheck` | `vue-tsc --noEmit -p tsconfig.json` |
-| `build` | `vite build` |
-| `ci` | `npm run format:check && npm run lint && npm run typecheck && npm run build` |
+| `test` | `vitest run` |
+| `build` | `node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build` |
+| `ci` | `npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build` |
 
 ```bash
 npm run format           # fix formatting

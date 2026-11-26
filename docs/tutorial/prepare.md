@@ -114,7 +114,7 @@ the first thing to compare against.
 
 Everything above is a property of the machine. The next step is a property of the project.
 
-**→ [2 · Create the project](project)**
+**→ [2 · Create the project](project.md)**
 
 ## See also
 

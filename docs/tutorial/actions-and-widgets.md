@@ -247,7 +247,7 @@ A widget the user may not see is absent from the payload, not hidden with CSS.
 
 It works on your machine. One page left.
 
-**→ [8 · Go to production](production)**
+**→ [8 · Go to production](production.md)**
 
 ## See also
 

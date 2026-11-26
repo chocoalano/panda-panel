@@ -256,6 +256,30 @@ Spans are on fields and infolist entries only. Calling one on the schema is the 
 
 The containers themselves are covered in [Layouts](layouts.md): `Section`, `Grid`, `Tabs`/`Tab`, `Wizard`/`Step`, `Callout`, `EmptyState`, `Relationship`, `CustomComponent`.
 
+## Submitting in the browser
+
+`FormRenderer.vue` draws every form — create and edit pages, action dialogs, and relation dialogs — and behaves the same in each.
+
+| What happens | What the reader sees |
+| --- | --- |
+| The server refuses the submit | The form stays, with what was typed. Messages appear on their fields and in a summary, and focus moves to the first one. A dialog stays open |
+| The write goes through | The next page is mounted afresh; a dialog closes |
+| A typed date or time is not one, or a file is still uploading | Nothing is sent, and the field says why. See [Validation](validation.md#what-the-browser-checks) |
+| The server sends a new `form` | Values, errors, and the controls' drafts are replaced with it — which is how *create another* answers with an empty form |
+
+The first two come from visiting with `preserveState: 'errors'`. A component of your own that submits with `router.visit()` needs the same option, or Inertia mounts the page again on a refusal and both the input and the messages are lost:
+
+```ts
+router.visit(url, {
+    method: 'post',
+    data,
+    preserveState: 'errors',
+    onError: (received) => (errors.value = received),
+});
+```
+
+A custom page that renders `FormRenderer` passes it a stable `form` object — a prop, or a `ref` assigned once. One rebuilt on every render resets the form on every render.
+
 ## Where a schema comes from
 
 | Caller | How it builds one |

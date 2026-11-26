@@ -40,38 +40,54 @@ resources/js/panel/
   layouts/       PanelLayout, SidebarPanelLayout, HeaderPanelLayout,
                  PanelBlankLayout, PanelAuthLayout
   components/    PanelSidebar, PanelNavigation, PanelNavigationItem,
-                 PanelHeader, PanelBreadcrumb, PanelSubNavigation,
-                 PanelClusterBar, PanelSearch, PanelNotifications,
-                 PanelSwitcher, PanelTenantSwitcher, PanelRenderHook,
-                 PanelRecordLayout, PageHeader, EmptyState, LoadingState,
-                 DashboardGuide
-  tables/        DataTable, DataTableCell, DataTableToolbar, DataTableFilters,
-                 DataTableQueryBuilder, DataTablePagination,
-                 DataTableBulkActions, DataTableColumnManager, DataTableTabs,
-                 filterParams, useFrozenColumns, registry, registryEmptyStates
+                 PanelHeader, PanelHeaderNavigation, PanelBreadcrumb,
+                 PanelSubNavigation, PanelClusterBar, PanelSearch,
+                 PanelNotifications, PanelSwitcher, PanelTenantSwitcher,
+                 PanelLocaleSwitcher, PanelRenderHook, PanelRecordLayout,
+                 PageHeader, EmptyState, LoadingState, DashboardGuide,
+                 PanelDatePicker, PanelTimePicker, temporalValue
+  tables/        DataTable, DataTableGrid, DataTableCard, DataTableCell,
+                 DataTableToolbar, DataTableFilters, DataTableQueryBuilder,
+                 DataTablePagination, DataTableBulkActions,
+                 DataTableColumnManager, DataTableTabs, DataTableIntro,
+                 DataTableLayoutToggle, DataTableSortMenu, RowReorderControl,
+                 cardFace, filterParams, queryBuilderRules, tableCells,
+                 useFrozenColumns, useTableGroups, useTableSelection,
+                 registry, registryEmptyStates
   forms/         FormRenderer, FormComponentRenderer, FormSection, FormGrid,
                  FormTabs, FormWizard, FormRelationship, FormCustomComponent,
                  FormCallout, FormPrime, FormField, FormEmptyState,
-                 fields/*, conditions, validation, http, markdown,
-                 optionsEndpoint, uploadEndpoint, formStateEndpoint, registry
+                 fields/*, conditions, validation, http, money,
+                 fieldIdentity, focusInvalid, focusAfterRemoval,
+                 submitBlockers, monacoBundle, optionsEndpoint,
+                 uploadEndpoint, formStateEndpoint, registry
   infolists/     InfolistRenderer, InfolistNode, InfolistEntry, InfolistTabs
   widgets/       WidgetGrid, WidgetRenderer, WidgetShell, StatsWidget,
                  TableWidget, ChartWidget, CustomWidget, WidgetFilters,
                  PageWidgets, WidgetFallback, registry
-  actions/       ActionButton, ActionGroup, ActionDialog, ActionModal
+  actions/       ActionButton, ActionGroup, ActionDialog, ActionModal, intent
   relations/     RelationManagerList, RelationManagerPanel, RelationFormDialog
+  tour/          PanelTour, TourStepActions, tour
   composables/   usePanel, usePanelPage, usePanelShell, usePanelStyling,
-                 usePanelBroadcasting, useNavigation, useResource, useActions,
-                 useInfolistActions, useRelationActions, useRelationTable,
-                 useErrorNotifications, useUnsavedChangesAlert, useColorScheme
+                 usePanelBranding, usePanelBroadcasting, useNavigation,
+                 useResource, useActions, useInfolistActions,
+                 useRelationActions, useRelationTable, useErrorNotifications,
+                 useUnsavedChangesAlert, useColorScheme, useContractCheck
   icons/         registry
   hooks/         registry
   shell/         registry
   lib/           grid
   palette.ts
+  contract.ts    the frontend protocol version, compared with the server's
   types/         panel, shared, navigation, breadcrumb, page, table, form,
-                 infolist, relation, action, widget, cellGuards, widgetGuards
+                 infolist, relation, action, widget, tour, cellGuards,
+                 widgetGuards
 ```
+
+Published beside it, outside `panel/`: `pages/panel/**` (`Dashboard`, `Page`, `auth/*`,
+`resources/*`, `settings/*`), `components/**` including the shadcn-vue primitives under
+`components/ui`, `composables/` (`useAppearance`, `useCountdown`, `useTranslator`), and `lib/`
+(`flashToast`, `utils`).
 
 ## Layouts
 
@@ -129,7 +145,10 @@ defineOptions({ layout: PanelLayout });
 | `PanelSubNavigation.vue` | the links between one record's pages |
 | `PanelRecordLayout.vue` | arranges a record page around that sub-navigation |
 | `PanelRenderHook.vue` | renders whatever the panel injected at a named point |
-| `PageHeader.vue` | heading, subheading, and an `actions` slot |
+| `PageHeader.vue` | heading, subheading, the page's [tour](../pages-navigation/tours.md) button when it has one, and an `actions` slot |
+| `PanelHeaderNavigation.vue` | one entry of the header layout's navigation row, children included |
+| `PanelLocaleSwitcher.vue` | changes the panel's language; renders nothing unless it offers more than one |
+| `PanelDatePicker.vue`, `PanelTimePicker.vue` | a typed date or time with a picker button; emit `update:invalid` for text that is not one |
 | `EmptyState.vue`, `LoadingState.vue` | the neutral states |
 | `DashboardGuide.vue` | what a dashboard shows before anything is on it |
 
@@ -185,13 +204,14 @@ TanStack Table v9 owns the row model and row selection, and nothing else — `ta
 ```text
 BuilderField        CheckboxField       CheckboxListField   CodeEditorField
 ColorPickerField    DateField           DateTimeField       FileUploadField
-KeyValueField       MarkdownEditorField NumberField         PasswordField
-RadioField          RepeaterField       RichEditorField     SelectField
-SliderField         TagsInputField      TextInputField      TextareaField
-TimeField           ToggleButtonsField  ToggleField
+KeyValueField       MarkdownEditorField MoneyField          NumberField
+PasswordField       RadioField          RepeaterField       RichEditorField
+SelectField         SliderField         TagsInputField      TextInputField
+TextareaField       TimeField           ToggleButtonsField  ToggleField
 
 FieldWrapper        the label, helper text and error every field wears
 CustomFieldRenderer resolves a CustomField's component through the registry
+RepeatedEntry       one entry of a repeater or a builder, with its own field scope
 editorAttributes.ts puts a field's identity on an element an editor owns
 ```
 
@@ -207,9 +227,25 @@ The supporting modules:
 | `validation.ts` | `validateFields()` — the subset of rules a browser can honestly check |
 | `http.ts` | `csrfToken()`, `postJson()`, `postForm()` |
 | `monacoBundle.ts` | `configureMonaco()` — the code editor's chunk boundary |
+| `money.ts` | reading and writing an amount the way a locale writes it |
+| `fieldIdentity.ts` | `useFieldIdentity()`, `useFieldPath()`, `useFieldScope()` — a field's DOM ids and state path |
+| `submitBlockers.ts` | `useSubmitBlock()`, `useSubmitBlockers()` — holding a submit for something the values do not show |
+| `focusInvalid.ts` | `focusFirstInvalid()` — where focus lands after a refused submit |
 | `optionsEndpoint.ts` | `provideOptionsUrl()`, `useOptionsUrl()`, `fetchOptions()` |
 | `uploadEndpoint.ts` | `provideUploadUrl()`, `useUploadUrl()`, `uploadFile()` |
 | `formStateEndpoint.ts` | `provideFormStateUrl()`, `useFormStateUrl()`, `fetchFormState()` |
+
+`FormRenderer.vue` is also what a submit behaves like: a refusal keeps the form and shows the messages, a new `form` prop replaces what is held. See [Submitting in the browser](../forms/overview.md#submitting-in-the-browser).
+
+### Tour
+
+| File | Role |
+| --- | --- |
+| `PanelTour.vue` | the tour button, and the popover or dialog of the open step. Drawn by `PageHeader.vue`; renders nothing on a page with no tour |
+| `TourStepActions.vue` | skip, back, next |
+| `tour.ts` | `normalizeTour()`, `findTourTarget()`, `shouldAutoStart()`, `rememberTour()` |
+
+Steps point at `data-tour` attributes that `FieldWrapper.vue`, the table's column headers, and `ActionButton.vue` write.
 
 ### Widgets
 
@@ -244,6 +280,8 @@ All under `@/panel/composables/`.
 | `useErrorNotifications` | `useErrorNotifications(): void` |
 | `useUnsavedChangesAlert` | `useUnsavedChangesAlert(isDirty: Ref<boolean>): void` |
 | `useColorScheme` | `useColorScheme(): ComputedRef<'light' \| 'dark'>` |
+| `usePanelBranding` | `usePanelBranding(...)` — the panel's logo and icon for the current theme |
+| `useContractCheck` | `useContractCheck(): void` — warns in development when the published frontend is behind the server |
 
 ### `usePanel()`
 
@@ -363,7 +401,7 @@ Every resolver returns a loader or `null`; nothing throws. Four also expose a me
 
 ## Types and guards
 
-`types/` mirrors the PHP serialization, one module per area: `panel`, `shared`, `navigation`, `breadcrumb`, `page`, `table`, `form`, `infolist`, `relation`, `action`, `widget`.
+`types/` mirrors the PHP serialization, one module per area: `panel`, `shared`, `navigation`, `breadcrumb`, `page`, `table`, `form`, `infolist`, `relation`, `action`, `widget`, `tour`.
 
 Two of them are runtime code rather than types:
 

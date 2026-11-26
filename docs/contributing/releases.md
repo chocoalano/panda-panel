@@ -18,13 +18,30 @@ git tag -a v0.1.3 -m "v0.1.3"
 git push origin v0.1.3
 ```
 
-That is `UPDATE.md` in the repository root, and it is the whole procedure. Packagist picks the tag up from the GitHub webhook; there is nothing to upload.
+Packagist picks the tag up from the GitHub webhook; there is nothing to upload.
 
 `composer validate --strict --no-check-publish` is first for a reason: it is the only check that reads `composer.json` as a *manifest* rather than as a dependency list, and a malformed one is a tag nobody can install.
 
+`release.sh` in the repository root runs the same steps without the typing:
+
+```bash
+COMPOSER_PROCESS_TIMEOUT=0 ./release.sh
+```
+
+Know what it does before running it, because it asks for no confirmation:
+
+- It takes the **next patch** number after the newest tag. It cannot cut a minor release; for one, run the steps above by hand.
+- It runs `composer validate`, `format-check`, `analyse`, and `test` — nothing on the frontend. Run `npm run ci` first.
+- It stages **everything** (`git add .`), commits, pushes `main`, tags, and pushes the tag, without waiting for CI.
+- It does not touch `CHANGELOG.md`.
+- Composer stops a script after 300 seconds, which the test suite can exceed; hence the variable.
+- Its last line, `composer update chocoalano/panel`, runs inside the package and updates no application.
+
+If pushing the tag fails, push it by name (`git push origin v0.1.3`) rather than running the script again, which would move on to the next number.
+
 ## Versioning
 
-The package is in its `0.x` series — `v0.1.0`, `v0.1.1` and `v0.1.2` are the published tags — and semantic versioning treats `0.x` as the one range where the usual promise does not hold: **a `0.x` minor release is allowed to break things.** Composer knows that and narrows the caret accordingly, so `^0.1` resolves `>=0.1.0 <0.2.0`.
+The package is in its `0.x` series — `git tag --sort=v:refname` lists what has been published — and semantic versioning treats `0.x` as the one range where the usual promise does not hold: **a `0.x` minor release is allowed to break things.** Composer knows that and narrows the caret accordingly, so `^0.1` resolves `>=0.1.0 <0.2.0`.
 
 | Bump | When |
 | --- | --- |
@@ -220,7 +237,7 @@ Renaming the package again also means the migration path in [Package name migrat
 ```bash
 composer validate --strict --no-check-publish    # ./composer.json is valid
 composer ci                                      # pint --test, phpstan, pest
-npm run ci                                       # prettier, eslint, vue-tsc, vite build
+npm run ci                                       # prettier, eslint, vue-tsc, vitest, vite build
 
 git archive HEAD | tar -t | grep package.json    # must print package.json
 git archive HEAD | tar -t | grep 'docs/'         # must print nothing
@@ -245,7 +262,7 @@ An annotated tag (`-a`) rather than a lightweight one, so the tag carries a date
 - **`minimum-stability` is `stable` and `prefer-stable` is `true`.** A `composer require chocoalano/panel` in an application never pulls a dev or beta dependency on this package's account.
 - **A `0.x` minor may break.** Until `1.0.0`, the caret is what protects an application, and `>=` or `dev-main` in a constraint is what removes that protection.
 - **The published frontend is versioned separately.** A `composer update` moves `vendor/chocoalano/panel` and does not move `resources/js/panel`, because those files became the application's when they were published. `.panel-assets.json` and `php artisan panel:assets` are that second story — see [Asset manifest](../upgrading/asset-manifest.md).
-- **`UPDATE.md` is gitignored.** It is a working note rather than a tracked document, which is why the procedure is restated here.
+- **`UPDATE.md` is gitignored.** It is a working note rather than a tracked document, which is why the procedure is written out here.
 - **Do not delete or move an ADR at release time.** A superseded record keeps its file and gains a status; see [Architecture decisions](architecture-decisions.md).
 
 ## See also

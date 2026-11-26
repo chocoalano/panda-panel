@@ -206,6 +206,29 @@ TextInput::make('email')->required()->email()->maxLength(100)
 
 Rules needing the database are deliberately absent: a frontend that guessed at `unique` would be confidently wrong. Only string rules are read, so a `Rule` object contributes no hint at all. A field hidden by a condition is skipped on both sides.
 
+Two more things hold a submit, and neither is a rule. Both are states in which what is on screen is not in the values:
+
+| State | Message |
+| --- | --- |
+| A [date or time](fields/date.md) typed as something that is not one, or outside its bounds | `forms.invalid_date`, `forms.invalid_time` |
+| A [file](fields/file-upload.md) still uploading | `forms.upload_in_progress` |
+
+Either appears against the field and in the summary above the form, and goes away by itself once the state does. The three strings are in `lang/{locale}/frontend.php`.
+
+A `FormWizard`'s *Next* button does not check these; the final submit does.
+
+A custom field of your own can hold the submit the same way:
+
+```ts
+import { useFieldPath } from '@/panel/forms/fieldIdentity';
+import { useSubmitBlock } from '@/panel/forms/submitBlockers';
+
+const path = useFieldPath(() => props.field.name);
+
+// Blocks while this answers a message; null lets the form through.
+useSubmitBlock(path, () => (uploading.value ? 'Still working.' : null));
+```
+
 ## Where validation runs on a page
 
 ```php

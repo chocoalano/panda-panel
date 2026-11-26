@@ -197,13 +197,13 @@ Which is a step on the [Release checklist](release-checklist.md) rather than som
 The published tags are the other half of the record, and they are what composer resolves against:
 
 ```bash
-git tag                                  # v0.1.0 … v0.1.9, v0.2.0, v0.3.0 — v0.1.3 was never tagged
+git tag --sort=v:refname                 # every release — v0.1.3 was never tagged
 git log --oneline v0.1.1..v0.1.2         # what a tag actually contained
 composer show chocoalano/panel --all     # every version Packagist knows about
 ```
 
-Every published tag has a matching `## [x.y.z]` heading. Four of them — `0.1.2`, `0.1.7`, `0.1.8`
-and `0.1.9` — say outright that no entries were recorded, which is a different statement from an
+Every published tag has a matching `## [x.y.z]` heading. Five of them — `0.1.2`, `0.1.7`, `0.1.8`,
+`0.1.9` and `0.5.1` — say outright that no entries were recorded, which is a different statement from an
 absent heading and is the honest one: those releases carried code and the changelog was not
 written. Read the section rather than inferring anything from a gap.
 

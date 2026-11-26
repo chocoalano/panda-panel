@@ -27,6 +27,7 @@ somewhere else.
 | **Infolist** | The read-only detail view, the counterpart to a form | [Infolists](/infolists/overview) |
 | **Plugin** | Panel configuration packaged for reuse across projects | [Plugin concepts](/plugins/concepts) |
 | **Cluster** | Resources and pages grouped under one path prefix, without changing any route name | [Clusters](/pages-navigation/clusters) |
+| **Tour** | A few optional steps of information or tutorial over one page, opened once and again from a button | [Page tours](/pages-navigation/tours) |
 | **Render hook** | A named injection point in the shell that renders a Vue component you registered | [Render hooks](/panels/render-hooks) |
 
 ## Words that carry weight here

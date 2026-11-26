@@ -207,7 +207,7 @@ A field the schema does not declare does not exist, however the request spells i
 
 ## Gotchas
 
-- **`searchable()` needs a form that provided an endpoint.** Resource create and edit pages and relation form dialogs do. An action's form and a widget filter do not, so the field falls back to a plain dropdown (or checkbox list) there — it shows the options it was given and nothing more.
+- **`searchable()` needs a form that provided an endpoint.** Resource create and edit pages, action dialogs, and relation form dialogs do. A widget filter does not, so the field falls back to a plain dropdown (or checkbox list) there — it shows the options it was given and nothing more.
 - **`searchable()` on a static list does not filter.** The combobox appears when an endpoint exists, but `resolveOptions()` ignores the search term for a static list and returns the same array. Use a relation, or leave the list short enough not to need searching.
 - **A relationship select needs `FormSchema::model()`.** Resources set it. A schema built by hand without `->model(Post::class)` renders the relation field with no options and no `exists` rule, silently — there is nothing at that layer that could say what the relation points at.
 - **Values arrive as strings.** `castForForm()` keeps a single value only when it is a string or an int, and maps a multiple value to `list<string>`. Compare with `==` or cast when a `visibleWhen()` condition depends on a select — conditions compare as strings for exactly this reason.

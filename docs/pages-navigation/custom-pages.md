@@ -446,6 +446,24 @@ See [Page discovery](discovery.md).
 - **A generated Vue component declares no layout.** The published components under `resources/js/pages/panel` all declare one — a test asserts it — but the `--component` stub does not, so add `defineOptions({ layout: PanelLayout })` to anything the generator writes.
 - **`make:panel-page` exits non-zero when every file it would write already exists.** `report()` returns failure when nothing was created and something was skipped, which is what makes `--force` visible in CI rather than a silent no-op.
 
+## A tour of the page
+
+Override `tour()` to explain the page to whoever opens it. It is `null` by default:
+
+```php
+use PandaPanel\Tours\Tour;
+use PandaPanel\Tours\TourStep;
+
+public function tour(): ?Tour
+{
+    return Tour::make()->steps([
+        TourStep::make('What this report counts')->region('widget'),
+    ]);
+}
+```
+
+See [Page tours](tours.md).
+
 ## See also
 
 - [Page discovery](discovery.md)

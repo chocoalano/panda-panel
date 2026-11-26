@@ -270,7 +270,7 @@ in a filter.
 
 The panel reads well. Now make it *do* something.
 
-**→ [7 · Actions and dashboard widgets](actions-and-widgets)**
+**→ [7 · Actions and dashboard widgets](actions-and-widgets.md)**
 
 ## See also
 

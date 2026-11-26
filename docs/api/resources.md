@@ -120,7 +120,10 @@ public static function integrationSettings(): Integrations;  // resolved once pe
 public static function getWidgets(): array;                  // []
 public static function getHeaderWidgets(string $page): array; // index gets getWidgets()
 public static function getFooterWidgets(string $page): array; // []
+public static function tour(string $page): ?Tour;            // null — see Page Tours
 ```
+
+`tour()` receives the same page key as `getHeaderWidgets()`: `index`, `create`, `view`, `edit`, or `relation:{key}`. See [Page tours](../pages-navigation/tours.md).
 
 `form()` is abstract rather than defaulting to an empty schema: a resource with no form should say so explicitly rather than inherit a create page that silently saves nothing.
 
@@ -343,6 +346,7 @@ public static function renderHookScope(): string;      // 'resource:{slug}'
 public static function resource(): string;
 public function headerWidgets(): array;                // Resource::getHeaderWidgets($page)
 public function footerWidgets(): array;                // Resource::getFooterWidgets($page)
+public function tour(?Model $record = null): ?Tour;    // Resource::tour($page)
 ```
 
 Override the three heading methods when the text depends on something a static property cannot say:
@@ -361,6 +365,7 @@ protected function defaultTitle(?Model $record): string;
 protected function defaultHeading(?Model $record): string;
 protected function defaultSubheading(?Model $record): ?string;
 protected function headingMetadata(?Model $record = null): array;
+protected function tourMetadata(?Model $record = null): array;   // the 'tour' key of a page's metadata
 protected function panel(): Panel;
 protected function dashboardUrl(): string;
 protected function baseBreadcrumbs(): array;

@@ -262,7 +262,7 @@ They resolve through the `infolist` scope, which is a different whitelist from t
 - **`DeleteAction` and `DeleteBulkAction` are both named `delete`.** They sit in different sets, which are different whitelists, so nothing has to disambiguate them.
 - **A delete on a soft-deleting model does not remove the row.** If the intention is permanent removal, that is `ForceDeleteAction`.
 - **`CreateAction::modal()` is a table action.** It appears in `headerActions()`, `toolbarActions()`, or `emptyStateActions()`, never in `recordActions()` — it has no record to act on.
-- **The create dialog has no options endpoint or live-field endpoint.** A relationship select that pages its options, or a field marked `live()`, works on the create *page* but not inside the dialog. See [Action forms](forms.md).
+- **The create dialog's form is an action form.** A searchable select, a file field, and a `live()` field work inside it, authorized as the action. See [Action forms](forms.md).
 - **`Resource::label()` drives the create label.** Override it with `->label()` when "New post" is not the phrase the panel wants.
 
 ## See also

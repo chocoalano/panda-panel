@@ -478,6 +478,7 @@ abstract class Cluster
 | `PandaPanel\Enums\RenderHook` | `BodyStart`, `BodyEnd`, `SidebarStart`, `SidebarEnd`, `HeaderStart`, `HeaderEnd`, `PageStart`, `PageEnd` |
 | `PandaPanel\Enums\SubNavigationPosition` | `Top`, `Start`, `End` |
 | `PandaPanel\Enums\ClusterPosition` | `Header`, `RightBar`, `Sidebar` |
+| `PandaPanel\Enums\TourSide` | `Top`, `Right`, `Bottom`, `Left` |
 
 ## Configuration keys
 

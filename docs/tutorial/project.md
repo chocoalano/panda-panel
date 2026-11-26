@@ -131,7 +131,7 @@ them.
 
 The application runs. Now give it a panel.
 
-**→ [3 · Install Panda Panel](install)**
+**→ [3 · Install Panda Panel](install.md)**
 
 ## See also
 

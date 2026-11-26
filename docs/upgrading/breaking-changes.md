@@ -18,10 +18,11 @@ A schema mistake raises at schema-build time, which is boot or first render — 
 before a user does. That is why `php artisan test` is the first line of this page rather than the
 last.
 
-## Unreleased
+## 0.5.10
 
 Four changes that can need an edit, and one step everybody takes: republish the frontend, because
-the contract is now version 3.
+the contract is now version 3. It was tagged as a patch release, so `^0.5` picks it up on an
+ordinary `composer update`.
 
 ```bash
 php artisan panel:assets --update

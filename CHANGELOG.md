@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.10] - 2026-11-26
+
+This release was tagged as a patch and carries changes that can need an edit, so
+a `^0.5` constraint picks them up on `composer update`. Each is marked below and
+written out in
+[Breaking changes](docs/upgrading/breaking-changes.md#0510).
+
 ### Added
 
 - **Page tours.** A resource (`Resource::tour(string $page)`), a resource page
@@ -281,6 +288,11 @@ published its frontend. Neither needs a source edit in an application.
   `docs/upgrading/asset-conflicts.md` carried a snippet for writing
   `.panel-assets.json` by hand, because no supported call could record a
   resolution. `AssetManifest::reconcile()` is that call.
+
+## [0.5.1] - 2026-09-10
+
+No entries were recorded for this release. It carries a one-line change to the
+date field component.
 
 ## [0.5.0] - 2026-09-10
 
@@ -845,7 +857,7 @@ _No entries were recorded for this tag._
 
   `$with` is unchanged and still needed for every relation with no name to read it from: one reached
   by a `formatUsing()` closure, by `recordTitle()`, or by a policy. See
-  [Query performance](docs/resources/performance.md), a new page covering what is derived, what is
+  Query performance (`docs/resources/performance.md`, since removed), a new page covering what is derived, what is
   not, why every read is `select *`, and how `Model::preventLazyLoading()` turns a missed eager load
   from a slow page into an exception.
 - **A hidden column costs nothing.** `toRow()` serializes the columns the current arrangement shows,

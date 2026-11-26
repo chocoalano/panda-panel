@@ -1,8 +1,8 @@
 # config/panda-panel.php
 
 Every key the package reads, what it decides, and what an invalid value does. This is the
-whole configuration file: ten top-level keys, all of them registration-time switches or
-security bounds. Everything with logic in it — paths, domains, middleware, navigation,
+whole configuration file: thirteen top-level keys — registration-time switches, security
+bounds, and a few application-wide defaults. Everything with logic in it — paths, domains, middleware, navigation,
 branding, access — is configured in code on the panel, because a decision with a condition
 in it does not belong in an array.
 
@@ -49,11 +49,15 @@ most common "the install worked but the URL 404s".
 | `integrations.history.enabled` | `bool` | `true` | `PandaPanel\Integrations\PanelIntegrationDelivery::enabled()` |
 | `integrations.history.keep_per_integration` | `int` | `50` | `PanelIntegrationDelivery::prune()` |
 | `integrations.history.retention_days` | `int` | `30` | `PanelIntegrationDelivery::prune()` |
+| `locales` | `array<string, string>` | `[]` | `PandaPanel\Core\Panel` |
+| `labels.file` | `string` | `'panel'` | `PandaPanel\Support\Label` |
+| `forms.diagnostics` | `'throw'\|'log'\|'ignore'\|null` | `null` (`PANDA_PANEL_FORM_DIAGNOSTICS`) | `PandaPanel\Forms\Support\SchemaDiagnostics` |
+| `forms.currency` | `string` | `'USD'` (`PANDA_PANEL_CURRENCY`) | `PandaPanel\Forms\Components\MoneyInput` |
 | `frontend.panel_path` | `string` | `'js/panel'` | `PandaPanel\Support\FrontendPaths::panel()` |
 | `frontend.pages_path` | `string` | `'js/pages/Panels'` | `PandaPanel\Support\FrontendPaths::pages()` |
 
-Nothing here is bound to `env()`. The package ships no environment variables of its own — see
-[Environment Variables](environment.md) for the Laravel configuration a panel does depend on.
+Only the two `forms` keys are bound to `env()` — see [Environment Variables](environment.md),
+which also lists the Laravel configuration a panel depends on.
 
 ## `panels`
 
@@ -298,6 +302,54 @@ the API keys these requests carry.
 Integrations are off for every resource until one opts in with
 `integrations()->isEnabled(true)`, so an application that configures none of this has nothing to
 turn off. See [Resource API](../resources/api.md).
+
+## `locales`
+
+```php
+'locales' => [
+    // 'en' => 'English',
+    // 'id' => 'Bahasa Indonesia',
+],
+```
+
+The languages the shell's switcher offers, keyed by code, each named in its own language. Empty
+means no switcher: the panel still follows `app()->getLocale()`. The package ships `en` and `id`;
+any other code needs `lang/vendor/panda-panel/{code}/`. A panel narrows the list with
+`->locales([...])`. See [Localization](localization.md).
+
+## `labels`
+
+```php
+'labels' => ['file' => 'panel'],
+```
+
+Before deriving a label such as "Created At" from a name, the panel looks it up in
+`lang/{locale}/{file}.php` — your file, with your words:
+
+```php
+// lang/id/panel.php
+return [
+    'fields' => ['created_at' => 'Dibuat pada'],
+    'resources' => ['User' => 'Pengguna'],
+];
+```
+
+`->label()` still wins, and with no such file the headline of the name is used.
+
+## `forms`
+
+```php
+'forms' => [
+    'diagnostics' => env('PANDA_PANEL_FORM_DIAGNOSTICS'),
+    'currency' => env('PANDA_PANEL_CURRENCY', 'USD'),
+],
+```
+
+`diagnostics` decides what happens to a schema that contradicts itself, such as two fields writing
+to one state path: `throw`, `log`, or `ignore`. Null means `throw` in `local` and `testing` and
+`log` elsewhere.
+
+`currency` is the ISO 4217 code a [money field](../forms/fields/money.md) uses when it names none.
 
 ## `frontend`
 

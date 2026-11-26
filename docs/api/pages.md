@@ -105,6 +105,7 @@ public function widgets(): array;            // [] — list<class-string<Widget>
 public function breadcrumbs(): array;        // list<Breadcrumb>
 public function headerActions(): array;      // []
 public function filterSchema(): ?FormSchema; // null
+public function tour(): ?Tour;               // null — see Page Tours
 public function render(): Response;
 ```
 
@@ -198,7 +199,27 @@ protected function filterSessionKey(): string;               // 'panel.{id}.page
 protected static function resolvePanel(Panel|string|null $panel): Panel;
 ```
 
-`metadata()` builds the `page` prop: `title`, `heading`, `subheading`, `breadcrumbs`, `headerActions`, `scope`, `cluster`.
+`metadata()` builds the `page` prop: `title`, `heading`, `subheading`, `breadcrumbs`, `headerActions`, `scope`, `tour`, `cluster`.
+
+## Tours
+
+`PandaPanel\Tours\Tour` and `TourStep` describe a guided tour. The whole guide is [Page tours](../pages-navigation/tours.md) — the signatures are:
+
+```php
+Tour::make(?string $key = null): Tour;
+$tour->steps(array $steps): Tour;                // array<array-key, TourStep>
+$tour->toArray(string $defaultKey): ?array;      // null for a tour with no steps
+
+TourStep::make(string $title): TourStep;
+$step->description(?string $description): TourStep;
+$step->field(string $name): TourStep;
+$step->column(string $name): TourStep;
+$step->action(string $name): TourStep;
+$step->region(string $region): TourStep;         // one of CssHooks::HOOKS, or InvalidArgumentException
+$step->selector(string $selector): TourStep;
+$step->side(TourSide $side): TourStep;           // TourSide::Bottom
+$step->toArray(): array;
+```
 
 ## Widgets on a page
 

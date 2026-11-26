@@ -1,8 +1,14 @@
 # Environment Variables
 
-The package defines no environment variables of its own. Every value in `config/panda-panel.php`
-is a literal — there is not one `env()` call in the file, or anywhere in `src/`. What a panel does
-depend on is a handful of ordinary Laravel configuration values, most of which a default skeleton
+The package defines two environment variables of its own, both for forms:
+
+| Variable | Config key | Default | For |
+| --- | --- | --- | --- |
+| `PANDA_PANEL_CURRENCY` | `panda-panel.forms.currency` | `USD` | the currency of a money field that names none |
+| `PANDA_PANEL_FORM_DIAGNOSTICS` | `panda-panel.forms.diagnostics` | unset | `throw`, `log`, or `ignore` for a contradictory schema |
+
+Every other value in `config/panda-panel.php` is a literal, and nothing in `src/` calls `env()`.
+What a panel does depend on is a handful of ordinary Laravel configuration values, most of which a default skeleton
 binds to environment variables. This page is the list, and what each one changes about a panel.
 
 ## A minimal working example
@@ -25,7 +31,7 @@ php artisan panel:cache
 Everything below is about a specific panel *feature* — realtime notifications, queued exports,
 emailed two-factor codes — and each is optional.
 
-## Nothing here is env-bound
+## The registration switches are not env-bound
 
 ```php
 // config/panda-panel.php — the whole file's shape

@@ -139,7 +139,7 @@ on. That predictability is what lets Wayfinder and server-side URL generation st
 
 You are signed in and looking at an empty dashboard inside the panel's own shell — not the starter
 kit's. If you see *your* application sidebar instead, that is the `app.ts` layout assignment from
-[step 2](project), not an authentication problem.
+[step 2](project.md), not an authentication problem.
 
 ## If it did not work
 
@@ -171,7 +171,7 @@ User::query()->where('email', 'ada@example.com')->first()
 
 An empty panel is not much of a panel. Give it something to manage.
 
-**→ [5 · Your first resource](resource)**
+**→ [5 · Your first resource](resource.md)**
 
 ## See also
 

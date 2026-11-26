@@ -253,7 +253,7 @@ it('declares a layout on every published panel page', function (): void {
 
 Which branch an action takes is decided in the browser, and the one time it was wrong the action ran with no dialog and no values while the whole PHP suite stayed green. The bug was that the request was never made, and no assertion about a payload can see a request that does not happen.
 
-So five files mount, through `@vue/test-utils` in a `happy-dom` environment, opted into per file with `@vitest-environment happy-dom` rather than globally — Vitest's default here stays `node`, and the rest of the suite is pure functions that should not pay for a DOM they never touch:
+So the files that need a component mount it, through `@vue/test-utils` in a `happy-dom` environment, opted into per file with `@vitest-environment happy-dom` rather than globally — Vitest's default here stays `node`, and the rest of the suite is pure functions that should not pay for a DOM they never touch. Some of them:
 
 ```
 resources/js/panel/composables/useRelationActions.test.ts   which branch, which scope, which URL
@@ -261,11 +261,17 @@ resources/js/panel/composables/useActions.test.ts           the resource side of
 resources/js/panel/relations/RelationManagerPanel.test.ts   mount, click, observe the dialog
 resources/js/panel/forms/FormRenderer.test.ts               submit payload, 422, success, upload URL
 resources/js/panel/forms/liveFormState.test.ts              a live field: request out, schema back, DOM changed
+resources/js/panel/forms/submitGuards.test.ts               what holds a submit; a replaced form
+resources/js/panel/forms/rejectedSubmit.test.ts             a refused submit, with Inertia itself visiting
+resources/js/panel/actions/staleActionForm.test.ts          two form requests answering out of order
+resources/js/panel/forms/calendarMonth.test.ts              which month the date picker opens on
+resources/js/panel/tour/PanelTour.test.ts                   a tour: first visit, steps, anchoring
+resources/js/panel/tour/markers.test.ts                     the markers a tour step points at
 ```
 
 `happy-dom` is a DOM implementation, not a browser. Nothing here launches one, and none of it is an end-to-end test.
 
-The router is the boundary that is mocked — `vi.mock('@inertiajs/vue3')` — and what is asserted is what crossed it, or that nothing did. Mocking a composable and asserting it was called would prove nothing: the defect was in the decision, not in the plumbing.
+The router is usually the boundary that is mocked — `vi.mock('@inertiajs/vue3')` — and what is asserted is what crossed it, or that nothing did. `rejectedSubmit.test.ts` is the exception: it runs the real Inertia with only the network replaced, because what a visit does to the page component is decided inside Inertia and a mock cannot show it. Mocking a composable and asserting it was called would prove nothing: the defect was in the decision, not in the plumbing.
 
 The table half of `RelationManagerPanel` is stubbed by name. Mounting the data-table stack to answer a question about a button would make the test about the table.
 
@@ -293,6 +299,7 @@ Say what an assertion actually rests on. The words below mean specific things, a
 npm run test:browser          # frozen columns, at 360×800
 npm run test:browser:verify   # the verification foundation and its baselines
 npm run test:browser:editors  # the Markdown and code editors, and what they load
+npm run test:browser:temporal # the date and time controls
 npm run test:browser:all      # every one of them
 PANDA_CHROME=/path/to/chromium npm run test:browser:all
 ```

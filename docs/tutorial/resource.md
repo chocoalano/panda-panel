@@ -293,7 +293,7 @@ try whenever a new class does not show up.
 
 The resource works. It is not yet pleasant to use.
 
-**→ [6 · Shape the form and the table](form-and-table)**
+**→ [6 · Shape the form and the table](form-and-table.md)**
 
 ## See also
 

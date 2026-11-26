@@ -157,9 +157,9 @@ Fields — `PandaPanel\Forms\Components\*`, all extending the abstract `Field`:
 | `TextInput` | `Select` | `DatePicker` | `RichEditor` | `Repeater` |
 | `Textarea` | `Radio` | `DateTimePicker` | `MarkdownEditor` | `Builder` |
 | `NumberInput` | `Checkbox` | `TimePicker` | `CodeEditor` | `KeyValue` |
-| `PasswordInput` | `CheckboxList` | | `FileUpload` | `TagsInput` |
-| `HiddenInput` | `Toggle` | | `ColorPicker` | `CustomField` |
-| | `ToggleButtons` | | `Slider` | |
+| `MoneyInput` | `CheckboxList` | | `FileUpload` | `TagsInput` |
+| `PasswordInput` | `Toggle` | | `ColorPicker` | `CustomField` |
+| `HiddenInput` | `ToggleButtons` | | `Slider` | |
 
 Layouts — `PandaPanel\Forms\Layouts\*`: `Section`, `Grid`, `Tabs`, `Tab`, `Wizard`, `Step`,
 `Callout`, `EmptyState`, `Relationship`, `CustomComponent`.
@@ -182,6 +182,9 @@ TextInput::make('name')
     ->live(onBlur: true)
     ->dehydrateTo('display_name');
 ```
+
+A submit the server refuses keeps the form and shows the messages; text that is not a date, and a
+file still uploading, hold the submit.
 
 → [FormSchema Basics](../forms/overview.md), [Validation](../forms/validation.md), [State Lifecycle](../forms/state-lifecycle.md)
 
@@ -293,7 +296,10 @@ with every panel unless `settings(false)` says otherwise.
 route name. `PandaPanel\Enums\RenderHook` names the eight injection points, `SubNavigationPosition`
 the three record sub-navigation positions, and `ClusterPosition` where a cluster's own bar sits.
 
-→ [Custom Pages](../pages-navigation/custom-pages.md), [Clusters](../pages-navigation/clusters.md), [Render Hooks](../panels/render-hooks.md)
+Any page or resource may offer a [guided tour](../pages-navigation/tours.md) — a few steps of
+information or tutorial that open once, and again from a button. It is off until declared.
+
+→ [Custom Pages](../pages-navigation/custom-pages.md), [Page Tours](../pages-navigation/tours.md), [Clusters](../pages-navigation/clusters.md), [Render Hooks](../panels/render-hooks.md)
 
 ## Authentication
 
@@ -415,6 +421,7 @@ $panel->plugins([ReportingPlugin::make()->withCharts()]);
 Published into the application on install: `resources/js/panel/**` (layouts, components, renderers,
 composables, registries, types), `resources/js/pages/panel/**` (framework-generic pages), and
 `resources/js/pages/Panels/**` (your own pages, widgets, columns, fields and modals).
+After an upgrade, `php artisan panel:assets --update` republishes them.
 `resources/css/panda-panel.css` is the Tailwind 4 stylesheet.
 
 Custom components resolve through build-time `import.meta.glob` allowlists over

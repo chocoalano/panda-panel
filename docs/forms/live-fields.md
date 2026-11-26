@@ -29,7 +29,7 @@ public static function form(FormSchema $schema): FormSchema
 }
 ```
 
-Changing `country` posts the current values to the panel's `form-state` endpoint, `form()` runs again with those values available on the request, and the new schema replaces the old one on screen. The values the user has already typed are kept.
+Changing `country` posts the current values to the panel's `form-state` endpoint, `form()` runs again with those values available on the request, and the new schema replaces the old one on screen. The values the user has already typed are kept, except where a hook [said otherwise](#reading-and-changing-other-fields).
 
 ## `live()`
 
@@ -65,7 +65,7 @@ public function afterStateUpdated(Closure $callback): static
 // Closure(mixed $new, mixed $old, ?Model $record): void
 ```
 
-Runs on the server when a live field's value changes, before the schema is rebuilt. For side effects and for deciding what other fields should become — it returns nothing, because a hook that both mutated and returned would leave two places to change a value.
+Runs on the server when a live field's value changes, before the schema is rebuilt. For side effects and for deciding what other fields should become — it returns nothing, because a hook that both mutated and returned would leave two places to change a value. To change another field, ask for a [`Set`](#reading-and-changing-other-fields).
 
 ```php
 use Illuminate\Database\Eloquent\Model;
@@ -87,6 +87,44 @@ $field = TextInput::make('a')->live()->afterStateUpdated($hook);
 $field->handleStateUpdated('new', 'old');
 ```
 
+## Reading and changing other fields
+
+Type-hint `PandaPanel\Forms\Support\Get` or `Set` and the hook is given it:
+
+```php
+use PandaPanel\Forms\Components\NumberInput;
+use PandaPanel\Forms\Components\Select;
+use PandaPanel\Forms\Support\Get;
+use PandaPanel\Forms\Support\Set;
+
+Select::make('department_id')
+    ->relationship('department', 'name')
+    ->live()
+    ->afterStateUpdated(static fn (Set $set) => $set('position_id', null)),
+
+NumberInput::make('quantity')
+    ->live(onBlur: true)
+    ->afterStateUpdated(static function (Get $get, Set $set): void {
+        // A money field takes a string at its own precision, never a raw float.
+        $set('total', number_format((float) $get('price') * (int) $get('quantity'), 2, '.', ''));
+    }),
+```
+
+| Object | Methods |
+| --- | --- |
+| `Get` | `$get($path)`, `get($path)`, `has($path)`, `all()` |
+| `Set` | `$set($path, $value)`, `set($path, $value)`, `forget($path)`, `reset($path)` — the last two write `null` |
+
+A path is the field's name, dotted names included (`profile.bio`). A field the form does not hold reads as `null`.
+
+A `Set` is recorded as a **patch** and sent back beside the rebuilt schema. It is the only thing that overrides what the user typed; rebuilding a schema never does.
+
+A closure that type-hints none of `Get`, `Set`, or `FormState` is called with `($new, $old, $record)` exactly as before. One that does may mix both styles:
+
+```php
+->afterStateUpdated(static fn (mixed $value, Set $set) => $set('slug', Str::slug((string) $value)))
+```
+
 ## The endpoint
 
 Route name `panel.{panel_id}.form-state`, registered per panel, handled by `PandaPanel\Http\Controllers\PanelFormStateController`.
@@ -94,27 +132,32 @@ Route name `panel.{panel_id}.form-state`, registered per panel, handled by `Pand
 | Part | Where it comes from | Values |
 | --- | --- | --- |
 | `resource` | query string | the resource slug in this panel; 422 if missing, 404 if unknown |
-| `page` | query string | `edit`, or `create` for anything else |
-| `record` | query string | required when `page=edit`; 422 if missing, 404 if not found |
+| `page` | query string | `create` or `edit`, for a resource's own form |
+| `record` | query string | the record being edited, or the owner of a relation form |
+| `action`, `scope` | query string | an action's form |
+| `relation`, `operation`, `related` | query string | a relation manager's form |
 | `state` | request body | the values typed so far, keyed by field name |
 | `changed` | request body | the field that changed |
 | `previous` | request body | its previous value, passed to the hook |
 
-The URL is built on the server by `PandaPanel\Support\FormEndpoints::formState()` and sent to the page as `formStateUrl`. Everything that says *what this form is* travels in the URL; the browser contributes only the values and which field changed, so a keystroke can never change which form is being asked about.
+The URL is built on the server by `PandaPanel\Support\FormEndpoints` and sent with the form as `formStateUrl`. Everything that says *what this form is* travels in the URL; the browser contributes only the values and which field changed, so a keystroke can never change which form is being asked about.
 
 The response is JSON:
 
 ```json
-{ "form": { "columns": 2, "schema": [ { "component": "field", "name": "region", "…": "…" } ] } }
+{
+  "form": { "columns": 2, "schema": [ { "component": "field", "name": "region", "…": "…" } ] },
+  "statePatch": { "region": null }
+}
 ```
 
-which is `FormSchema::toArrayWithState($record, $state)` — the schema rebuilt, with the submitted values applied over the field values.
+`form` is `FormSchema::toArrayWithState($record, $state)` — the schema rebuilt, with the state applied over the field values. `statePatch` holds only what a hook `Set`, and is `{}` otherwise.
 
 ### What the endpoint will not do
 
 - **It validates nothing.** No rules are run and no errors are returned.
 - **It writes nothing.** Asking what a form looks like is not a submit.
-- **It authorizes.** Describing a create form requires `canCreate()`; describing an edit form requires `canEdit($record)`. Both are asked before the schema is built, because building it runs the schema's own closures.
+- **It authorizes.** A create form requires `canCreate()`, an edit form `canEdit($record)`, an action's form the action's own authorization, and a relation form the manager's abilities for that operation. Asked before the schema is built, because building it runs the schema's own closures.
 - **It narrows the state.** Only keys the schema declares are read out of `state`; anything else is discarded before any hook sees it.
 
 That separation is what makes it safe to call on every keystroke of a live field: the worst a crafted request can do is ask what a form looks like, which it could see by opening the page.
@@ -129,6 +172,8 @@ That separation is what makes it safe to call on every keystroke of a live field
 - On success the schema is replaced. Fields the rebuilt schema introduced are given their serialized value; fields the user has already typed into keep theirs.
 - On any failure the form is left exactly as it was. Rebuilding is an enrichment, and losing it must not cost the user what they have entered.
 - A response whose shape does not match is treated as a failure rather than asserted into place.
+- Paths in `statePatch` replace what the user had, and their error messages are cleared.
+- A new `form` from the server — a fresh page, or *create another* — cancels any rebuild still pending and replaces the schema and the values.
 
 ## Reading the submitted values in `form()`
 
@@ -160,7 +205,7 @@ On the first render there is no `state`, so the dependent field starts with what
 
 ## Where live fields work
 
-`formStateUrl` is provided by the resource create and edit pages, and by nothing else. A `live()` field inside an [action dialog](../actions/forms.md), a [relation form](../relations/relation-forms.md), or a [widget filter](../widgets/filters.md) has no endpoint to ask, so it behaves as an ordinary field — no request, no rebuild, no `afterStateUpdated()`.
+Every form that is submitted: resource create and edit pages, [action dialogs](../actions/forms.md), and [relation forms](../relations/relation-forms.md), relation actions included. A [widget filter](../widgets/filters.md) has no endpoint to ask, so a `live()` field there behaves as an ordinary one — no request, no rebuild, no `afterStateUpdated()`.
 
 ## Notes
 

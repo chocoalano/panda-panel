@@ -184,6 +184,10 @@ The client appends only `field` and `search`. Everything else is the server's st
 
 The 50-result cap is a bound the request cannot raise. See [Options endpoints](../forms/options-endpoints.md).
 
+## Live fields on a relation form
+
+`formStateUrl` carries the same context, so a [`live()` field](../forms/live-fields.md) rebuilds a relation form too, under the relation's own abilities.
+
 ## File uploads on a relation form
 
 `uploadUrl` carries the same context as the options URL, so a file field on a relation form is authorized by the relation's own abilities rather than by the owning resource's. Nothing else about the field changes — see [File uploads](../forms/file-uploads.md).

@@ -222,14 +222,14 @@ public function live(bool $onBlur = false, ?int $debounce = null): static;   // 
 public function isLive(): bool;
 ```
 
-Asks the server to rebuild the form when this field changes, through the panel's `form-state` endpoint. For a dependency the declarative conditions cannot express — a select whose options come from another field's value, a computed total. Off by default, because a round trip per keystroke is the wrong default.
+Asks the server to rebuild the form when this field changes, through the panel's `form-state` endpoint. A hook changes other fields with `PandaPanel\Forms\Support\Set` and reads them with `Get` — see [Live fields](../forms/live-fields.md#reading-and-changing-other-fields). For a dependency the declarative conditions cannot express — a select whose options come from another field's value, a computed total. Off by default, because a round trip per keystroke is the wrong default.
 
 ### State hooks
 
 ```php
 public function formatUsing(Closure $callback): static;          // Closure(mixed, ?Model): mixed — model → form
 public function afterStateHydrated(Closure $callback): static;   // observer; its return value is ignored
-public function afterStateUpdated(Closure $callback): static;    // Closure(mixed $new, mixed $old, ?Model): void
+public function afterStateUpdated(Closure $callback): static;    // Closure(mixed $new, mixed $old, ?Model): void — may type-hint Get, Set, FormState
 public function mutateUsing(Closure $callback): static;          // form → model
 public function dehydrateStateUsing(Closure $callback): static;  // the same thing, Filament's name
 public function mutate(mixed $value, ?Model $record): mixed;
@@ -293,6 +293,7 @@ Every type is `PandaPanel\Forms\Components\*` and inherits the whole `Field` API
 | `Textarea` | `Textarea` | `rows(int)`, `maxLength(?int)` | `rows` 4 |
 | `PasswordInput` | `Password` | `confirmed(bool = true)`, `revealable(bool = true)`, `optionalWhenFilled()`, `isConfirmed()` | `revealable` true |
 | `NumberInput` | `Number` | `integer(bool = true)`, `min(int\|float\|null)`, `max(...)`, `step(...)` | all null |
+| `MoneyInput` | `Money` | `currency(string)`, `decimals(int)`, `locale(?string)`, `storedAsMinorUnits(bool = true)`, `min(...)`, `max(...)` | currency from `panda-panel.forms.currency` |
 | `HiddenInput` | `Hidden` | — | — |
 | `Checkbox` | `Checkbox` | — | `default` **false** |
 | `Toggle` | `Toggle` | *(extends `Checkbox`)* | `default` false |
@@ -339,6 +340,19 @@ PasswordInput::make('password')
 `formValue()` always returns `null`: a password is never sent back to the browser, because rendering the stored hash would put it on screen and in the page payload.
 
 `optionalWhenFilled()` is `required(false)` plus a `dehydrateWhen()` that keeps only non-empty strings — optional on edit, still validated when typed, and dropped when blank so the stored hash survives.
+
+### `MoneyInput`
+
+Rules: `numeric`, `decimal:0,{decimals}`, `PandaPanel\Forms\Support\ExactFloatAmount`, plus `min` / `max`. `ExactFloatAmount` holds a JSON number to the same decimal limit; it is a `ValidationRule` you may add to a field of your own:
+
+```php
+use PandaPanel\Forms\Components\NumberInput;
+use PandaPanel\Forms\Support\ExactFloatAmount;
+
+NumberInput::make('rate')->rules(['decimal:0,4', new ExactFloatAmount(4)]);
+```
+
+See [Money](../forms/fields/money.md).
 
 ### `Select`
 
@@ -608,7 +622,7 @@ A closure is evaluated on the server against the record; only the resulting stri
 
 | Enum | Cases |
 | --- | --- |
-| `FieldType` | `Text`, `Textarea`, `Password`, `Number`, `Hidden`, `Checkbox`, `Toggle`, `Select`, `Date`, `DateTime`, `Time`, `Radio`, `CheckboxList`, `ToggleButtons`, `ColorPicker`, `Slider`, `TagsInput`, `KeyValue`, `RichEditor`, `MarkdownEditor`, `CodeEditor`, `FileUpload`, `Repeater`, `Builder`, `Custom` |
+| `FieldType` | `Text`, `Textarea`, `Password`, `Number`, `Money`, `Hidden`, `Checkbox`, `Toggle`, `Select`, `Date`, `DateTime`, `Time`, `Radio`, `CheckboxList`, `ToggleButtons`, `ColorPicker`, `Slider`, `TagsInput`, `KeyValue`, `RichEditor`, `MarkdownEditor`, `CodeEditor`, `FileUpload`, `Repeater`, `Builder`, `Custom` |
 | `ConditionOperator` | `Equals`, `NotEquals`, `In`, `NotIn`, `Filled`, `Blank`, `GreaterThan`, `LessThan`, `Truthy`, `Falsy` |
 | `CalloutTone` | `Info`, `Success`, `Warning`, `Danger` |
 | `CodeLanguage` | `Plain`, `Json`, `Html`, `Css`, `JavaScript`, `Php`, `Sql`, `Yaml`, `Markdown` |
@@ -617,7 +631,7 @@ A closure is evaluated on the server against the record; only the resulting stri
 
 | Route name | Used by |
 | --- | --- |
-| `panel.{id}.options` | a searchable `Select` asking for more rows; create checks `canCreate()`, edit requires `record` and checks `canEdit($record)` |
+| `panel.{id}.options` | a searchable `Select` asking for more rows; authorized as the form it belongs to — page, action, or relation operation |
 | `panel.{id}.uploads` | `FileUpload` storing a file before submit |
 | `panel.{id}.form-state` | a `live()` field asking what the form should look like now |
 | `panel.{id}.resources.{slug}.validateCreateStep` / `validateEditStep` | a wizard moving between steps |

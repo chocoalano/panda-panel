@@ -12,7 +12,7 @@ composer install
 npm ci
 
 composer ci     # pint --test, then phpstan, then pest
-npm run ci      # prettier --check, then eslint, then vue-tsc, then vite build
+npm run ci      # prettier --check, eslint, vue-tsc, vitest, then vite build
 ```
 
 Both scripts are declared in the repository rather than assembled here, and both are what CI runs. A change that passes them locally fails CI only for a version-specific reason — which is what the [CI matrix](../testing/ci-matrix.md) is for.
@@ -44,8 +44,8 @@ The first five directories are the shipped package. Everything else is how the r
 
 | Script | Runs |
 | --- | --- |
-| `composer test` | `vendor/bin/pest` |
-| `composer test-coverage` | `vendor/bin/pest --coverage` |
+| `composer test` | `php -d memory_limit=512M vendor/bin/pest` |
+| `composer test-coverage` | `php -d memory_limit=512M vendor/bin/pest --coverage` |
 | `composer format` | `vendor/bin/pint` |
 | `composer format-check` | `vendor/bin/pint --test` |
 | `composer analyse` | `vendor/bin/phpstan analyse --memory-limit=1G` |
@@ -71,8 +71,9 @@ composer ci              # all three, in the order a failure is most useful
 | `npm run format` | `prettier --write resources/js frontend resources/css` |
 | `npm run format:check` | `prettier --check resources/js frontend resources/css` |
 | `npm run typecheck` | `vue-tsc --noEmit -p tsconfig.json` |
-| `npm run build` | `vite build` |
-| `npm run ci` | `format:check`, `lint`, `typecheck`, `build` |
+| `npm run test` | `vitest run` |
+| `npm run build` | `node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build` |
+| `npm run ci` | `format:check`, `lint`, `typecheck`, `test`, `build` |
 
 ```bash
 npm ci                   # install from the committed lockfile
@@ -80,7 +81,7 @@ npm run format           # fix formatting
 npm run lint:fix         # fix what eslint can fix
 npm run typecheck        # vue-tsc over every component
 npm run build            # does all of it compile together
-npm run ci               # all four, as CI runs them
+npm run ci               # all five
 ```
 
 `engines` declares `"node": ">=20.19"`. CI runs Node 20, 22 and 24; anything older is untested and the `@tailwindcss/vite` and Vite 7 versions in `dependencies` will not resolve.

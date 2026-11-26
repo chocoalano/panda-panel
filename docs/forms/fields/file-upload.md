@@ -227,6 +227,10 @@ interface FileUploadFieldDefinition extends BaseFieldDefinition {
 
 ## Gotchas
 
+**An upload in progress holds the submit.** The field's value does not change until the file is
+stored, so submitting meanwhile would save the old value or nothing. The form refuses, with a
+message against the field, and lets the submit through once the upload ends — successfully or not.
+
 **Removing a file from a form does not delete it.** The form has not been submitted and the record may still be using the file. Deleting orphans is the application's job — a model observer on `deleting`, or a scheduled sweep of the directory.
 
 **`maxSize()` is in kilobytes.** It is passed straight to Laravel's `max:` rule for files, which measures kilobytes. `maxSize(1024)` is one megabyte.
