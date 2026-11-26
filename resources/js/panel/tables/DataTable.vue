@@ -527,6 +527,7 @@ const { hook } = usePanelStyling();
                         v-for="column in visibleColumns"
                         :key="column.name"
                         :ref="measure(column.name)"
+                        :data-tour="`column:${column.name}`"
                         :aria-sort="sortStateOf(column)"
                         :class="[
                             ALIGNMENT_CLASSES[column.headerAlignment],

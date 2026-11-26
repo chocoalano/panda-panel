@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Calendar as CalendarIcon, X } from '@lucide/vue';
-import { CalendarDate, parseDate } from '@internationalized/date';
+import {
+    CalendarDate,
+    getLocalTimeZone,
+    parseDate,
+    today,
+} from '@internationalized/date';
 import { computed, ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -57,7 +62,11 @@ const props = withDefaults(
     },
 );
 
-const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
+const emit = defineEmits<{
+    'update:modelValue': [value: string | null];
+    /** The typed text is not a date, so the value above is null for it. */
+    'update:invalid': [invalid: boolean];
+}>();
 
 const open = ref(false);
 
@@ -84,8 +93,32 @@ const selected = computed(() => toCalendarDate(props.modelValue) ?? undefined);
 const minValue = computed(() => toCalendarDate(props.min) ?? undefined);
 const maxValue = computed(() => toCalendarDate(props.max) ?? undefined);
 
+/**
+ * The month the calendar opens on: that of the date held, and otherwise of
+ * today, moved inside the bounds. Left to itself the calendar opens on today
+ * whatever the field holds.
+ */
+const opensOn = computed(() => {
+    if (selected.value !== undefined) {
+        return selected.value;
+    }
+
+    const now = today(getLocalTimeZone());
+
+    if (minValue.value !== undefined && now.compare(minValue.value) < 0) {
+        return minValue.value;
+    }
+
+    if (maxValue.value !== undefined && now.compare(maxValue.value) > 0) {
+        return maxValue.value;
+    }
+
+    return now;
+});
+
 const draft = ref('');
 const draftInvalid = ref(false);
+watch(draftInvalid, (value) => emit('update:invalid', value));
 let pending: string | null | undefined;
 watch(
     () => props.modelValue,
@@ -179,6 +212,7 @@ function onClear(): void {
                 <Calendar
                     :locale="locale"
                     :model-value="selected"
+                    :default-placeholder="opensOn"
                     :min-value="minValue"
                     :max-value="maxValue"
                     initial-focus

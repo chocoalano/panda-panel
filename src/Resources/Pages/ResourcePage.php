@@ -20,6 +20,7 @@ use PandaPanel\Support\Breadcrumb;
 use PandaPanel\Support\ClusterNavigation;
 use PandaPanel\Support\ParentRecord;
 use PandaPanel\Support\RecordSubNavigation;
+use PandaPanel\Tours\Tour;
 use PandaPanel\Widgets\PageContext;
 use PandaPanel\Widgets\Support\WidgetFilters;
 use PandaPanel\Widgets\Widget;
@@ -224,6 +225,34 @@ abstract class ResourcePage
         return $validator->fails()
             ? response()->json(['errors' => $validator->errors()->toArray()], 422)
             : response()->json(['errors' => []]);
+    }
+
+    /**
+     * The guided tour of this page, or null for none.
+     *
+     * Asks the resource. Override it on the page when the tour depends on
+     * something only the page knows — the record, most often.
+     */
+    public function tour(?Model $record = null): ?Tour
+    {
+        return static::$resource::tour($this->widgetPageKey());
+    }
+
+    /**
+     * The `tour` key of a page's metadata. A custom page that builds its own
+     * metadata spreads this in to have a tour at all.
+     *
+     * @return array{tour: array<string, mixed>|null}
+     */
+    protected function tourMetadata(?Model $record = null): array
+    {
+        $defaultKey = sprintf(
+            'resource:%s.%s',
+            static::$resource::slug(),
+            $this->widgetPageKey(),
+        );
+
+        return ['tour' => $this->tour($record)?->toArray($defaultKey)];
     }
 
     /**

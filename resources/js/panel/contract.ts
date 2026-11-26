@@ -15,4 +15,4 @@
  *
  * See `FrontendContract` for what each version added, and bump both together.
  */
-export const PANEL_CONTRACT_VERSION = 2;
+export const PANEL_CONTRACT_VERSION = 3;

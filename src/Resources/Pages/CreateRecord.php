@@ -286,6 +286,7 @@ abstract class CreateRecord extends ResourcePage
     {
         return [
             ...$this->headingMetadata(),
+            ...$this->tourMetadata(),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 ...$this->baseBreadcrumbs(),
                 Breadcrumb::make('New')->current(),

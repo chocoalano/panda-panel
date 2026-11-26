@@ -7,6 +7,71 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Page tours.** A resource (`Resource::tour(string $page)`), a resource page
+  (`ResourcePage::tour()`), or a standalone page (`Page::tour()`) may declare a
+  few steps of information or tutorial. All three answer `null` by default, and
+  a page with no tour draws nothing. A tour opens by itself on a reader's first
+  visit and from a button in the page header afterwards; "seen" is kept in the
+  browser. Steps point at a field, a column, an action, a shell region, or any
+  selector, and are built from the `Popover`, `Dialog`, and `Button` primitives
+  the panel already ships. See
+  [Page tours](docs/pages-navigation/tours.md).
+
+  **Breaking:** `Resource`, `ResourcePage`, and `Page` now define `tour()`, and
+  `ResourcePage` defines `tourMetadata()`. A class of your own that already has
+  a method by either name, with a different signature, is a fatal error.
+
+  **Behaviour change:** the frontend contract is now version 3. Run
+  `php artisan panel:assets --update` and rebuild.
+
+### Changed
+
+- **Behaviour change:** `MoneyInput`'s rule list carries an
+  `ExactFloatAmount` object after `decimal`. It casts to the string
+  `exact_float_amount:{decimals}`, so code that compares or stringifies the
+  rule list sees one more entry.
+
+### Fixed
+
+- **A `MoneyInput` refuses an over-precise JSON number instead of rounding it.**
+  `decimal:0,{n}` reads a float through a string cast that keeps 14 significant
+  digits, so `{"amount": 10.000000000000001}` passed validation and was stored
+  as `10.00`, while the same amount sent as a string was refused. A float that
+  needs more than 15 significant digits, or has more decimals than the
+  currency, is now refused with the `decimal` rule's own message. Digits the
+  JSON decoder itself drops (`100.00000000000000001` is `100.0`) cannot be
+  seen by any rule; send amounts as strings. **Behaviour change:** a `live()`
+  hook that sets a raw computed float such as `0.1 + 0.2` into a money field is
+  now refused too — set a string at the field's precision.
+- **A refused submit keeps the form.** `FormRenderer` visited without saying
+  anything about state, so Inertia mounted the page again for every answer —
+  including a validation failure. The typed values were gone and no message was
+  shown; a dialog simply closed. It now preserves state when the answer carries
+  errors, and a successful write starts the next page afresh as before. The
+  integrations page had the same fault, and never showed its errors at all.
+- **A form no longer submits over something it cannot send.** A date or time
+  typed by hand that is not one, and a file still uploading, both leave the
+  field's value null, which an optional field accepts — so submitting saved
+  "nothing" over what was on screen. The submit is now refused, with a message
+  against the field, until the text is corrected or the upload ends.
+- **A fresh form from the server replaces what was typed.** `FormRenderer`
+  took a new `form`'s schema and kept the old values, errors, and the controls'
+  own drafts. **Behaviour change:** an Inertia visit that preserves state and
+  brings back a *different* form — an action elsewhere on an edit page that
+  changed the record — now replaces unsaved edits. A custom page that renders
+  `FormRenderer` must pass a stable object: one rebuilt on every render resets
+  the form on every render.
+- **An action or relation dialog shows the form that was asked for last.** An
+  older request answering second replaced the newer one, including its submit
+  URL.
+- **The date picker's calendar opens on the date held.** It opened on the
+  current month, and where the bounds excluded today that was a grid with
+  nothing to choose. An empty field opens on today, moved inside the bounds.
+
+## [0.5.9] - 2026-10-31
+
 ### Fixed
 
 - **An aggregate over a camelCase relation no longer renders empty.**
@@ -22,6 +87,54 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   generated attribute ordered by a column that is not in the select — an
   error on MySQL and PostgreSQL, a silent no-op on SQLite. The aggregate
   attribute is now the fallback whichever order the two are called in.
+
+## [0.5.8] - 2026-09-28
+
+### Added
+
+- **`MoneyInput`.** An amount typed with the locale's separators and the
+  currency's symbol, submitted as a decimal string in both directions, rounded
+  on its digits rather than through a float, and optionally stored as an integer
+  count of minor units with `storedAsMinorUnits()`. See
+  [Money](docs/forms/fields/money.md).
+- **`panda-panel.forms.currency`** (`PANDA_PANEL_CURRENCY`, default `USD`): the
+  currency a money field uses when it names none.
+
+## [0.5.7] - 2026-09-25
+
+### Changed
+
+- **A `searchable()` select is a combobox.** The trigger reads like any other
+  select and opens onto a search box over the list; a multiple one names the
+  first three choices and counts the rest. A record found by searching keeps its
+  name on the trigger after the popup closes. The panel now publishes a
+  `components/ui/combobox` primitive.
+
+## [0.5.6] - 2026-09-24
+
+### Changed
+
+- **The rich text, Markdown, and code fields are real editors.** `RichEditor` is
+  Tiptap, `MarkdownEditor` is `md-editor-v3`, and `CodeEditor` is Monaco. The
+  stored values are what they were. Nothing is fetched from a CDN at runtime.
+
+  **Breaking:** six npm dependencies are new —
+  `@guolao/vue-monaco-editor`, `@tiptap/pm`, `@tiptap/starter-kit`,
+  `@tiptap/vue-3`, `md-editor-v3`, and `monaco-editor` — and an application has
+  to install them before it can build. The build may need
+  `NODE_OPTIONS=--max-old-space-size=4096`.
+
+  **Breaking:** `resources/js/panel/forms/markdown.ts` and its
+  `renderMarkdown()` are gone. An import of either no longer resolves.
+
+## [0.5.5] - 2026-09-24
+
+### Changed
+
+- **Date and time fields take typed input.** Each is a text input —
+  `YYYY-MM-DD`, `HH:mm`, or `HH:mm:ss` — with a button that opens a calendar or
+  an hour, minute, and second picker. A browser test that clicked the old
+  trigger to open the control has to click the button beside the input.
 
 ## [0.5.4] - 2026-09-15
 

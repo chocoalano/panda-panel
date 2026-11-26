@@ -69,8 +69,10 @@ final class FrontendContract
      *    response carries `statePatch`; a select declares `dependentOptions`
      *    and its options endpoint accepts POSTed state; create and edit pages
      *    send `submitLabel`; tenancy carries `label`.
+     * 3. Page metadata carries `tour`; form fields, column headers, and action
+     *    buttons carry the `data-tour` marker its steps point at.
      */
-    public const VERSION = 2;
+    public const VERSION = 3;
 
     /**
      * Where the published constant lives, relative to the panel's own tree.

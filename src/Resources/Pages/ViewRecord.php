@@ -119,6 +119,7 @@ abstract class ViewRecord extends ResourcePage
 
         return [
             ...$this->headingMetadata($record),
+            ...$this->tourMetadata($record),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 ...$this->baseBreadcrumbs(),
                 Breadcrumb::make($title)->current(),

@@ -89,7 +89,8 @@ it('validates the amount, its decimals and its bounds', function (): void {
         ->schema([MoneyInput::make('price')->currency('USD')->min(0)->max(500)])
         ->validationRules();
 
-    expect(array_map(strval(...), $rules['price']))->toBe(['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:500']);
+    expect(array_map(strval(...), $rules['price']))
+        ->toBe(['nullable', 'numeric', 'decimal:0,2', 'exact_float_amount:2', 'min:0', 'max:500']);
 });
 
 it('refuses an amount it would have to round', function (): void {
@@ -100,6 +101,39 @@ it('refuses an amount it would have to round', function (): void {
         ->and(moneyPasses($field, ['price' => 'Rp 12']))->toBeFalse()
         ->and(moneyPasses(MoneyInput::make('price')->currency('IDR'), ['price' => '1500.5']))->toBeFalse();
 });
+
+/*
+ * A JSON number reaches PHP as a float, and `decimal` reads a float through a
+ * cast that keeps 14 significant digits. Decoded from JSON here, because that
+ * is how the value arrives.
+ */
+it('refuses a JSON number it would have to round', function (string $json): void {
+    $data = json_decode('{"price":'.$json.'}', true);
+
+    expect(moneyPasses(MoneyInput::make('price')->currency('USD'), $data))->toBeFalse();
+})->with([
+    'digits the decimal rule can see' => ['12.345'],
+    'just past a whole number' => ['10.000000000000001'],
+    'just past two decimals' => ['12.340000000000002'],
+    'binary float noise' => ['0.30000000000000004'],
+    'a third decimal on a large amount' => ['100000000000.005'],
+    'more digits than a float holds to the cent' => ['90071992547409.93'],
+]);
+
+it('accepts a JSON number that is exactly the amount it says', function (string $json): void {
+    $data = json_decode('{"price":'.$json.'}', true);
+
+    expect(moneyPasses(MoneyInput::make('price')->currency('USD'), $data))->toBeTrue();
+})->with(['0', '12', '12.3', '12.34', '0.29', '-0.5', '1000000.10', '9999999999999.99']);
+
+it('says once, in the words a string is refused with, why a number was refused', function (float $amount): void {
+    $rules = FormSchema::make()
+        ->schema([MoneyInput::make('price')->currency('USD')])
+        ->validationRules();
+
+    expect(Validator::make(['price' => $amount], $rules)->errors()->get('price'))
+        ->toBe(['The price field must have 0-2 decimal places.']);
+})->with([12.345, 10.000000000000002]);
 
 it('compares the bounds to the amount, not to its length', function (): void {
     $field = MoneyInput::make('price')->currency('USD')->min(10)->max(100);

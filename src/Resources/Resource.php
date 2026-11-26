@@ -31,6 +31,7 @@ use PandaPanel\Support\ParentRecord;
 use PandaPanel\Support\PolicyGate;
 use PandaPanel\Tables\TableSchema;
 use PandaPanel\Tenancy\Tenancy;
+use PandaPanel\Tours\Tour;
 use PandaPanel\Widgets\Widget;
 
 /**
@@ -381,6 +382,17 @@ abstract class Resource implements ResourceContract
     public static function integrations(Integrations $integrations): Integrations
     {
         return $integrations;
+    }
+
+    /**
+     * The guided tour of one of this resource's pages, or null for none.
+     *
+     * `$page` is the same resource page key `getHeaderWidgets()` receives:
+     * `index`, `create`, `view`, `edit`, or `relation:{key}`.
+     */
+    public static function tour(string $page): ?Tour
+    {
+        return null;
     }
 
     /**

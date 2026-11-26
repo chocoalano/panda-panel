@@ -67,6 +67,14 @@ export const dictionaries = {
             notifications_failed: 'Notifications could not be loaded.',
             notifications_empty: 'Nothing here yet.',
         },
+        tour: {
+            start: 'Show tour',
+            progress: 'Step :current of :total',
+            next: 'Next',
+            back: 'Back',
+            skip: 'Skip',
+            done: 'Done',
+        },
         dashboard: {
             this_panel: 'This panel',
             ready: ':panel is ready. Its dashboard is empty.',
@@ -177,6 +185,10 @@ export const dictionaries = {
             minute: 'Minute',
             second: 'Second',
             uploads_unavailable: 'This form cannot store files.',
+            invalid_date:
+                'Enter a valid date, as YYYY-MM-DD, within the allowed range.',
+            invalid_time: 'Enter a valid time within the allowed range.',
+            upload_in_progress: 'Wait for the upload to finish.',
             link: 'Link',
             link_url: 'Link URL',
             plain_text: 'Plain text',
@@ -410,6 +422,14 @@ export const dictionaries = {
             notifications_failed: 'Notifikasi tidak dapat dimuat.',
             notifications_empty: 'Belum ada apa pun di sini.',
         },
+        tour: {
+            start: 'Lihat panduan',
+            progress: 'Langkah :current dari :total',
+            next: 'Lanjut',
+            back: 'Kembali',
+            skip: 'Lewati',
+            done: 'Selesai',
+        },
         dashboard: {
             this_panel: 'Panel ini',
             ready: ':panel sudah siap. Dasbornya masih kosong.',
@@ -521,6 +541,10 @@ export const dictionaries = {
             minute: 'Menit',
             second: 'Detik',
             uploads_unavailable: 'Formulir ini tidak dapat menyimpan berkas.',
+            invalid_date:
+                'Isi tanggal yang benar, berformat YYYY-MM-DD, dalam rentang yang diizinkan.',
+            invalid_time: 'Isi waktu yang benar dalam rentang yang diizinkan.',
+            upload_in_progress: 'Tunggu hingga unggahan selesai.',
             link: 'Tautan',
             link_url: 'URL tautan',
             plain_text: 'Teks biasa',

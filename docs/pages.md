@@ -250,6 +250,7 @@ Custom pages, clusters, breadcrumbs, sub-navigation, URLs.
 - [Full Page URLs](pages-navigation/urls.md)
 - [Prefetching](pages-navigation/prefetching.md)
 - [Error Notifications](pages-navigation/error-notifications.md)
+- [Page Tours](pages-navigation/tours.md)
 
 ### Widgets
 
@@ -545,5 +546,5 @@ Working on the package itself.
 
 ---
 
-360 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
+361 pages. [`sidebar.md`](sidebar.md) is the same tree collapsed to one entry per section, for
 a navigation bar.

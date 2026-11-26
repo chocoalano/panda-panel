@@ -86,4 +86,4 @@ Every command in full: [CLI reference](/cli/panel-install).
 
 - [Tutorial](/tutorial/) — the eight-step path from nothing to a working panel
 - [Overview](/introduction/overview) — what the package is
-- [All 360 pages](/pages)
+- [All 361 pages](/pages)

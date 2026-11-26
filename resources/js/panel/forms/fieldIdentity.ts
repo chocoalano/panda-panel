@@ -86,6 +86,16 @@ export type FieldIdentity = {
     path: string;
 };
 
+/**
+ * The state path alone, for a field that has something to say about itself
+ * but draws none of the elements the ids below name.
+ */
+export function useFieldPath(name: () => string): () => string {
+    const scope = useFieldScope();
+
+    return () => `${scope().path}${name()}`;
+}
+
 export function useFieldIdentity(
     name: () => string,
     has: { helper: () => boolean; error: () => boolean },

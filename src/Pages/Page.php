@@ -20,6 +20,7 @@ use PandaPanel\Support\ClusterNavigation;
 use PandaPanel\Support\Label;
 use PandaPanel\Support\NavigationGroupName;
 use PandaPanel\Support\NavigationItem;
+use PandaPanel\Tours\Tour;
 use PandaPanel\Widgets\Support\WidgetFilters;
 use PandaPanel\Widgets\Widget;
 
@@ -235,6 +236,16 @@ abstract class Page implements PageContract
         return [];
     }
 
+    /**
+     * The guided tour of this page, or null for none — which is the default.
+     *
+     * A method, so its sentences can be translated.
+     */
+    public function tour(): ?Tour
+    {
+        return null;
+    }
+
     public function render(): Response
     {
         abort_unless(static::canAccess(), 403);
@@ -306,6 +317,7 @@ abstract class Page implements PageContract
             ),
             'headerActions' => $this->headerActions(),
             'scope' => static::renderHookScope(),
+            'tour' => $this->tour()?->toArray(static::renderHookScope()),
             // Null unless this page is in a cluster, and null too when the
             // cluster has nothing this user may see — so a bar with no links
             // in it is never rendered.

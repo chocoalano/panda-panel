@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -244,35 +244,45 @@ describe('I6 — query builder', () => {
  */
 
 describe('I7 — temporal', () => {
-    it('names the time parts in English', () => {
-        speak('en');
+    /**
+     * The hour, minute, and second sit in a popover behind the typed input, so
+     * they exist to be named only once it is open.
+     */
+    async function openTimeParts(): Promise<void> {
         keep(
             mount(PanelTimePicker, {
                 attachTo: document.body,
                 props: { modelValue: '09:05', seconds: true },
             }),
         );
+
+        document
+            .querySelector<HTMLButtonElement>('button[aria-haspopup]')
+            ?.click();
+        await flushPromises();
+    }
+
+    it('names the time parts in English', async () => {
+        speak('en');
+        await openTimeParts();
 
         expect(names()).toEqual(
             expect.arrayContaining(['Hour', 'Minute', 'Second']),
         );
     });
 
-    it('names the time parts in Indonesian', () => {
+    it('names the time parts in Indonesian', async () => {
         speak('id');
-        keep(
-            mount(PanelTimePicker, {
-                attachTo: document.body,
-                props: { modelValue: '09:05', seconds: true },
-            }),
-        );
+        await openTimeParts();
 
         expect(names()).toEqual(
             expect.arrayContaining(['Jam', 'Menit', 'Detik']),
         );
     });
 
-    it('translates the date picker placeholder and clear', () => {
+    // The empty input shows the format it wants, which is not a word in any
+    // language. What is translated is what the input and its button are called.
+    it('translates the names of the date input and its calendar button', () => {
         speak('id');
         keep(
             mount(PanelDatePicker, {
@@ -281,7 +291,9 @@ describe('I7 — temporal', () => {
             }),
         );
 
-        expect(document.body.textContent).toContain('Pilih tanggal');
+        expect(names()).toEqual(
+            expect.arrayContaining(['Tanggal', 'Pilih tanggal']),
+        );
 
         document.body.innerHTML = '';
         speak('en');
@@ -292,7 +304,9 @@ describe('I7 — temporal', () => {
             }),
         );
 
-        expect(document.body.textContent).toContain('Pick a date');
+        expect(names()).toEqual(
+            expect.arrayContaining(['Date', 'Pick a date']),
+        );
     });
 
     it('translates the clear control', () => {

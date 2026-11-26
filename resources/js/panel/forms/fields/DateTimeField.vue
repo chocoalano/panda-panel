@@ -5,6 +5,8 @@ import PanelDatePicker from '@/panel/components/PanelDatePicker.vue';
 import PanelTimePicker from '@/panel/components/PanelTimePicker.vue';
 import { useTranslator } from '@/composables/useTranslator';
 import { timeWithinBounds } from '@/panel/components/temporalValue';
+import { useFieldPath } from '@/panel/forms/fieldIdentity';
+import { useSubmitBlock } from '@/panel/forms/submitBlockers';
 import type { DateTimeFieldDefinition } from '@/panel/types/form';
 
 const { t } = useTranslator();
@@ -16,6 +18,18 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
+
+const path = useFieldPath(() => props.field.name);
+const invalidDate = ref(false);
+const invalidTime = ref(false);
+
+useSubmitBlock(path, () => {
+    if (invalidDate.value) {
+        return t('forms.invalid_date');
+    }
+
+    return invalidTime.value ? t('forms.invalid_time') : null;
+});
 
 /**
  * A date and a time, from the panel's own controls.
@@ -214,6 +228,7 @@ function onTime(value: string | null): void {
                 :aria-label="t('forms.date')"
                 :clearable="!field.required"
                 @update:model-value="onDate"
+                @update:invalid="(value) => (invalidDate = value)"
             />
 
             <PanelTimePicker
@@ -228,6 +243,7 @@ function onTime(value: string | null): void {
                 :max-time="maxTime"
                 :clearable="!field.required"
                 @update:model-value="onTime"
+                @update:invalid="(value) => (invalidTime = value)"
             />
         </div>
     </FieldWrapper>

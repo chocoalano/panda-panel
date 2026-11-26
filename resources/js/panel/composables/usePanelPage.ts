@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import type { ComputedRef } from 'vue';
+import { normalizeTour } from '@/panel/tour/tour';
 import type { PanelBreadcrumbItem } from '@/panel/types/breadcrumb';
 import type { NavigationItem } from '@/panel/types/navigation';
 import type {
@@ -102,6 +103,7 @@ export function normalizePageMetadata(value: unknown): PageMetadata | null {
         // Validated like everything else crossing the boundary: an absent
         // scope means the page matches only unscoped render hooks.
         scope: typeof value.scope === 'string' ? value.scope : null,
+        tour: normalizeTour(value.tour),
         subNavigation: toSubNavigation(value.subNavigation),
         cluster: toCluster(value.cluster),
     };

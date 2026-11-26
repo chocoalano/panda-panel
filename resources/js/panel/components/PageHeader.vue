@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { usePanelStyling } from '@/panel/composables/usePanelStyling';
+import PanelTour from '@/panel/tour/PanelTour.vue';
 
 defineProps<{
     heading: string;
@@ -45,6 +46,8 @@ const { hook } = usePanelStyling();
             showing a button that does nothing.
         -->
         <div class="flex flex-wrap items-center gap-2">
+            <!-- Draws nothing on a page with no tour. -->
+            <PanelTour />
             <slot name="actions" />
         </div>
     </div>

@@ -2,7 +2,9 @@
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { useFieldPath } from '@/panel/forms/fieldIdentity';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
+import { useSubmitBlockers } from '@/panel/forms/submitBlockers';
 import { uploadFile, useUploadUrl } from '@/panel/forms/uploadEndpoint';
 import type { FileUploadFieldDefinition } from '@/panel/types/form';
 import { useTranslator } from '@/composables/useTranslator';
@@ -30,6 +32,8 @@ const emit = defineEmits<{
  * before it reaches a record.
  */
 const uploadUrl = useUploadUrl();
+const blockers = useSubmitBlockers();
+const statePath = useFieldPath(() => props.field.name);
 
 const uploading = ref(0);
 const failure = ref<string | null>(null);
@@ -106,9 +110,17 @@ async function onFiles(event: Event): Promise<void> {
 
         uploading.value += 1;
 
+        // Held for as long as the request is out, not as long as this control
+        // is on screen: the upload carries on either way.
+        const release = blockers?.hold(
+            statePath(),
+            t('forms.upload_in_progress'),
+        );
+
         const stored = await uploadFile(url, props.field.name, file);
 
         uploading.value -= 1;
+        release?.();
 
         if (stored === null) {
             failure.value = `${file.name} could not be uploaded.`;

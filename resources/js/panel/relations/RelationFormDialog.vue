@@ -102,7 +102,16 @@ function toPayload(value: unknown): RelationFormPayload | null {
     };
 }
 
+/**
+ * Which request the dialog is still waiting for. Answers arrive in whatever
+ * order the server finishes them, and only the one asked for last may land —
+ * an older form arriving second would be filled in and sent to the wrong URL.
+ */
+let latest = 0;
+
 async function load(url: string): Promise<void> {
+    const request = ++latest;
+
     loading.value = true;
     failed.value = false;
     payload.value = null;
@@ -113,14 +122,22 @@ async function load(url: string): Promise<void> {
             credentials: 'same-origin',
         });
 
-        failed.value = !response.ok;
+        const next = response.ok ? toPayload(await response.json()) : null;
 
-        payload.value = response.ok ? toPayload(await response.json()) : null;
-        failed.value = failed.value || payload.value === null;
+        if (request !== latest) {
+            return;
+        }
+
+        payload.value = next;
+        failed.value = next === null;
     } catch {
-        failed.value = true;
+        if (request === latest) {
+            failed.value = true;
+        }
     } finally {
-        loading.value = false;
+        if (request === latest) {
+            loading.value = false;
+        }
     }
 }
 
@@ -128,6 +145,9 @@ watch(
     () => props.formUrl,
     (url) => {
         if (url === null) {
+            // Nothing is wanted any more, including what is still coming.
+            latest++;
+            loading.value = false;
             payload.value = null;
             failed.value = false;
 

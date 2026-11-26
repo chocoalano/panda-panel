@@ -132,6 +132,8 @@ const draft = ref<Integration>(
 );
 
 const processing = ref(false);
+const errors = ref<Record<string, string>>({});
+const refusals = computed(() => Object.values(errors.value));
 const tab = ref<TabKey>('params');
 const sendResult = ref<{ status: number | null; error: string | null } | null>(
     null,
@@ -155,12 +157,14 @@ function select(integration: Integration): void {
     selectedId.value = integration.id;
     draft.value = { ...integration };
     sendResult.value = null;
+    errors.value = {};
 }
 
 function startNew(): void {
     selectedId.value = null;
     draft.value = blank();
     sendResult.value = null;
+    errors.value = {};
 }
 
 const isNew = computed(() => draft.value.id === null);
@@ -224,6 +228,7 @@ function payload(): RequestPayload {
 
 function save(): void {
     processing.value = true;
+    errors.value = {};
 
     const url = isNew.value
         ? props.endpoints.store
@@ -233,6 +238,9 @@ function save(): void {
         method: isNew.value ? 'post' : 'put',
         data: payload(),
         preserveScroll: true,
+        // Or a refusal mounts the page again and the draft is gone.
+        preserveState: 'errors',
+        onError: (received) => (errors.value = received),
         onFinish: () => (processing.value = false),
     });
 }
@@ -458,6 +466,16 @@ function triggerLabel(value: string): string {
                     <Button type="button" variant="ghost" @click="destroy">
                         {{ t('integrations.delete') }}
                     </Button>
+                </div>
+
+                <div
+                    v-if="refusals.length > 0"
+                    role="alert"
+                    class="flex flex-col gap-1 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+                >
+                    <p v-for="message in refusals" :key="message">
+                        {{ message }}
+                    </p>
                 </div>
 
                 <!-- Tabs -->

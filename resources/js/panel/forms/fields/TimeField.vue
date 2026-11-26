@@ -1,15 +1,28 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import FieldWrapper from '@/panel/forms/fields/FieldWrapper.vue';
 import PanelTimePicker from '@/panel/components/PanelTimePicker.vue';
+import { useFieldPath } from '@/panel/forms/fieldIdentity';
+import { useSubmitBlock } from '@/panel/forms/submitBlockers';
 import type { TimeFieldDefinition } from '@/panel/types/form';
+import { useTranslator } from '@/composables/useTranslator';
 
-defineProps<{
+const { t } = useTranslator();
+
+const props = defineProps<{
     field: TimeFieldDefinition;
     modelValue: unknown;
     error?: string;
 }>();
 
 const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
+
+const path = useFieldPath(() => props.field.name);
+const invalidText = ref(false);
+
+useSubmitBlock(path, () =>
+    invalidText.value ? t('forms.invalid_time') : null,
+);
 </script>
 
 <template>
@@ -42,6 +55,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
             :labelled-by="labelledBy"
             :clearable="!field.required"
             @update:model-value="(value) => emit('update:modelValue', value)"
+            @update:invalid="(value) => (invalidText = value)"
         />
     </FieldWrapper>
 </template>

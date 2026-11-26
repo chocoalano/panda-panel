@@ -18,6 +18,143 @@ A schema mistake raises at schema-build time, which is boot or first render — 
 before a user does. That is why `php artisan test` is the first line of this page rather than the
 last.
 
+## Unreleased
+
+Four changes that can need an edit, and one step everybody takes: republish the frontend, because
+the contract is now version 3.
+
+```bash
+php artisan panel:assets --update
+npm run build
+```
+
+| # | Change | How it shows up |
+| --- | --- | --- |
+| 1 | `tour()` and `tourMetadata()` are taken | A fatal error naming the method |
+| 2 | `MoneyInput` refuses a float it would have to round | A validation error on a money field |
+| 3 | A money field's rule list has one more entry | A test comparing the rules fails |
+| 4 | A replaced `form` prop resets `FormRenderer` | Typed values disappear on a custom page |
+
+---
+
+### 1. `tour()` and `tourMetadata()` are taken
+
+**What changed.** [Page tours](../pages-navigation/tours.md) added `public static function
+tour(string $page): ?Tour` to `Resource`, `public function tour(?Model $record = null): ?Tour` and
+`protected function tourMetadata()` to `ResourcePage`, and `public function tour(): ?Tour` to
+`Page`.
+
+**What breaks.** A resource or page of yours that already has a method with one of those names and
+a different signature no longer compiles.
+
+**The fix.** Rename your method:
+
+```php
+// Before
+public static function tour(): string { /* … */ }
+
+// After
+public static function guidedVisit(): string { /* … */ }
+```
+
+### 2. `MoneyInput` refuses a float it would have to round
+
+**What changed.** A JSON number such as `10.000000000000001` used to pass `decimal:0,2` and be
+stored as `10.00`. It is refused now.
+
+**What breaks.** Usually nothing: the panel's own control submits a string. A `live()` hook that
+puts a computed float into a money field, or a client that posts amounts as numbers carrying float
+noise, gets a validation error.
+
+**The fix.** Set a string at the field's precision:
+
+```php
+->afterStateUpdated(function (Get $get, Set $set): void {
+    $set('total', number_format((float) $get('price') * (int) $get('quantity'), 2, '.', ''));
+})
+```
+
+### 3. A money field's rule list has one more entry
+
+**What changed.** `ExactFloatAmount` sits after `decimal` in the rules.
+
+**What breaks.** An assertion on the exact list. The object casts to `exact_float_amount:{n}`.
+
+**The fix.**
+
+```php
+expect(array_map(strval(...), $rules['price']))
+    ->toBe(['nullable', 'numeric', 'decimal:0,2', 'exact_float_amount:2']);
+```
+
+### 4. A replaced `form` prop resets `FormRenderer`
+
+**What changed.** A new `form` object now replaces the schema, the values, the errors, and the
+controls' drafts. It used to replace the schema only. The answer to a refused submit is the
+exception: what was typed stays.
+
+**What breaks.** A custom page that builds the object in its template, or in a computed that
+re-evaluates often, loses typed values on every render. An Inertia visit that preserves state and
+returns a different form also replaces unsaved edits.
+
+**The fix.** Pass a stable object — a prop from the server, or a `ref` assigned once:
+
+```vue
+<!-- Before: a new object on every render -->
+<FormRenderer :form="{ columns: 1, schema }" :submit-url="url" />
+
+<!-- After -->
+<FormRenderer :form="form" :submit-url="url" />
+```
+
+## 0.5.6
+
+Two entries, both on the frontend. Neither is visible until a build.
+
+| # | Change | How it shows up |
+| --- | --- | --- |
+| 1 | Six new npm dependencies | The build cannot resolve an import |
+| 2 | `panel/forms/markdown.ts` is gone | The build cannot resolve your import of it |
+
+---
+
+### 1. Six new npm dependencies
+
+**What changed.** The rich text, Markdown, and code fields became Tiptap, `md-editor-v3`, and
+Monaco.
+
+**What breaks.** `npm run build` fails on the first unresolved package.
+
+**The fix.**
+
+```bash
+npm install @guolao/vue-monaco-editor@^1.6.0 @tiptap/pm@^3.31.3 \
+  @tiptap/starter-kit@^3.31.3 @tiptap/vue-3@^3.31.3 \
+  md-editor-v3@^7.0.0 monaco-editor@^0.56.0
+php artisan panel:assets --update
+npm run build
+```
+
+Monaco is large. If the build runs out of memory:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=4096 npm run build
+```
+
+### 2. `panel/forms/markdown.ts` is gone
+
+**What changed.** The hand-written preview renderer was removed with the textarea it served.
+
+**What breaks.** A component of yours importing `renderMarkdown` from it.
+
+**The fix.** Use a Markdown library of your own. `md-editor-v3` is already installed and ships a
+preview component:
+
+```ts
+import { MdPreview } from 'md-editor-v3';
+import 'md-editor-v3/lib/preview.css';
+```
+
 ## 0.5.4
 
 One entry, and it only shows up as a **check that newly goes red**. Nothing

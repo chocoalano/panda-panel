@@ -78,6 +78,8 @@ it('sends page metadata in the shape the layout reads', function (): void {
                 // Render hook scoping matches on this, and it is a slug
                 // rather than a class name.
                 ->where('scope', 'page:dashboard')
+                // Null until a page declares one.
+                ->where('tour', null)
                 // Null for a page in no cluster, which is most of them.
                 ->where('cluster', null)
             )

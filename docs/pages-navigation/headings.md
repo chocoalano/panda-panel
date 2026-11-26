@@ -189,6 +189,7 @@ All three arrive in the `page` prop, alongside the breadcrumbs and the rest:
     'breadcrumbs' => [/* … */],
     'headerActions' => [],
     'scope' => 'page:settings',
+    'tour' => null, // see Page Tours
     'cluster' => null,
 ]
 ```

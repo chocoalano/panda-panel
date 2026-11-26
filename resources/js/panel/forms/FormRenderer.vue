@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormDataConvertible, RequestPayload } from '@inertiajs/core';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -21,6 +21,10 @@ import {
     provideFormValues,
     provideOptionsUrl,
 } from '@/panel/forms/optionsEndpoint';
+import {
+    createSubmitBlockers,
+    provideSubmitBlockers,
+} from '@/panel/forms/submitBlockers';
 import { provideUploadUrl } from '@/panel/forms/uploadEndpoint';
 import { validateFields } from '@/panel/forms/validation';
 import type {
@@ -33,6 +37,7 @@ import type {
 import { useTranslator } from '@/composables/useTranslator';
 
 const { t } = useTranslator();
+const page = usePage();
 
 const props = defineProps<{
     form: FormDefinition;
@@ -84,6 +89,11 @@ const registry = createFieldRegistry();
 
 provideFieldRegistry(registry);
 
+/** What a control is holding that the values below do not show. */
+const blockers = createSubmitBlockers();
+
+provideSubmitBlockers(blockers);
+
 /**
  * `saved` lets a host close itself once the write went through. A page
  * ignores it — the server has already redirected it somewhere — and a dialog
@@ -98,16 +108,15 @@ const emit = defineEmits<{ saved: [] }>();
  * have the server rebuild it: new options for a dependent select, a different
  * set of visible components. The prop is still the source of truth for a new
  * form — a fresh page, or a dialog reopened on another record — which is what
- * the watch below restores.
+ * the watch further down restores.
  */
 const schema = ref<FormComponentDefinition[]>(props.form.schema);
 
-watch(
-    () => props.form,
-    (form) => {
-        schema.value = form.schema;
-    },
-);
+/**
+ * Bumped for every new form, so the controls are mounted again. Some keep a
+ * draft of their own, which a value that did not change would never overwrite.
+ */
+const generation = ref(0);
 
 /**
  * Collects every field in the schema, however deeply nested, so the initial
@@ -232,9 +241,9 @@ function initialValues(): FormValues {
  * that is the one place local state is the right answer. Errors are not
  * local: they come back from the server on the Inertia response.
  */
-const initial = initialValues();
+const initial = ref<FormValues>(initialValues());
 
-const values = ref<FormValues>({ ...initial });
+const values = ref<FormValues>({ ...initial.value });
 const errors = ref<Record<string, string>>({});
 const processing = ref(false);
 
@@ -318,7 +327,7 @@ const wizard = computed(() =>
 const isDirty = computed(
     () =>
         !processing.value &&
-        JSON.stringify(values.value) !== JSON.stringify(initial),
+        JSON.stringify(values.value) !== JSON.stringify(initial.value),
 );
 
 useUnsavedChangesAlert(isDirty);
@@ -337,13 +346,76 @@ const previousValues = new Map<string, FormValue>();
 
 let inFlight: AbortController | null = null;
 
-onBeforeUnmount(() => {
+/** Forgets every live rebuild that was asked for and has not landed. */
+function cancelLive(): void {
     for (const timer of timers.values()) {
         clearTimeout(timer);
     }
 
+    timers.clear();
+    pendingBlur.clear();
+    previousValues.clear();
     inFlight?.abort();
-});
+}
+
+onBeforeUnmount(cancelLive);
+
+/** Whether the page now on screen is the answer to a refused submit. */
+function isRefusal(): boolean {
+    const refused = page.props.errors;
+
+    return (
+        typeof refused === 'object' &&
+        refused !== null &&
+        Object.keys(refused).length > 0
+    );
+}
+
+/**
+ * A new form from the server replaces everything held about the old one: its
+ * schema, its values, and what was said about them. "Create another" answers
+ * with the same page and an empty form, and keeping what was typed would offer
+ * to save the record that was just saved.
+ *
+ * Not after a refusal. What is on screen then is newer than anything the
+ * response holds — a password is never sent back — and it is what the messages
+ * are about.
+ */
+watch(
+    () => props.form,
+    (form) => {
+        if (isRefusal()) {
+            return;
+        }
+
+        cancelLive();
+
+        schema.value = form.schema;
+        initial.value = initialValues();
+        values.value = { ...initial.value };
+        errors.value = {};
+        generation.value++;
+    },
+);
+
+/** A block that has lifted takes its own message down with it. */
+let blocked: Record<string, string> = {};
+
+watch(
+    () => blockers.current(),
+    (current) => {
+        const remaining = { ...errors.value };
+
+        for (const [path, message] of Object.entries(blocked)) {
+            if (current[path] === undefined && remaining[path] === message) {
+                delete remaining[path];
+                delete blocked[path];
+            }
+        }
+
+        errors.value = remaining;
+    },
+);
 
 async function sendState(name: string): Promise<void> {
     const url = props.formStateUrl ?? null;
@@ -491,7 +563,12 @@ function submit(createAnother = false): void {
     // Checked here only to save a round trip. The server validates everything
     // again, and anything it can check that a browser cannot — uniqueness,
     // existence — is deliberately not attempted.
-    const clientErrors = validateFields(fields.value, values.value);
+    blocked = blockers.current();
+
+    const clientErrors = {
+        ...validateFields(fields.value, values.value),
+        ...blocked,
+    };
 
     if (Object.keys(clientErrors).length > 0) {
         errors.value = clientErrors;
@@ -514,6 +591,11 @@ function submit(createAnother = false): void {
         // same values again — so the client only says which button it was.
         data: createAnother ? { ...data, createAnother: true } : data,
         preserveScroll: true,
+        // A refusal has to find this form still here: otherwise Inertia mounts
+        // the page again, and the typed values and the messages explaining the
+        // refusal go with the old one. A write that went through still starts
+        // the next page afresh.
+        preserveState: 'errors',
         onSuccess: () => {
             errors.value = {};
             emit('saved');
@@ -569,6 +651,7 @@ const { hook } = usePanelStyling();
 
         <FormWizard
             v-if="wizard"
+            :key="generation"
             :wizard="wizard"
             :values="values"
             :errors="errors"
@@ -593,6 +676,7 @@ const { hook } = usePanelStyling();
         -->
         <FormGrid
             v-if="!wizard"
+            :key="generation"
             :grid="{ component: 'grid', columns: form.columns, schema }"
             :values="values"
             :errors="errors"

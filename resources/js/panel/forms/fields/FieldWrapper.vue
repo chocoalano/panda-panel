@@ -76,7 +76,12 @@ const slotProps = computed(() => ({
 </script>
 
 <template>
-    <div v-if="inline" class="flex items-start gap-3">
+    <!-- `data-tour` is what a tour step's `field()` points at. -->
+    <div
+        v-if="inline"
+        :data-tour="`field:${name}`"
+        class="flex items-start gap-3"
+    >
         <slot v-bind="slotProps" />
         <div class="flex flex-col gap-1">
             <Label
@@ -100,6 +105,7 @@ const slotProps = computed(() => ({
 
     <div
         v-else-if="inlineLabel"
+        :data-tour="`field:${name}`"
         class="grid grid-cols-1 items-start gap-x-4 gap-y-1.5 sm:grid-cols-[12rem_1fr]"
     >
         <Label
@@ -123,7 +129,7 @@ const slotProps = computed(() => ({
         </div>
     </div>
 
-    <div v-else class="flex flex-col gap-1.5">
+    <div v-else :data-tour="`field:${name}`" class="flex flex-col gap-1.5">
         <Label :id="labelId" :for="group ? undefined : identity.controlId">
             {{ label }}
             <span v-if="required" class="text-destructive">*</span>

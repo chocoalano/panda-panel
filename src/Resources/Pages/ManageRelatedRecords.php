@@ -109,6 +109,7 @@ abstract class ManageRelatedRecords extends ResourcePage
 
         return [
             ...$this->headingMetadata($owner),
+            ...$this->tourMetadata($owner),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 ...$this->baseBreadcrumbs(),
                 $this->recordCrumb($owner, $title),

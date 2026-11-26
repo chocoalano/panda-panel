@@ -69,7 +69,11 @@ const props = withDefaults(
     },
 );
 
-const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
+const emit = defineEmits<{
+    'update:modelValue': [value: string | null];
+    /** The typed text is not a time, so the value above is null for it. */
+    'update:invalid': [invalid: boolean];
+}>();
 
 function pad(value: number): string {
     return String(value).padStart(2, '0');
@@ -91,6 +95,7 @@ const second = ref<number | null>(null);
 const open = ref(false);
 const draft = ref('');
 const draftInvalid = ref(false);
+watch(draftInvalid, (value) => emit('update:invalid', value));
 let pending: string | null | undefined;
 
 watch(

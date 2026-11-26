@@ -204,6 +204,7 @@ abstract class EditRecord extends ResourcePage
 
         return [
             ...$this->headingMetadata($record),
+            ...$this->tourMetadata($record),
             'breadcrumbs' => $this->serializeBreadcrumbs([
                 ...$this->baseBreadcrumbs(),
                 $this->recordCrumb($record, $title),

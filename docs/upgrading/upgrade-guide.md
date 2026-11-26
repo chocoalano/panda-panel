@@ -219,6 +219,45 @@ resources you expect, an icon renders, and the browser console is empty.
 
 ## Version-specific notes
 
+### Unreleased
+
+Republish the frontend — the contract is version 3. Then check the four entries under
+[Breaking changes](breaking-changes.md#unreleased).
+
+| # | Change | What you notice |
+| --- | --- | --- |
+| 1 | Resources and pages can offer a [tour](../pages-navigation/tours.md) | Nothing, until one declares it |
+| 2 | A refused submit keeps the form and shows its errors | Forms and dialogs no longer reset or close on a validation error |
+| 3 | An invalid typed date or time, or a running upload, holds the submit | A message against the field instead of a silent empty value |
+| 4 | `MoneyInput` refuses an over-precise JSON number | A validation error where an amount was rounded |
+| 5 | The date calendar opens on the date held | — |
+
+### 0.5.9
+
+Nothing needs an edit. Aggregate columns over a camelCase relation (`counts('lineItems')`) now show
+their values, and `counts()->sortable()` sorts by the aggregate whichever is called first.
+
+### 0.5.8
+
+Nothing needs an edit. [`MoneyInput`](../forms/fields/money.md) is new, with
+`panda-panel.forms.currency` (default `USD`) for fields that name no currency. Run
+`php artisan panel:assets --update` and rebuild to get its control.
+
+### 0.5.7
+
+Republish the frontend: a `searchable()` select is now a combobox and needs the new
+`components/ui/combobox` files. A browser test that typed into the old search box above the
+control has to open the combobox first.
+
+### 0.5.6
+
+Two build-time changes, written out under [Breaking changes](breaking-changes.md#056): six new npm
+dependencies for the editors, and the removal of `panel/forms/markdown.ts`.
+
+### 0.5.5
+
+Republish the frontend. Date and time fields are now typed inputs with a picker button beside them.
+
 ### 0.5.0
 
 Nothing needs a source edit. Three things behave differently, and all three are worth knowing

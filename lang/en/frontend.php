@@ -87,6 +87,18 @@ return [
     ],
 
     /*
+     * The guided tour a page may offer.
+     */
+    'tour' => [
+        'start' => 'Show tour',
+        'progress' => 'Step :current of :total',
+        'next' => 'Next',
+        'back' => 'Back',
+        'skip' => 'Skip',
+        'done' => 'Done',
+    ],
+
+    /*
      * The dashboard a panel has before anything is registered in it.
      */
     'dashboard' => [
@@ -208,6 +220,9 @@ return [
         'minute' => 'Minute',
         'second' => 'Second',
         'uploads_unavailable' => 'This form cannot store files.',
+        'invalid_date' => 'Enter a valid date, as YYYY-MM-DD, within the allowed range.',
+        'invalid_time' => 'Enter a valid time within the allowed range.',
+        'upload_in_progress' => 'Wait for the upload to finish.',
         'link' => 'Link',
         'link_url' => 'Link URL',
         'plain_text' => 'Plain text',

@@ -24,6 +24,7 @@ const url = computed(() => safeUrl(props.action.url));
         :href="url"
         :variant="action.variant"
         :size="size ?? 'sm'"
+        :data-tour="`action:${action.name}`"
     >
         <component :is="icon" v-if="icon" />
         {{ action.label }}
@@ -35,6 +36,7 @@ const url = computed(() => safeUrl(props.action.url));
         :variant="action.variant"
         :size="size ?? 'sm'"
         :disabled="disabled"
+        :data-tour="`action:${action.name}`"
         @click="emit('run', action)"
     >
         <component :is="icon" v-if="icon" />

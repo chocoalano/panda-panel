@@ -86,6 +86,18 @@ return [
     ],
 
     /*
+     * Panduan langkah demi langkah yang boleh dimiliki sebuah halaman.
+     */
+    'tour' => [
+        'start' => 'Lihat panduan',
+        'progress' => 'Langkah :current dari :total',
+        'next' => 'Lanjut',
+        'back' => 'Kembali',
+        'skip' => 'Lewati',
+        'done' => 'Selesai',
+    ],
+
+    /*
      * Dasbor sebuah panel sebelum ada apa pun yang terdaftar di dalamnya.
      */
     'dashboard' => [
@@ -207,6 +219,9 @@ return [
         'minute' => 'Menit',
         'second' => 'Detik',
         'uploads_unavailable' => 'Formulir ini tidak dapat menyimpan berkas.',
+        'invalid_date' => 'Isi tanggal yang benar, berformat YYYY-MM-DD, dalam rentang yang diizinkan.',
+        'invalid_time' => 'Isi waktu yang benar dalam rentang yang diizinkan.',
+        'upload_in_progress' => 'Tunggu hingga unggahan selesai.',
         'link' => 'Tautan',
         'link_url' => 'URL tautan',
         'plain_text' => 'Teks biasa',

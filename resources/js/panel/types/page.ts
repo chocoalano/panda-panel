@@ -1,5 +1,6 @@
 import type { PanelBreadcrumbItem } from '@/panel/types/breadcrumb';
 import type { NavigationItem } from '@/panel/types/navigation';
+import type { TourDefinition } from '@/panel/types/tour';
 
 /**
  * Metadata every panel page ships alongside its own props.
@@ -19,6 +20,8 @@ export interface PageMetadata {
      * `page:{slug}`. A slug, never a class name.
      */
     scope: string | null;
+    /** The page's guided tour. Null for a page that declared none. */
+    tour: TourDefinition | null;
     /**
      * The links between one record's pages. Empty on a page that has no
      * record, and on a record with only one page it can reach.

@@ -85,10 +85,16 @@ FormSchema::make()
     ->schema([MoneyInput::make('price')->currency('USD')->min(0)->max(500)])
     ->validationRules();
 
-// ['price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:500']]
+// ['price' => ['nullable', 'numeric', 'decimal:0,2', ExactFloatAmount, 'min:0', 'max:500']]
 ```
 
 `decimal:0,{n}` refuses an amount the form would have to round: `12.345` dollars is an error, not `12.35`. The browser cannot type a third decimal, so this only ever catches a request that did not come from the form.
+
+`ExactFloatAmount` holds a JSON *number* to the same rule. `decimal` reads a float through a cast that keeps 14 significant digits, so on its own it would pass `10.000000000000001` and let it be rounded to `10.00`. A float is refused, with the same message, when it needs more than 15 significant digits or has more than `{n}` decimals.
+
+One thing no rule can catch: digits the JSON decoder drops before the application sees them. `100.00000000000000001` arrives as exactly `100.0`. Send amounts as strings — `"100.00"` — and every digit is checked.
+
+A value your own code puts into the form is held to this too. A `live()` hook that computes an amount should set a string at the field's precision — `$set('total', number_format($total, 2, '.', ''))` — not the raw float, which may be `0.30000000000000004`.
 
 ## In the browser
 

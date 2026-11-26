@@ -7,6 +7,7 @@ namespace PandaPanel\Forms\Components;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 use PandaPanel\Forms\Enums\FieldType;
+use PandaPanel\Forms\Support\ExactFloatAmount;
 use Stringable;
 
 /**
@@ -177,13 +178,19 @@ final class MoneyInput extends Field
     }
 
     /**
-     * @return list<string>
+     * @return list<mixed>
      */
     protected function typeRules(): array
     {
         // `decimal` caps the digits after the separator, so an amount the
         // form would have to round is refused rather than silently changed.
-        $rules = ['numeric', 'decimal:0,'.$this->getDecimals()];
+        // It reads a float through a cast that hides digits, so a JSON
+        // number is held to the same rule a second way.
+        $rules = [
+            'numeric',
+            'decimal:0,'.$this->getDecimals(),
+            new ExactFloatAmount($this->getDecimals()),
+        ];
 
         if ($this->min !== null) {
             $rules[] = 'min:'.$this->min;
